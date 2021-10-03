@@ -1,0 +1,14 @@
+.env
+web/data/privuma/**
+web/data/comics/**
+web/config/*
+!web/config/*-example.*
+web/logs/*.txt
+docker/etc/ssh/id_rsa
+docker/etc/ssh/id_rsa.pub
+docker/etc/ssh/config
+!docker/etc/ssh/*-example.*
+docker/db/
+**/job.lock
+**/cookies.txt
+**/.DS_Store
