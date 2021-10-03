@@ -1,4 +1,5 @@
 .env
+.gitmodules
 web/data/privuma/**
 web/data/comics/**
 web/config/*
