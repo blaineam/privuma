@@ -1,0 +1,121 @@
+FROM php:7.4-fpm
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    cron \
+    build-essential \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    locales \
+    libzip-dev \
+    libmcrypt-dev \
+    libonig-dev \
+    zlib1g-dev \
+    zip \
+    jpegoptim optipng pngquant gifsicle \
+    vim \
+    unzip \
+    git \
+    graphviz \
+    curl \
+    supervisor \
+    htop \
+    rsyslog
+
+# Fix rsyslog
+RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf    
+
+# Install ffmpeg
+RUN apt-get update && apt-get install -y ffmpeg
+
+RUN apt-get update && \
+    apt-get install -y libcurl4-openssl-dev
+
+# Install php extensions
+RUN docker-php-ext-install curl json fileinfo iconv gd mysqli mbstring pdo pdo_mysql zip exif pcntl
+
+# Enable PHP Semaphores
+RUN docker-php-ext-configure sysvmsg --enable-sysvmsg; \
+    docker-php-ext-configure sysvsem --enable-sysvsem; \
+    docker-php-ext-configure sysvshm --enable-sysvshm; \
+    docker-php-ext-install sysvmsg sysvsem sysvshm
+
+
+# Install Imagemagick
+ARG IM_VERSION=7.1.0-8
+ARG LIB_HEIF_VERSION=1.12.0
+ARG LIB_AOM_VERSION=3.1.2
+ARG LIB_WEBP_VERSION=1.2.1
+RUN apt-get -y update && \
+    # apt-get -y upgrade && \
+    apt-get install -y git make gcc pkg-config autoconf g++ \
+    # libaom
+    yasm cmake \
+    # libheif
+    libde265-0 libde265-dev libjpeg62-turbo libjpeg62-turbo-dev x265 libx265-dev libtool \
+    # IM
+    libpng16-16 libpng-dev libjpeg62-turbo libjpeg62-turbo-dev libgomp1 ghostscript libxml2-dev libxml2-utils libtiff-dev libfontconfig1-dev libfreetype6-dev && \
+    # Building libwebp
+    git clone https://chromium.googlesource.com/webm/libwebp && \
+    cd libwebp && git checkout v${LIB_WEBP_VERSION} && \
+    ./autogen.sh && ./configure --enable-shared --enable-libwebpdecoder --enable-libwebpdemux --enable-libwebpmux --enable-static=no && \
+    make && make install && \
+    ldconfig /usr/local/lib && \
+    cd ../ && rm -rf libwebp && \
+    # Building libaom
+    git clone https://aomedia.googlesource.com/aom && \
+    cd aom && git checkout v${LIB_AOM_VERSION} && cd .. && \
+    mkdir build_aom && \
+    cd build_aom && \
+    cmake ../aom/ -DENABLE_TESTS=0 -DBUILD_SHARED_LIBS=1 && make && make install && \
+    ldconfig /usr/local/lib && \
+    cd .. && \
+    rm -rf aom && \
+    rm -rf build_aom && \
+    # Building libheif
+    curl -L https://github.com/strukturag/libheif/releases/download/v${LIB_HEIF_VERSION}/libheif-${LIB_HEIF_VERSION}.tar.gz -o libheif.tar.gz && \
+    tar -xzvf libheif.tar.gz && cd libheif-${LIB_HEIF_VERSION}/ && ./autogen.sh && ./configure && make && make install && cd .. && \
+    ldconfig /usr/local/lib && \
+    rm -rf libheif-${LIB_HEIF_VERSION} && rm libheif.tar.gz && \
+    # Building ImageMagick
+    git clone https://github.com/ImageMagick/ImageMagick.git && \
+    cd ImageMagick && git checkout ${IM_VERSION} && \
+    ./configure --without-magick-plus-plus --disable-docs --disable-static --with-libtiff && \
+    make && make install && \
+    ldconfig /usr/local/lib && \
+    rm -rf /ImageMagick
+
+# Install Imagick php extension
+RUN pecl install imagick && \
+    docker-php-ext-enable imagick
+
+# Install python an dependencies
+RUN apt-get update && apt-get install -y python3 python3-pip && \
+pip3 install beautifulsoup4 && \
+pip3 install requests && \
+pip3 install tqdm
+
+# Cleanup extra packages
+RUN apt-get remove --autoremove --purge -y gcc make cmake autoconf g++ yasm pkg-config libpng-dev libjpeg62-turbo-dev libde265-dev libx265-dev libxml2-dev libtiff-dev libfontconfig1-dev libfreetype6-dev
+
+# Clear cache
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Set php user id to host id
+RUN usermod -u 1026 www-data
+
+RUN chsh -s /bin/bash www-data
+
+# Install Crontab Job
+RUN (echo "* * * * * www-data /usr/local/bin/php /var/www/html/cron.php > /var/log/cron.log 2>&1" > /etc/cron.d/privuma)
+RUN touch /var/log/cron.log && chown 1026 /var/log/cron.log
+
+RUN export PATH="$PATH:/usr/local/bin/" && ln -s /usr/local/bin/php /usr/bin/php
+
+EXPOSE 9000
+
+CMD bash -c "rsyslogd && cron -L 1 && php-fpm"
