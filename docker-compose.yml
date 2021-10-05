@@ -14,16 +14,32 @@ services:
         environment:
             - NGINX_HOST=${NGINX_HOST}
         links:
-            - php
+            - php-web
         command: /bin/sh -c "envsubst '$$NGINX_HOST' < /etc/nginx/conf.d/default.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
         restart: always
         depends_on:
-            - php
+            - php-web
             - mysqldb
-    php:
+    php-web:
         image: cenode/privuma-php
         restart: always
-        container_name: privuma_php
+        container_name: privuma_php_web
+        env_file:
+            - ".env"
+        links:
+            - mysqldb
+            - db
+        volumes:
+            - ./docker/etc/php/zz-overrides.ini:/usr/local/etc/php/conf.d/zz-overrides.ini:ro
+            - ./docker/etc/php/zzz-overrides.conf:/etc/php-fpm.d/zzz-overrides.conf:ro
+            - "./web/:/var/www/html/:ro"
+        depends_on:
+            - mysqldb
+            - db
+    php-cron:
+        image: cenode/privuma-php
+        restart: always
+        container_name: privuma_php_cron
         env_file:
             - ".env"
         links:
@@ -65,9 +81,9 @@ services:
         deploy:
             resources:
                 limits:
-                    memory: 1G
+                    memory: 2G
                 reservations:
-                    memory: 1G
+                    memory: 2G
     db:
         image: mariadb
         restart: always

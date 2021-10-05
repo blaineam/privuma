@@ -24,7 +24,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     supervisor \
     htop \
-    rsyslog
+    rsyslog \
+    percona-toolkit
 
 # Fix rsyslog
 RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf    
