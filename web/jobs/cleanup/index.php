@@ -86,9 +86,8 @@ function realFilePath($filePath)
                 }
             }
         }
-    } else {
-        return false;
     }
+    return false;
 }
 
 function findFile($filePath, $blockDupes = false)

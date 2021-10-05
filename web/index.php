@@ -215,21 +215,23 @@ function realFilePath($filePath)
         if (strtolower($ext) == "mp4" || strtolower($ext) == "webm") {
             foreach($files as $file) {
                 $iext = pathinfo($file, PATHINFO_EXTENSION);
-                if (strtolower($ext) == strtolower($ext)) {
+                if (strtolower($ext) == strtolower($iext)) {
                     return $file;
                 }
             }
-        }
+        } else {
+        	
+	        foreach($files as $file) {
+	            $iext = pathinfo($file, PATHINFO_EXTENSION);
+	            if (strtolower($iext) !== "mp4" && strtolower($iext) !== "webm") {
+	                return $file;
+	            }
+	        }
 
-        foreach($files as $file) {
-            $iext = pathinfo($file, PATHINFO_EXTENSION);
-            if (strtolower($iext) !== "mp4" && strtolower($iext) !== "webm") {
-                return $file;
-            }
         }
-    } else {
-        return false;
     }
+     
+     return false;
 }
 
 function getProtectedUrlForMediaPath($path, $use_fallback = false) {
