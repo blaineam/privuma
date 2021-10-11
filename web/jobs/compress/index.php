@@ -25,7 +25,7 @@ function compressVideo($filePath) {
     $newFilePath = dirname($filePath) . DIRECTORY_SEPARATOR . $filename . "---compressed.mp4";
     
     exec("/usr/bin/ffmpeg -threads 1 -hide_banner -loglevel error -y -i '".$filePath."' -c:v h264 -crf 24 -c:a aac -movflags frag_keyframe+empty_moov  -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '".$newFilePath."'", $void, $response);
-    
+
     unset($void);
 
     if($response == 0){
