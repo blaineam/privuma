@@ -2,7 +2,7 @@
 ini_set('mysql.connect_timeout', 3600);
 ini_set('default_socket_timeout', 3600);
 $SYNC_FOLDER = __DIR__ . "/../../data/privuma/";
-$DEBUG = true;
+$DEBUG = false;
 $ffmpegThreadCount = 1;
 $ffmpegPath = "/usr/bin/ffmpeg";
 include(__DIR__.'/../../helpers/dotenv.php');
@@ -69,7 +69,7 @@ function getDirContents($dir, &$results = array())
 {
     global $pdo;
     global $DEBUG;
-    $files = scandir($dir);
+    $files = scan_dir($dir);
     $queue = [];
     foreach ($files as $key => $value) {
         $path = realpath($dir . DIRECTORY_SEPARATOR . $value);

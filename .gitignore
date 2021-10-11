@@ -12,3 +12,4 @@ docker/db/
 **/job.lock
 **/cookies.txt
 **/.DS_Store
+cron.log
