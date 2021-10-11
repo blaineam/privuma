@@ -3,10 +3,10 @@ ini_set('mysql.connect_timeout', 3600);
 ini_set('default_socket_timeout', 3600);
 $SYNC_FOLDER = __DIR__ . "/../../data/privuma/";
 $DEBUG = true;
-$ffmpegThreadCount = 1;
-$ffmpegPath = "/usr/bin/ffmpeg";
+$ffmpegThreadCount = 4;
+$ffmpegPath = "/usr/local/bin/ffmpeg";
 include(__DIR__.'/../../helpers/dotenv.php');
-loadEnv(__DIR__ . '/../../config/.env');
+loadEnv(__DIR__ . '/../../config/mac.env');
 $host = get_env('MYSQL_HOST');
 $db   = get_env('MYSQL_DATABASE');
 $user = get_env('MYSQL_USER');
@@ -143,7 +143,7 @@ function processVideoFile($filePath)
         return;
     }
 
-    exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $filePath . "' -c:v h264 -r 24 -crf 24 -c:a aac -movflags frag_keyframe+empty_moov  -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFilePath . "'", $void, $response2);
+    exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $filePath . "' -c:v h264_videotoolbox -r 24 -crf 24 -c:a aac -movflags frag_keyframe+empty_moov  -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFilePath . "'", $void, $response2);
 
     if ($response == 0 && $response2 == 0) {
         if($DEBUG) {

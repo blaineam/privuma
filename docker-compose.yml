@@ -1,4 +1,4 @@
-version: '3'
+version: '2.2'
 services:
     web:
         build: ./docker/images/nginx
@@ -20,6 +20,8 @@ services:
         depends_on:
             - php-web
             - mysqldb
+        cpu_shares: 256 
+        mem_limit: 128M
     php-web:
         image: cenode/privuma-php
         restart: always
@@ -36,6 +38,8 @@ services:
         depends_on:
             - mysqldb
             - db
+        cpu_shares: 256 
+        mem_limit: 512M
     php-cron:
         image: cenode/privuma-php
         restart: always
@@ -49,15 +53,12 @@ services:
             - ./docker/etc/php/zz-overrides.ini:/usr/local/etc/php/conf.d/zz-overrides.ini:ro
             - ./docker/etc/php/zzz-overrides.conf:/etc/php-fpm.d/zzz-overrides.conf:ro
             - "./web/:/var/www/html/"
+            - "./cron.log:/var/log/cron.log"
         depends_on:
             - mysqldb
             - db
-        deploy:
-            resources:
-                limits:
-                    memory: 2G
-                reservations:
-                    memory: 2G
+        cpu_shares: 64 
+        mem_limit: 2G
     # use remote mysql server via an ssh tunnel
     mysqldb:
         restart: always
@@ -72,18 +73,6 @@ services:
             REMOTE_HOST: 127.0.0.1
             LOCAL_PORT: 3306
             REMOTE_PORT: 3306
-    puppeteer-renderer:
-        restart: always
-        container_name: renderer
-        ports:
-            - '7852:3000'
-        image: zenato/puppeteer-renderer
-        deploy:
-            resources:
-                limits:
-                    memory: 2G
-                reservations:
-                    memory: 2G
     db:
         image: mariadb
         restart: always
@@ -93,12 +82,10 @@ services:
             - MARIADB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
             - MARIADB_USER=${MYSQL_USER}
             - MARIADB_PASSWORD=${MYSQL_PASSWORD}
-        deploy:
-            resources:
-                limits:
-                    memory: 1G
-                reservations:
-                    memory: 1G
+        ports:
+            - "3306:3306"
+        cpu_shares: 256 
+        mem_limit: 1G
         volumes:
             - ./docker/db:/var/lib/mysql
             - ./docker/images/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
