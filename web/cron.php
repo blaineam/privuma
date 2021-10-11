@@ -32,21 +32,28 @@
             continue;
         }
 
-        $cronConfig = json_decode(file_get_contents($cron), true) ?? [ "interval" => 24 * 60 * 60, "lastRan" => $currentTime - 24 * 60 * 60 ];
+        $cronConfig = json_decode(file_get_contents($cron), true) ?? [ "interval" => 24 * 60 * 60];
 
-        if ($currentTime - $cronConfig["lastRan"] < $cronConfig["interval"]) {
+        $lastRan = filemtime($cron) ?? $currentTime - 24 * 60 * 60;
+
+        unset($cronConfig['lastRan']);
+
+        if ($currentTime - $lastRan < $cronConfig["interval"]) {
             if ($DEBUG) {
                 var_dump([
                     "CRON RAN TOO RECENTLY",
                     $currentTime,
-                    $cronConfig["lastRan"],
+                    $lastRan,
                     $cronConfig["interval"]
                 ]);
             }
             continue;
         }
 
-        $cronConfig["lastRan"] = $currentTime;
+        if (!touch($cron, $currentTime)) {
+            echo PHP_EOL. "Cron file's modification date cannot be set, please check the cron.json permissions";
+            continue;
+        };
 
         file_put_contents($cron, json_encode($cronConfig, JSON_PRETTY_PRINT));
 
