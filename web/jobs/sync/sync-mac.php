@@ -1,6 +1,9 @@
 <?php
 ini_set('mysql.connect_timeout', 3600);
 ini_set('default_socket_timeout', 3600);
+
+if ($argc > 1) parse_str(implode('&', array_slice($argv, 1)), $_GET);
+
 $SYNC_FOLDER = __DIR__ . "/../../data/privuma/";
 $DEBUG = true;
 $ffmpegThreadCount = 4;
@@ -86,11 +89,16 @@ function getDirContents($dir, &$results = array())
             }
 
         } else if ($value != "." && $value != ".." && $value != "@eaDir") {
+            if(isset($_GET['albums']) && !in_array(basename($path), explode(',', $_GET['albums']))) {
+                continue;
+            }
+
             getDirContents($path);
         }
     }
 
-    if($DEBUG) {
+
+    if($DEBUG && count($queue) > 0) {
         echo PHP_EOL . "Checking for missed filesystem files for album: " . basename(dirname($queue[0]));
     }
 
@@ -129,7 +137,7 @@ function processVideoFile($filePath)
     $thumbnailPath = dirname($filePath) . DIRECTORY_SEPARATOR . $filename . ".jpg";
     $newFilePath = dirname($filePath) . DIRECTORY_SEPARATOR . $filename . "---compressed.mp4";
     exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -i '" . $filePath . "' -vcodec mjpeg -vframes 1 -an -f rawvideo -ss `$ffmpegPath -threads $ffmpegThreadCount -y -i '" . $filePath . "' 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'` '" . $thumbnailPath . "' > /dev/null", $void, $response);
-    if (strtolower($ext) == "mp4") {
+    if (strtolower($ext) == "mp4" && is_file($newFilePath)) {
 
         if($DEBUG) {
             echo PHP_EOL . "File is the correct format already";
