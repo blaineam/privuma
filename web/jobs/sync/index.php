@@ -5,11 +5,12 @@ ini_set('default_socket_timeout', 3600);
 if ($argc > 1) parse_str(implode('&', array_slice($argv, 1)), $_GET);
 
 $SYNC_FOLDER = __DIR__ . "/../../data/privuma/";
-$DEBUG = false;
-$ffmpegThreadCount = 1;
-$ffmpegPath = "/usr/bin/ffmpeg";
+$DEBUG = PHP_OS_FAMILY == 'Darwin' ? true : false;
+$ffmpegThreadCount = PHP_OS_FAMILY == 'Darwin' ? 4 : 1;
+$ffmpegVideoCodec = PHP_OS_FAMILY == 'Darwin' ? "h264_videotoolbox" : "h264";
+$ffmpegPath =  PHP_OS_FAMILY == 'Darwin' ? "/usr/local/bin/ffmpeg" : "/usr/bin/ffmpeg";
 include(__DIR__.'/../../helpers/dotenv.php');
-loadEnv(__DIR__ . '/../../config/.env');
+loadEnv(PHP_OS_FAMILY == 'Darwin' ? __DIR__ . '/../../config/mac.env' : __DIR__ . '/../../config/.env');
 $host = get_env('MYSQL_HOST');
 $db   = get_env('MYSQL_DATABASE');
 $user = get_env('MYSQL_USER');
@@ -64,6 +65,19 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS  `media` (
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
 function scan_dir($dir) {
+    if ($_GET['order'] == "time" && isset($_GET['reverse'])) {
+        exec("ls -rt '" . $dir . "'", $files);
+        return ($files) ? $files : false;
+    }
+    if ($_GET['order'] == "name" && isset($_GET['reverse'])) {
+        exec("ls -r '" . $dir . "'", $files);
+        return ($files) ? $files : false;
+    }
+    if ($_GET['order'] == "name" && !isset($_GET['reverse'])) {
+        exec("ls '" . $dir . "'", $files);
+        return ($files) ? $files : false;
+    }
+
     exec("ls -t '" . $dir . "'", $files);
     return ($files) ? $files : false;
 }
@@ -150,7 +164,7 @@ function processVideoFile($filePath)
         return;
     }
 
-    exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $filePath . "' -c:v h264 -r 24 -crf 24 -c:a aac -movflags frag_keyframe+empty_moov  -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFilePath . "'", $void, $response2);
+    exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $filePath . "' -c:v " . $ffmpegVideoCodec . " -r 24 -crf 24 -c:a aac -movflags +faststart -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFilePath . "'", $void, $response2);
 
     if ($response == 0 && $response2 == 0) {
         if($DEBUG) {
