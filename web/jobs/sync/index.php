@@ -65,15 +65,15 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS  `media` (
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
 function scan_dir($dir) {
-    if ($_GET['order'] == "time" && isset($_GET['reverse'])) {
+    if (isset($_GET['order']) && $_GET['order'] == "time" && isset($_GET['reverse'])) {
         exec("ls -rt '" . $dir . "'", $files);
         return ($files) ? $files : false;
     }
-    if ($_GET['order'] == "name" && isset($_GET['reverse'])) {
+    if (isset($_GET['order']) && $_GET['order'] == "name" && isset($_GET['reverse'])) {
         exec("ls -r '" . $dir . "'", $files);
         return ($files) ? $files : false;
     }
-    if ($_GET['order'] == "name" && !isset($_GET['reverse'])) {
+    if (isset($_GET['order']) && $_GET['order'] == "name" && !isset($_GET['reverse'])) {
         exec("ls '" . $dir . "'", $files);
         return ($files) ? $files : false;
     }
