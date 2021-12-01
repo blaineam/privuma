@@ -8,13 +8,11 @@ web/data/**
 web/config/*
 !web/config/*-example.*
 web/logs/*.txt
-docker/etc/ssh/id_rsa
-docker/etc/ssh/id_rsa.pub
-docker/etc/ssh/config
+docker/etc/ssh/**
 !docker/etc/ssh/*-example.*
 docker/db/
 **/job.lock
 **/cookies.txt
 **/.DS_Store
-**/artchiver/**
+web/jobs/artchiver/**
 cron.log
