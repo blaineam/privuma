@@ -1,6 +1,8 @@
 **/@eaDir
 @eaDir
 .env
+.auth
+web/.auth
 .gitmodules
 web/data/**
 web/config/*
@@ -14,4 +16,5 @@ docker/db/
 **/job.lock
 **/cookies.txt
 **/.DS_Store
+**/artchiver/**
 cron.log

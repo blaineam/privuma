@@ -6,3 +6,7 @@ Options -Indexes
     Order allow,deny
     Deny from all
 </Files>
+<Files .auth>
+    Order allow,deny
+    Deny from all
+</Files>
