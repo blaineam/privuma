@@ -304,7 +304,8 @@ function getS3UrlForMediaPath($path) {
 
 function getpcloudurlfrommediapath($path) {
     if(!is_file(__DIR__ . "/.auth")) {
-        return "Please visit ?pcloud-auth to use pcloud mirroring.";
+        error_log("Please visit ?pcloud-auth to use pcloud mirroring.");
+        return null;
     }
     try {
         $token = json_decode(file_get_contents(__DIR__."/.auth"), true);
@@ -328,8 +329,11 @@ function getpcloudurlfrommediapath($path) {
             }
         }
 
+        throw new Exception("File with that name not found on pCloud");
+
     } catch (Exception $e) {
-        echo $e->getMessage();
+        error_log($e->getMessage());
+        return null;
     }
 }
 
@@ -430,7 +434,7 @@ function run()
         print(json_encode($photos, JSON_UNESCAPED_SLASHES));
 
     } else if (isset($_GET['media'])) {
-        if ($USE_S3) {
+        if ($USE_S3 && !isset($_GET['direct'])) {
             if(is_base64_encoded($_GET['media'])) {
                 $_GET['media'] = base64_decode($_GET['media']);
             }
@@ -464,7 +468,7 @@ function run()
         }
 
 
-        if (is_dir(__DIR__ . '/lib/pCloud/') && $USE_PCLOUD) {
+        if (is_dir(__DIR__ . '/lib/pCloud/') && $USE_PCLOUD && !isset($_GET['direct'])) {
             if(is_base64_encoded($_GET['media'])) {
                 $_GET['media'] = base64_decode($_GET['media']);
             }
@@ -477,12 +481,11 @@ function run()
 
             $path = $_GET['media'];
             $url = getpcloudurlfrommediapath(str_replace('-----', DIRECTORY_SEPARATOR, $path));
-            $head = get_headers($url);
-            if (strpos($head[0], '200') === FALSE) {
+            if (is_null($url) || strpos(get_headers($url)[0], '200') === FALSE) {
                 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
                 header("Cache-Control: post-check=0, pre-check=0", false);
                 header("Pragma: no-cache");
-                header('Location: ' . getProtectedUrlForMediaPath($path, true));
+                header('Location: ' . getProtectedUrlForMediaPath($path, true) . '&direct');
                 die();
             }
             
