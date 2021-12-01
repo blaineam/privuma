@@ -7,13 +7,15 @@ ini_set('session.gc_maxlifetime', 60 * 60 * 24 * 30);
 date_default_timezone_set('America/Los_Angeles');
 
 session_start();
-
 include(__DIR__.'/helpers/dotenv.php');
-loadEnv(__DIR__ . '/.env');
+loadEnv(__DIR__ . '/config/.env');
 $SYNC_FOLDER = __DIR__ .'/data/privuma';
 $FALLBACK_ENDPOINT = get_env('FALLBACK_ENDPOINT');
 $ENDPOINT = get_env('ENDPOINT');
 $AUTHTOKEN = get_env('AUTHTOKEN');
+$USE_PCLOUD = get_env('USE_PCLOUD');
+$PCLOUD_CLIENT_ID = get_env('PCLOUD_CLIENT_ID');
+$PCLOUD_CLIENT_SECRET = get_env('PCLOUD_CLIENT_SECRET');
 $USE_S3 = get_env('USE_S3');
 $S3_PROXY = get_env('S3_PROXY');
 $AWS_ACCESS = get_env('AWS_ACCESS_KEY');
@@ -25,6 +27,56 @@ $host = get_env('MYSQL_HOST');
 $db   = get_env('MYSQL_DATABASE');
 $user = get_env('MYSQL_USER');
 $pass =  get_env('MYSQL_PASSWORD');
+
+if(is_dir(__DIR__ . '/lib/pCloud/') && $USE_PCLOUD) {
+    require_once(__DIR__ . '/lib/pCloud/autoload.php');
+
+    if(isset($_GET['pcloud-auth'])) {
+        $appKey=$PCLOUD_CLIENT_ID;
+        $appSecret=$PCLOUD_CLIENT_SECRET;
+        $redirect_uri="https://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+
+        if(isset($_GET['code']) && isset($_GET['locationid'])) {
+			$app = new pCloud\App();
+			$app->setAppKey($appKey);
+			$app->setAppSecret($appSecret);
+			$app->setRedirectURI($redirect_uri);
+
+			$token = $app->getTokenFromCode($_GET["code"], $_GET['locationid']);
+
+            if(!file_put_contents(__DIR__."/.auth", json_encode($token))) {
+                ?>
+                <p>Please put the following text in a file at the privuma/web/.auth location</p>
+                <pre>
+                    <?= json_encode($token) ?>
+                </pre>
+                <?php
+            }
+
+            echo "Auth Token Saved. Please use your Privuma endpoint now.";
+            exit();
+        }
+
+
+        try {
+        
+            $app = new pCloud\App();
+            $app->setAppKey($appKey);
+            $app->setAppSecret($appSecret);
+            $app->setRedirectURI($redirect_uri);
+        
+            $codeUrl = $app->getAuthorizeCodeUrl();
+        
+            header('Location: '.$codeUrl);
+            exit();
+        } catch (Exception $e) {
+            echo $e->getMessage();
+        }
+    }
+
+}
+
+
 $charset = 'utf8mb4';
 $port = 3306;
 
@@ -150,7 +202,7 @@ if (session_status() == PHP_SESSION_ACTIVE && isset($_SESSION['SessionAuth']) &&
 } else if (isset($_GET['AuthToken']) && $_GET['AuthToken'] === $AUTHTOKEN) {
     $_SESSION['SessionAuth'] = $_GET['AuthToken'];
     run();
-} else if(checkToken($_GET['token'], $AUTHTOKEN)) {
+} else if(isset($_GET['token']) && checkToken($_GET['token'], $AUTHTOKEN)) {
     run();
 } else {
     die("Malformed Request");
@@ -250,6 +302,37 @@ function getS3UrlForMediaPath($path) {
     return AWS_S3_PresignDownload($AWS_ACCESS, $AWS_SECRET, $AWS_BUCKET, '/data/privuma/'.$path, $AWS_REGION);
 }
 
+function getpcloudurlfrommediapath($path) {
+    if(!is_file(__DIR__ . "/.auth")) {
+        return "Please visit ?pcloud-auth to use pcloud mirroring.";
+    }
+    try {
+        $token = json_decode(file_get_contents(__DIR__."/.auth"), true);
+        $access_token = $token['access_token'];
+        $locationid = $token['locationid'];
+
+        $pCloudApp = new pCloud\App();
+        $pCloudApp->setAccessToken($access_token);
+        $pCloudApp->setLocationId($locationid);
+
+        $pCloudFolder = new pCloud\Folder($pCloudApp);
+
+        $pCloudFile = new pCloud\File($pCloudApp);
+
+
+        $mediaFolderId = $pCloudFolder->listFolder("data/privuma/".dirname($path))["folderid"];
+
+        foreach($pCloudFolder->getContent($mediaFolderId ) as $file) {
+            if($file->name === basename($path)) {
+                return $pCloudFile->getLink($file->fileid);
+            }
+        }
+
+    } catch (Exception $e) {
+        echo $e->getMessage();
+    }
+}
+
 function streamMedia($file) {
     $head = array_change_key_case(get_headers($file, TRUE));
     header('Content-Type: ' . $head['content-type']);
@@ -270,6 +353,7 @@ function run()
     global $AUTHTOKEN;
     global $USE_S3;
     global $S3_PROXY;
+    global $USE_PCLOUD;
 
     if (isset($_GET['album']) || isset($_GET['amp;album'])) {
         $albumName = $_GET['album'] ?? $_GET['amp;album'];
@@ -377,6 +461,32 @@ function run()
                 header('Location: ' . getS3UrlForMediaPath(str_replace('-----', DIRECTORY_SEPARATOR, $_GET['media'])));
                 die();
             }
+        }
+
+
+        if (is_dir(__DIR__ . '/lib/pCloud/') && $USE_PCLOUD) {
+            if(is_base64_encoded($_GET['media'])) {
+                $_GET['media'] = base64_decode($_GET['media']);
+            }
+
+            if ($_GET['media'] === "blank.gif") {
+                header('Content-Type: image/gif');
+                echo base64_decode('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==');
+                return;
+            }
+
+            $path = $_GET['media'];
+            $url = getpcloudurlfrommediapath(str_replace('-----', DIRECTORY_SEPARATOR, $path));
+            $head = get_headers($url);
+            if (strpos($head[0], '200') === FALSE) {
+                header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+                header("Cache-Control: post-check=0, pre-check=0", false);
+                header("Pragma: no-cache");
+                header('Location: ' . getProtectedUrlForMediaPath($path, true));
+                die();
+            }
+            
+            streamMedia($url);
         }
 
         if (strpos($ENDPOINT, $_SERVER['HTTP_HOST']) == false ){
