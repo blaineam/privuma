@@ -14,5 +14,12 @@ docker/db/
 **/job.lock
 **/cookies.txt
 **/.DS_Store
-web/jobs/artchiver/**
+web/jobs/*
+!web/jobs/cleanup
+!web/jobs/compress
+!web/jobs/faststart
+!web/jobs/mirror-copy
+!web/jobs/mirror-db
+!web/jobs/mirror-sync
+!web/jobs/sync
 cron.log
