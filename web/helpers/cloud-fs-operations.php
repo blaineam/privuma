@@ -20,7 +20,11 @@ class Operations {
             return false;
         }
         try {
-            $response = array_column(json_decode($this->execute('lsjson', $directory), true), 'Name');
+            $files = json_decode($this->execute('lsjson', $directory, null, false, true, []), true);
+            usort($files, function($a, $b) {
+                return strtotime(explode('.', $b['ModTime'])[0]) <=> strtotime(explode('.', $a['ModTime'])[0]);
+            });
+            $response = array_column($files, 'Name');
             return ['.','..', ...$response];
         } catch(Exception $e) {
             error_log($e->getMessage());
