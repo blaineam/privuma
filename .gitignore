@@ -22,4 +22,5 @@ web/jobs/*
 !web/jobs/mirror-db
 !web/jobs/mirror-sync
 !web/jobs/sync
+!web/jobs/test
 cron.log
