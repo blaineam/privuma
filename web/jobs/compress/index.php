@@ -1,9 +1,16 @@
 <?php
-$SYNC_FOLDER = __DIR__ . "/../../data/privuma/";
+
+
+require(__DIR__ . '/../../helpers/cloud-fs-operations.php'); 
+
+$ops = new cloudFS\Operations();
+
+$SYNC_FOLDER = "/data/privuma/";
 $DEBUG = false;
 
 function getDirContents($dir, &$results = array()) {
-    $files = scandir($dir);
+    global $ops;
+    $files = $ops->scandir($dir);
 
     foreach ($files as $key => $value) {
         $path = realpath($dir . DIRECTORY_SEPARATOR . $value);
@@ -18,42 +25,72 @@ function getDirContents($dir, &$results = array()) {
 getDirContents($SYNC_FOLDER);
 
 function compressVideo($filePath) {
+    global $ops;
     echo PHP_EOL. "Compressing video: ".$filePath;    
     $ext = pathinfo($filePath, PATHINFO_EXTENSION);
 
     $filename = basename($filePath, ".".$ext);
     $newFilePath = dirname($filePath) . DIRECTORY_SEPARATOR . $filename . "---compressed.mp4";
+
+    $tempFile = $ops->pull($filePath);
+
+    $newFileTemp = tempnam(sys_get_temp_dir(), 'PVMA');
     
-    exec("/usr/bin/ffmpeg -threads 1 -hide_banner -loglevel error -y -i '".$filePath."' -c:v h264 -crf 24 -c:a aac -movflags frag_keyframe+empty_moov  -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '".$newFilePath."'", $void, $response);
+    exec("/usr/bin/ffmpeg -threads 1 -hide_banner -loglevel error -y -i '".$tempFile."' -c:v h264 -crf 24 -c:a aac -movflags frag_keyframe+empty_moov  -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '".$newFileTemp."'", $void, $response);
 
     unset($void);
 
     if($response == 0){
         echo PHP_EOL . "Video Conversion Was Successful for: " . $filename;
+
+        $ops->copy($newFileTemp, $newFilePath, false);
         
-        unlink($filePath);
+        $ops->unlink($filePath);
+
     }
+
+    unlink($tempFile);
+    unlink($newFileTemp);
 }
 
 function compressPhoto($filePath){
+    global $ops;
     $ext = pathinfo($filePath, PATHINFO_EXTENSION);
     echo PHP_EOL."Compressing image: ".$filePath;
     $filename = basename($filePath, ".".$ext);
     $newFilePath = dirname($filePath) . DIRECTORY_SEPARATOR . $filename . "---compressed." . $ext;
 
+    $tempFile = $ops->pull($filePath);
+
+    $newFileTemp = tempnam(sys_get_temp_dir(), 'PVMA');
+
+
     if (strtolower($ext) === "gif") {
-	    exec("/usr//bin/gifsicle --colors=72 -O3 --lossy=100 --color-method=median-cut --resize-fit 1920x1920 '" . $filePath . "' -o '" . $newFilePath . "'", $void, $response);
+	    exec("/usr/bin/gifsicle --colors=72 -O3 --lossy=100 --color-method=median-cut --resize-fit 1920x1920 '" . $tempFile . "' -o '" . $newFileTemp . "'", $void, $response);
 	    unset($void);
 	    if($response == 0 ) {
-		unlink($filePath);
+            $ops->copy($newFileTemp, $newFilePath, false);
+            
+            $ops->unlink($filePath);
 	    }
-    } else {
-	    exec("/usr/local/bin/mogrify -resize 1920x1920 -quality 60 -fuzz 7% '".$filePath."'");
-	    rename($filePath, $newFilePath);
+    } else { 
+        $path = '/usr/local/bin/mogrify';
+        exec($path . ' -h 2>&1', $test, $binNotFound);
+        if($binNotFound !== 0){
+               $path = '/usr/bin/mogrify';
+        }
+	    exec($path . " -resize 1920x1920 -quality 60 -fuzz 7% '".$ext.':'.$tempFile."'");
+	    
+        $ops->copy($tempFile, $newFilePath, false);
+            
+        $ops->unlink($filePath);
     }
+    unlink($tempFile);
+    unlink($newFileTemp);
 }
 
 function processFilePath($filePath) {
+    global $ops;
     global $DEBUG;
     $allowedPhotos = ["BMP", "GIF", "HEIC", "ICO", "JPG", "JPEG", "PNG", "TIFF", "WEBP"];
     if(is_dir($filePath)) {
@@ -84,7 +121,7 @@ function processFilePath($filePath) {
     $filename = basename($filePath, "." . $ext);
     $fileParts = explode('---', $filename);
 
-    if (count($fileParts) < 2 || $fileParts[1] !== md5_file($filePath)) {
+    if (count($fileParts) < 2 || $fileParts[1] !== $ops->md5_file($filePath)) {
         if ($DEBUG) {
             echo  PHP_EOL."Missing or Mismatched MD5 file hash";
         }

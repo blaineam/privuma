@@ -1,6 +1,10 @@
 <?php
 include(__DIR__.'/../../helpers/dotenv.php');
 loadEnv(__DIR__ . '/../../config/.env');
+
+if(!get_env('MIRROR_DB')){
+    exit();
+}
 $host = get_env('MYSQL_HOST');
 $hostExternal = get_env('MYSQL_HOST_EXTERNAL');
 $db   = get_env('MYSQL_DATABASE');

@@ -4,7 +4,10 @@ ini_set('default_socket_timeout', 3600);
 
 if ($argc > 1) parse_str(implode('&', array_slice($argv, 1)), $_GET);
 
-$SYNC_FOLDER = __DIR__ . "/../../data/privuma/";
+require(__DIR__ . '/../../helpers/cloud-fs-operations.php'); 
+
+$ops = new cloudFS\Operations();
+$SYNC_FOLDER = "/data/privuma";
 $DEBUG = PHP_OS_FAMILY == 'Darwin' ? true : false;
 $ffmpegThreadCount = PHP_OS_FAMILY == 'Darwin' ? 4 : 1;
 $ffmpegVideoCodec = PHP_OS_FAMILY == 'Darwin' ? "h264_videotoolbox" : "h264";
@@ -86,11 +89,12 @@ function getDirContents($dir, &$results = array())
 {
     global $pdo;
     global $DEBUG;
-    $files = scan_dir($dir);
+    global $ops;
+    $files = array_diff($ops->scandir($dir), ['.','..']);
     $queue = [];
-    foreach ($files as $key => $value) {
-        $path = realpath($dir . DIRECTORY_SEPARATOR . $value);
-        if (!is_dir($path)) {
+    foreach ($files as $value) {
+        $path = $dir . DIRECTORY_SEPARATOR . $value;
+        if (!$ops->is_dir($path)) {
             $ext = pathinfo($path, PATHINFO_EXTENSION);
             $filename = basename($path, "." . $ext);
             $filenameParts = explode("---", $filename);
@@ -124,7 +128,7 @@ function getDirContents($dir, &$results = array())
         if (count($filenameParts) >= 2) {
             $hash = $filenameParts[1];
         } else {
-            $hash = md5_file($path);
+            $hash = $ops->md5_file($path);
         }
 
         $stmt = $pdo->prepare('SELECT * FROM media WHERE hash = ? AND album = ? AND MATCH(filename) AGAINST("' . trim($filenameParts[0],'-') . '")');
@@ -142,41 +146,56 @@ getDirContents($SYNC_FOLDER);
 function processVideoFile($filePath)
 {
     global $ffmpegThreadCount;
+    global $ffmpegVideoCodec;
     global $ffmpegPath;
     global $pdo;
     global $DEBUG;
+    global $ops;
     $ext = pathinfo($filePath, PATHINFO_EXTENSION);
     $filename = basename($filePath, "." . $ext);
     $thumbnailPath = dirname($filePath) . DIRECTORY_SEPARATOR . $filename . ".jpg";
     $newFilePath = dirname($filePath) . DIRECTORY_SEPARATOR . $filename . "---compressed.mp4";
-    exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -i '" . $filePath . "' -vcodec mjpeg -vframes 1 -an -f rawvideo -ss `$ffmpegPath -threads $ffmpegThreadCount -y -i '" . $filePath . "' 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'` '" . $thumbnailPath . "' > /dev/null", $void, $response);
-    if (strtolower($ext) == "mp4" && is_file($newFilePath)) {
+
+
+    $tempFile = $ops->pull($filePath);
+
+    $newFileTemp = tempnam(sys_get_temp_dir(), 'PVMA');
+    $newThumbTemp = tempnam(sys_get_temp_dir(), 'PVMA');
+
+    exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -i '" . $tempFile . "' -vcodec mjpeg -vframes 1 -an -f rawvideo -ss `$ffmpegPath -threads $ffmpegThreadCount -y -i '" . $tempFile . "' 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'` '" . $newThumbTemp . "' > /dev/null", $void, $response);
+    if (strtolower($ext) == "mp4" && $ops->is_file($newFilePath)) {
 
         if($DEBUG) {
             echo PHP_EOL . "File is the correct format already";
         }
 
-        exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -i '" . $filePath . "' -c copy -map 0 -movflags +faststart'" . $newFilePath . "-fast.mp4" . "'", $void, $response3);
-        if ($response3 == 0 && is_file($newFilePath . "-fast.mp4")) {
-            unlink($newFilePath);
-            rename($newFilePath . "-fast.mp4", $newFilePath);
+        exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -i '" . $tempFile . "' -c copy -map 0 -movflags +faststart'" . $newFileTemp . "'", $void, $response3);
+        if ($response3 == 0 && is_file($newFileTemp)) {
+            $ops->copy($newFileTemp, $newFilePath, false);
         }
+        unlink($tempFile);
+        unlink($newFileTemp);
+        unlink($newThumbTemp);
         return;
     }
 
-    exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $filePath . "' -c:v " . $ffmpegVideoCodec . " -r 24 -crf 24 -c:a aac -movflags +faststart -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFilePath . "'", $void, $response2);
+    exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $tempFile . "' -c:v " . $ffmpegVideoCodec . " -r 24 -crf 24 -c:a aac -movflags +faststart -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFileTemp . "'", $void, $response2);
 
     if ($response == 0 && $response2 == 0) {
         if($DEBUG) {
             echo PHP_EOL . "Video Conversion Was Successful for: " . $filename;
         }
-        exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -i '" . $newFilePath . "' -c copy -map 0 -movflags +faststart '" . $newFilePath . "-fast.mp4'", $void, $response3);
-        if ($response3 == 0 && is_file($newFilePath . "-fast.mp4")) {
-            unlink($newFilePath);
-            rename($newFilePath . "-fast.mp4", $newFilePath);
+
+        $ops->copy($newThumbTemp, $thumbnailPath, false);
+
+        $newFastFileTemp = tempnam(sys_get_temp_dir(), 'PVMA');
+        exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -i '" . $newFileTemp . "' -c copy -map 0 -movflags +faststart '" . $newFastFileTemp . "'", $void, $response3);
+        if ($response3 == 0 && is_file($newFastFileTemp)) {
+            $ops->copy($newFastFileTemp, $newFilePath, false);
+        } else {
+            $ops->copy($newFileTemp, $newFilePath, false);
         }
 
-        unlink($filePath);
     } else {
             echo PHP_EOL."Video Conversion Failed: " . $filename;
             $filenameParts = explode("---", $filename);
@@ -184,10 +203,14 @@ function processVideoFile($filePath)
             $album = basename(dirname($filePath));
             $stmt = $pdo->prepare('SELECT * FROM media WHERE hash = ? AND album = ? AND MATCH(filename) AGAINST("' . trim($filenameParts[0],'-') . '")');
             $stmt->execute([$hash, $album]);
-            unlink($filePath);
-            unlink($thumbnailPath);
-    
+            $ops->unlink($filePath);
+            $ops->unlink($thumbnailPath);
         }
+
+        unlink($newThumbTemp);
+        unlink($newFileTemp);
+        unlink($newFastFileTemp);
+        unlink($tempFile);
     
         unset($void);
 }
@@ -208,6 +231,7 @@ function normalizeString($str = '')
 function realFilePath($filePath)
 {
     global $SYNC_FOLDER;
+    global $ops;
     $ext = pathinfo($filePath, PATHINFO_EXTENSION);
 
     $filename = basename($filePath, "." . $ext);
@@ -218,12 +242,15 @@ function realFilePath($filePath)
 
     $dupe = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
                 
-    $files = glob($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
-    if (is_file($filePath)) {
+    $files = $ops->scandir($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
+    if($files === false) {
+        $files = [];
+    }
+    if ($ops->is_file($filePath)) {
         return $filePath;
-    } else if (is_file($compressedFile)) {
+    } else if ($ops->is_file($compressedFile)) {
         return $compressedFile;
-    } else if (is_file($dupe)) {
+    } else if ($ops->is_file($dupe)) {
         return $dupe;
     } else if (count($files) > 0) {
         if (strtolower($ext) == "mp4" || strtolower($ext) == "webm") {
@@ -254,6 +281,7 @@ function processFilePath($filePath)
     global $conn;
     global $pdo;
     global $DEBUG;
+    global $ops;
     global $SYNC_FOLDER;
 
     /* check if server is alive */
@@ -263,7 +291,7 @@ function processFilePath($filePath)
         exit(1);
     }
 
-    if (is_dir($filePath)) {
+    if ($ops->is_dir($filePath)) {
         return;
     }
 
@@ -279,7 +307,7 @@ function processFilePath($filePath)
         return;
     } else {
         echo PHP_EOL . "Found unsupported " . $ext . " filetype: " . $filePath;
-        unlink($filePath);
+        $ops->unlink($filePath);
         return;
     }
 
@@ -290,12 +318,12 @@ function processFilePath($filePath)
     if (count($fileParts) > 1 && $fileParts[1] !== "compressed" && !empty($fileParts[1])) {
         $hash = $fileParts[1];
     } else {
-        $hash = md5_file($filePath);
+        $hash = $ops->md5_file($filePath);
 
-        if ($hash == 'd41d8cd98f00b204e9800998ecf8427e' || filesize($filePath) == 0) {
+        if ($hash == 'd41d8cd98f00b204e9800998ecf8427e' || $ops->filesize($filePath) == 0) {
             echo PHP_EOL."Found Empty File: " . $filePath;
-            if (is_file($filePath)){
-                unlink($filePath);
+            if ($ops->is_file($filePath)){
+                $ops->unlink($filePath);
             }
             return;
         }
@@ -324,7 +352,7 @@ function processFilePath($filePath)
     if ($original !== false && $fileIsDupe == 0) {
         $originalPath = realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $original["album"] . DIRECTORY_SEPARATOR . $original["filename"]);
 
-        if ($originalPath !== false && filesize($filePath) == filesize($originalPath)) {
+        if ($originalPath !== false && $ops->filesize($filePath) == $ops->filesize($originalPath)) {
             $fileIsDupe = 2;
         }
     }
@@ -339,7 +367,7 @@ function processFilePath($filePath)
         $ext = "mp4";
     }
 
-    if (((in_array(strtoupper($ext), $allowedPhotos) && !is_file(dirname($filePath) . DIRECTORY_SEPARATOR . $filename . ".mp4")) || strtolower($ext) === "mp4")) {
+    if (((in_array(strtoupper($ext), $allowedPhotos) && !$ops->is_file(dirname($filePath) . DIRECTORY_SEPARATOR . $filename . ".mp4")) || strtolower($ext) === "mp4")) {
         $fname = implode('---', $fileParts) . "." . $ext;
         $stmt = $pdo->prepare('SELECT * FROM media WHERE hash = ? AND album = ? AND filename LIKE "' . trim($fileParts[0],'-') . '%"  ORDER BY time ASC');
         $stmt->execute([$hash, $albumName, $fname]);
@@ -359,7 +387,7 @@ function processFilePath($filePath)
         echo PHP_EOL . "Moving: " . $filePath . ",  To: " . $newPath;
     }
 
-    rename($filePath, $newPath);
+    $ops->rename($filePath, $newPath);
 
     if ($fileIsDupe == 0) {
         if($DEBUG) {
@@ -375,7 +403,7 @@ function processFilePath($filePath)
             $thumbnailPath = dirname($newPath) . DIRECTORY_SEPARATOR . $filename . ".jpg";
             $newFilePath = dirname($newPath) . DIRECTORY_SEPARATOR . $filename . ".mp4";
 
-            if (!is_file($thumbnailPath) || !is_file($newFilePath)) {
+            if (!is_file($thumbnailPath) || !$ops->is_file($newFilePath)) {
                 if($DEBUG) {
                     echo PHP_EOL . "File is New Video";
                 }
@@ -391,7 +419,7 @@ function processFilePath($filePath)
         if($DEBUG) {
             echo PHP_EOL . "Replacing contents of: " . $newPath . ", With: " . $relativePath;
         }
-        file_put_contents($newPath, $relativePath);
+        $ops->file_put_contents($newPath, $relativePath);
 
         if (in_array(strtoupper($ext), $allowedVideos)) {
             $extension1 = pathinfo($originalPath, PATHINFO_EXTENSION);
@@ -404,7 +432,7 @@ function processFilePath($filePath)
                 echo PHP_EOL . "Replacing contents of: " . $thumbnailPath . ", With: " . $relativethumbnailPath;
             }
 
-            file_put_contents($thumbnailPath, $relativethumbnailPath);
+            $ops->file_put_contents($thumbnailPath, $relativethumbnailPath);
         }
 
         unset($originalPath);
