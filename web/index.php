@@ -7,9 +7,12 @@ ini_set('session.gc_maxlifetime', 60 * 60 * 24 * 30);
 date_default_timezone_set('America/Los_Angeles');
 
 session_start();
+require(__DIR__ . '/helpers/cloud-fs-operations.php'); 
+
+$ops = new cloudFS\Operations();
 include(__DIR__.'/helpers/dotenv.php');
 loadEnv(__DIR__ . '/config/.env');
-$SYNC_FOLDER = __DIR__ .'/data/privuma';
+$SYNC_FOLDER = '/data/privuma';
 $FALLBACK_ENDPOINT = get_env('FALLBACK_ENDPOINT');
 $ENDPOINT = get_env('ENDPOINT');
 $AUTHTOKEN = get_env('AUTHTOKEN');
@@ -250,40 +253,46 @@ function normalizeString($str = '')
 function realFilePath($filePath)
 {
     global $SYNC_FOLDER;
+    global $ops;
     $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+
     $filename = basename($filePath, "." . $ext);
     $album = normalizeString(basename(dirname($filePath)));
+
     $filePath = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename . "." . $ext;
     $compressedFile = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---compressed." . $ext;
+
     $dupe = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
-    $files = glob($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
-    if (is_file($filePath)) {
+                
+    $files = $ops->scandir($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
+    if($files === false) {
+        $files = [];
+    }
+    if ($ops->is_file($filePath)) {
         return $filePath;
-    } else if (is_file($compressedFile)) {
+    } else if ($ops->is_file($compressedFile)) {
         return $compressedFile;
-    } else if (is_file($dupe)) {
+    } else if ($ops->is_file($dupe)) {
         return $dupe;
     } else if (count($files) > 0) {
         if (strtolower($ext) == "mp4" || strtolower($ext) == "webm") {
-            foreach($files as $file) {
+            foreach ($files as $file) {
                 $iext = pathinfo($file, PATHINFO_EXTENSION);
                 if (strtolower($ext) == strtolower($iext)) {
                     return $file;
                 }
             }
         } else {
-        	
-	        foreach($files as $file) {
-	            $iext = pathinfo($file, PATHINFO_EXTENSION);
-	            if (strtolower($iext) !== "mp4" && strtolower($iext) !== "webm") {
-	                return $file;
-	            }
-	        }
-
+            foreach ($files as $file) {
+                $iext = pathinfo($file, PATHINFO_EXTENSION);
+                if (strtolower($iext) !== "mp4" && strtolower($iext) !== "webm") {
+                    return $file;
+                }
+            }
         }
     }
-     
-     return false;
+
+    return false;
 }
 
 function getProtectedUrlForMediaPath($path, $use_fallback = false) {
@@ -337,14 +346,20 @@ function getpcloudurlfrommediapath($path) {
     }
 }
 
-function streamMedia($file) {
-    $head = array_change_key_case(get_headers($file, TRUE));
-    header('Content-Type: ' . $head['content-type']);
-    header('Content-Length:' . $head['content-length']);
+function streamMedia($file, bool $useOps = false) {
+    global $ops;
     header('Accept-Ranges: bytes');
     header('Content-Disposition: inline');
-    readfile($file);
-
+    if($useOps){
+        header('Content-Type: ' . get_mime_by_filename($file));
+        header('Content-Length:' . $ops->filesize($file));
+        $ops->readfile($file);
+    }else {
+        $head = array_change_key_case(get_headers($file, TRUE));
+        header('Content-Type: ' . $head['content-type']);
+        header('Content-Length:' . $head['content-length']);
+        readfile($file);
+    }
     exit;
 }
 
@@ -358,6 +373,7 @@ function run()
     global $USE_S3;
     global $S3_PROXY;
     global $USE_PCLOUD;
+    global $ops;
 
     if (isset($_GET['album']) || isset($_GET['amp;album'])) {
         $albumName = $_GET['album'] ?? $_GET['amp;album'];
@@ -514,27 +530,24 @@ function run()
         $file = realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath);
         $ext = pathinfo($mediaPath, PATHINFO_EXTENSION);
         $album = explode(DIRECTORY_SEPARATOR, $mediaPath)[0];
-        if (!is_file($file)) {
+        if (!$ops->is_file($file)) {
             die('Media file not found' . $file);
         }
         
         $mediaPath = basename(dirname($file)) . DIRECTORY_SEPARATOR . basename($file);
-        if (strpos($mediaPath, "---dupe") !== false && filesize($mediaPath) <= 512) {
-            $mediaPath = file_get_contents($file);
+        if (strpos($mediaPath, "---dupe") !== false && $ops->filesize($mediaPath) <= 512) {
+            $mediaPath = $ops->file_get_contents($file);
             $file = realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath);
         }
 
-        header('Content-Description: File Transfer');
-        header('Content-Type: ' . mime_content_type($file));
-        header('Content-Disposition: inline; filename=' . basename($file));
-        header('Content-Transfer-Encoding: binary');
-        header('Pragma: public');
-        header('Content-Length: ' . filesize($file));
-        header("X-Accel-Redirect: /data/privuma/" . $mediaPath);
+        if (!$ops->is_file($file)) {
+            die('Media file not found' . $file);
+        }
+        streamMedia($file, true);
+        //header("X-Accel-Redirect: /data/privuma/" . $mediaPath);
 
-        ob_clean();
-        flush();
-        exit;
+        //ob_clean();
+        //flush();
     } else {
         $result = $conn->query('select filename, album, max(time) as time, hash FROM media where dupe = 0 GROUP by album order by time DESC;');
         $realbums = [];
@@ -563,5 +576,32 @@ function run()
         header('Content-Type: application/json');
         print(json_encode($realbums, JSON_UNESCAPED_SLASHES, 10));
         exit();
+    }
+}
+
+
+function get_mime_by_filename($filename) {
+    if (!is_file(__DIR__ .'/mimes.json')) {
+       $db = json_decode(file_get_contents('https://cdn.jsdelivr.net/gh/jshttp/mime-db@master/db.json'), true);
+       $mime_types = [];
+       foreach ($db as $mime => $data) {
+           if (!isset($data['extensions'])) {
+               continue;
+           }
+           foreach ($data['extensions'] as $extension) {
+               $mime_types[$extension] = $mime;
+           }
+       }
+
+       file_put_contents(__DIR__ .'/mimes.json', json_encode($mime_types, JSON_PRETTY_PRINT));
+    }
+
+    $mime_types = json_decode(file_get_contents(__DIR__ .'/mimes.json'), true);
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    if (array_key_exists($ext, $mime_types)) {
+        return $mime_types[$ext];
+    }
+    else {
+        return 'application/octet-stream';
     }
 }

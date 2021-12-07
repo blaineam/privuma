@@ -1,7 +1,10 @@
 <?php
 ini_set('session.cookie_lifetime', 60 * 60 * 24 * 30);
 ini_set('session.gc_maxlifetime', 60 * 60 * 24 * 30);
-$SYNC_FOLDER = __DIR__ . "/../../data/privuma";
+require(__DIR__ . '/../../helpers/cloud-fs-operations.php'); 
+
+$ops = new cloudFS\Operations();
+$SYNC_FOLDER = "/data/privuma";
 include(__DIR__ . '/../../helpers/dotenv.php');
 loadEnv(__DIR__ . '/../../config/.env');
 $host = get_env('MYSQL_HOST');
@@ -57,18 +60,23 @@ function normalizeString($str = '')
 function realFilePath($filePath)
 {
     global $SYNC_FOLDER;
+    global $ops;
     $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+
     $filename = basename($filePath, "." . $ext);
     $album = normalizeString(basename(dirname($filePath)));
+
     $filePath = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename . "." . $ext;
     $compressedFile = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---compressed." . $ext;
+
     $dupe = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
-    $files = glob($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0] . "*.*");
-    if (is_file($filePath)) {
+                
+    $files = $ops->scandir($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
+    if ($ops->is_file($filePath)) {
         return $filePath;
-    } else if (is_file($compressedFile)) {
+    } else if ($ops->is_file($compressedFile)) {
         return $compressedFile;
-    } else if (is_file($dupe)) {
+    } else if ($ops->is_file($dupe)) {
         return $dupe;
     } else if (count($files) > 0) {
         if (strtolower($ext) == "mp4" || strtolower($ext) == "webm") {
@@ -87,6 +95,7 @@ function realFilePath($filePath)
             }
         }
     }
+
     return false;
 }
 
@@ -125,30 +134,30 @@ while ($album = $result->fetch()) {
             $stmt = $pdo->prepare('delete from media where id = ?');
             $stmt->execute([$item['id']]);
 
-            if (is_file($realFilePath)) {
-                unlink($realFilePath);
+            if ($ops->is_file($realFilePath)) {
+                $ops->unlink($realFilePath);
             }
             continue;
         }
 
         if ($item["dupe"] !== 0) {
-            if (!is_file(realFilePath($filePath))) {
+            if (!$ops->is_file(realFilePath($filePath))) {
                 $stmt = $pdo->prepare('delete from media where id = ?');                    /* execute query */
                 echo PHP_EOL . "Deleting db entry for missing dupe file: " . $item['id'] . " FilePath: " . $filePath . " Response: " . $stmt->execute([$item['id']]);
                 continue;
             }
 
-            if (is_file($realFilePath) && filesize($realFilePath) !== false && filesize($realFilePath) <= 512) {
-                $mediaPath = file_get_contents($realFilePath);
+            if ($ops->is_file($realFilePath) && $ops->filesize($realFilePath) !== false && $ops->filesize($realFilePath) <= 512) {
+                $mediaPath = $ops->file_get_contents($realFilePath);
 
-                if (!is_file(realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath))) {
+                if (!$ops->is_file(realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath))) {
                     echo PHP_EOL . "Reference File Destination file not found: " . $mediaPath;
                     $stmt = $pdo->prepare('delete from media where hash = ?');
                     $stmt->execute([$item['hash']]);
-                    unlink($realFilePath);
+                    $ops->unlink($realFilePath);
                 }
 
-                $originalFileSize = filesize(realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath));
+                $originalFileSize = $ops->filesize(realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath));
                 if (strstr($mediaPath, "---dupe") !== false && $originalFileSize  !== false && $originalFileSize <= 512) {
                     echo PHP_EOL . "File References should never have a dupe as its destination and dupes should never be more than 512 bytes:";
                     echo PHP_EOL . "Source: " . basename(dirname($realFilePath)) . DIRECTORY_SEPARATOR . basename($realFilePath);
@@ -156,10 +165,10 @@ while ($album = $result->fetch()) {
                     echo PHP_EOL . "FileSize(Bytes): " . $originalFileSize;
                     $stmt = $pdo->prepare('delete from media where id = ?');
                     $stmt->execute([$item['id']]);
-                    unlink($realFilePath);
+                    $ops->unlink($realFilePath);
 
-                    if (is_file($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath)) {
-                        unlink($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath);
+                    if ($ops->is_file($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath)) {
+                        $ops->unlink($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath);
                     } else {
                         continue;
                     }
@@ -167,7 +176,7 @@ while ($album = $result->fetch()) {
             }
         }
 
-        if (!is_file(realFilePath($filePath))) {
+        if (!$ops->is_file(realFilePath($filePath))) {
             $stmt = $pdo->prepare('delete from media where hash = ?');
             $stmt->execute([$item['hash']]);
             $albumCounts["deletes"]++;
