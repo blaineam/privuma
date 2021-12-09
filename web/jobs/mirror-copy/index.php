@@ -9,7 +9,7 @@ if (!get_env('MIRROR_FILES')){
 
 
 require(__DIR__ . '/../../helpers/cloud-fs-operations.php'); 
-$opsDest = new cloudFS\Operations($RCLONE_DESTINATION, true);
+$opsDest = new cloudFS\Operations($RCLONE_DESTINATION, false);
 function syncEncodedPath($path) {
     global $opsDest;
     global $RCLONE_DESTINATION;
@@ -19,7 +19,7 @@ function syncEncodedPath($path) {
         $childPath = $child['Name'];
         $target = str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR, $path . DIRECTORY_SEPARATOR . $childPath);
         if(!$child['IsDir']) {
-            if(strpos($target, '---compressed.') !== false || strpos($target, '.pdf') !== false){
+            if(strpos($opsDest->decode($target), '---compressed.') !== false || strpos($opsDest->decode($target), '.pdf') !== false){
                 if($opsDest->sync($RCLONE_DESTINATION . $target, $RCLONE_MIRROR . dirname($target), false, false, false,  ['--track-renames --ignore-existing --size-only --transfers 2 --checkers 2  --s3-chunk-size 64M '])){
                     echo PHP_EOL . "synced: " . $target;
                 }
@@ -30,7 +30,7 @@ function syncEncodedPath($path) {
         }
     }
 }
-syncEncodedPath(DIRECTORY_SEPARATOR.'data');
+syncEncodedPath(DIRECTORY_SEPARATOR.'ZGF0YQ==');
 
 $opsDest = new cloudFS\Operations($RCLONE_DESTINATION, false);
 function syncNoEncodePath($path) {
@@ -48,7 +48,7 @@ function syncNoEncodePath($path) {
                }
             }
         }else if($child['IsDir']) {
-            if(!in_array(basename($target), ['data', '#recycle', '@eaDir']) && !(strpos($target, 'jobs') !== false && in_array(basename($target), ['scratch'])) ){
+            if(!in_array(basename($target), ['ZGF0YQ==', 'data', '#recycle', '@eaDir']) && !(strpos($target, 'jobs') !== false && in_array(basename($target), ['scratch'])) ){
                 echo PHP_EOL.$target;
                 syncNoEncodePath($target);
             }
