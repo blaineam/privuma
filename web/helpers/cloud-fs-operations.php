@@ -8,91 +8,112 @@ class Operations {
     private string $rCloneBinaryPath;
     private string $rCloneConfigPath;
     private string $rCloneDestination;
+    private bool   $encoded;
 
-    function __construct(string $rCloneDestination = 'privuma:', string $rCloneBinaryPath = __DIR__.'/../bin/rclone', string $rCloneConfigPath = __DIR__ . '/../config/rclone.conf') {
+    function __construct(string $rCloneDestination = 'privuma:', bool $encoded = true, string $rCloneBinaryPath = '/usr/bin/rclone', string $rCloneConfigPath = __DIR__ . '/../config/rclone/rclone.conf') {
+        exec($rCloneBinaryPath . ' version', $void, $code);
+        if($code !== 0) {
+            $rCloneBinaryPath = __DIR__ . '/../bin/rclone';
+        }
         $this->rCloneBinaryPath = $rCloneBinaryPath;
         $this->rCloneConfigPath = $rCloneConfigPath;
         $this->rCloneDestination = $rCloneDestination;
+        $this->encoded = $encoded;
     }
 
-    public function scandir(string $directory) {
-        if(!$this->is_dir($directory)) {
+    public function scandir(string $directory, bool $objects = false, bool $recursive = false, ?string $filter = null) {
+        if(!$this->is_dir($directory) && $directory !== DIRECTORY_SEPARATOR) {
+            error_log("not a dir");
             return false;
         }
         try {
-            $files = json_decode($this->execute('lsjson', $directory, null, false, true, []), true);
+            $files = json_decode($this->execute('lsjson', $directory, null, false, true, [($recursive !== false) ? '--recursive': '', (!is_null($filter)) ? '--include ' . escapeshellarg($this->encoded ? $this->encode($filter) : $filter): '']), true);
             usort($files, function($a, $b) {
                 return strtotime(explode('.', $b['ModTime'])[0]) <=> strtotime(explode('.', $a['ModTime'])[0]);
             });
-            $response = array_column($files, 'Name');
-            return ['.','..', ...$response];
+            $response = array_map(function($object) {
+                $object['Name'] = ($this->encoded ? $this->decode($object['Name']) : $object['Name']);
+                return $object;
+            }, $files);
+
+            $response = $objects ? $response : ['.','..', array_column($response, 'Name')];
+            return  $response;
         } catch(Exception $e) {
             error_log($e->getMessage());
             return false;
         }
+    }
+
+    private function getPathInfo(string $path, bool $modTime = true, bool $mimetype = true, bool $onlyDirs = false, bool $onlyFiles = false, bool $showMD5 = false) {
+        try {
+            $list = json_decode($this->execute('lsjson', $path, null, false, true, [
+                '--stat',
+                $modTime ? '' : '--no-modtime',
+                $mimetype ? '' : '--no-mimetype',
+                $onlyDirs ? '--dirs-only' : '',
+                $onlyFiles ? '--files-only' : '',
+                $showMD5 ? '--hash --hash-type md5' : '',
+            ]), true);
+        } catch(Exception $e) {
+            error_log($e->getMessage());
+            return false;
+        }
+        return is_null($list) ? false : $list;
     }
 
     public function file_exists(string $file) : bool {
-        try {
-            $list = json_decode($this->execute('lsjson', dirname($file)), true);
-        } catch(Exception $e) {
-            error_log($e->getMessage());
-            return false;
-        }
-        $key = array_search(basename($file), array_column($list, 'Name'));
-        return $key !== false && !$list[$key]['IsDir'];
+        $info = $this->getPathInfo($file, false, false, false, false, false);
+        return $info !== false;
     }
 
     public function is_file(string $file) : bool {
-        try {
-            $list = json_decode($this->execute('lsjson', dirname($file)), true);
-        } catch(Exception $e) {
-            error_log($e->getMessage());
-            return false;
-        }
-        $key = array_search(basename($file), array_column($list, 'Name'));
-        return $key !== false && !$list[$key]['IsDir'];
+        $info = $this->getPathInfo($file, false, false, false, true, false);
+        return $info !== false;
     }
 
     public function filemtime(string $file) {
-        try {
-            $list = json_decode($this->execute('lsjson', dirname($file)), true);
+        $info = $this->getPathInfo($file,true,false,false,true,false);
+        if ($info !== false) {
+            return strtotime(explode('.', $info['ModTime'])[0]);
+        }
+        return false;
+    }
+
+    public function touch(string $file, ?int $time = null, ?int $atime = null) : bool {
+        if(is_null($time)) {
+            $time = time();
+        }
+        if(is_null($atime)) {
+            $atime = $time;
+        }
+        try{
+            $this->execute('touch', $file, null, false, true, ['--timestamp', date("Y-m-d\TH:i:s", $time) ]);
         } catch(Exception $e) {
             error_log($e->getMessage());
             return false;
         }
-        $key = array_search(basename($file), array_column($list, 'Name'));
-        
-        if ($key !== false && !$list[$key]['IsDir']) {
-            return strtotime(explode('.', $list[$key]['ModTime'])[0]);
+        return true;
+    }
+
+    public function mime_content_type(string $file) {
+        $info = $this->getPathInfo($file, false,true,false,true,false);
+        if ($info !== false) {
+            return $info['MimeType'];
         }
         return false;
     }
 
     public function filesize(string $file) {
-        try {
-            $list = json_decode($this->execute('lsjson', dirname($file)), true);
-        } catch(Exception $e) {
-            error_log($e->getMessage());
-            return false;
-        }
-        $key = array_search(basename($file), array_column($list, 'Name'));
-        
-        if ($key !== false && !$list[$key]['IsDir']) {
-            return $list[$key]['Size'];
+        $info = $this->getPathInfo($file, false,false,false,true,false);
+        if ($info !== false) {
+            return strtotime(explode('.', $info['Size'])[0]);
         }
         return false;
     }
 
     public function is_dir(string $directory) : bool {
-        try {
-            $list = json_decode($this->execute('lsjson', dirname($directory)), true);
-        } catch(Exception $e) {
-            error_log($e->getMessage());
-            return false;
-        }
-        $key = array_search(basename($directory), array_column($list, 'Name'));
-        return $key !== false && $list[$key]['IsDir'];
+        $info = $this->getPathInfo($directory,false,false,true,false,false);
+        return $info !== false;
     }
 
     public function mkdir(string $directory) : bool {
@@ -140,9 +161,9 @@ class Operations {
         return false;
     }
 
-    public function public_link(string $path) {   
+    public function public_link(string $path, string $expire = "1d") {   
         if($this->file_exists($path)){
-            return array_pop(explode(PHP_EOL, $this->execute('link', $path, null, false, true, ['--expire', '1d'])));
+            return array_pop(explode(PHP_EOL, $this->execute('link', $path, null, false, true, ['--expire', $expire])));
         }  
         return false;
     }
@@ -225,7 +246,7 @@ class Operations {
         if($this->file_exists($path)){
             $tmpfile = tempnam(sys_get_temp_dir(), 'PVMA');
             try{
-                $this->execute('copyto', $tmpfile, $path, true, false);
+                $this->execute('copyto', $tmpfile, $path, true, false);  
             } catch(Exception $e) {
                 error_log($e->getMessage());
                 return false;
@@ -233,6 +254,123 @@ class Operations {
             return $tmpfile;
         }  
         return false;
+    }
+
+    public function encode(string $path) : string {
+        $ext = pathinfo($path, PATHINFO_EXTENSION);
+        return implode(DIRECTORY_SEPARATOR, array_map(function($part) use ($ext) {
+            return base64_encode(basename($part, '.' . $ext));
+        }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
+    }
+
+    public function decode(string $path) : string {
+        $ext = pathinfo($path, PATHINFO_EXTENSION);
+        return implode(DIRECTORY_SEPARATOR, array_map(function($part) use ($ext) {
+            return base64_decode(basename($part, '.' . $ext));
+        }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
+    }
+
+
+
+
+    public function moveSync(string $source, string $destination, bool $encodeDestination = true, bool $decodeSource = false, bool $preserveBucketName = true, array $flags = []): bool {
+        try{
+            $destinationParts = explode(':', $destination);
+            $sourceParts = explode(':', $source);
+            $target = $destination;
+            if($encodeDestination) {
+                $target = array_shift($destinationParts) 
+                . ':';
+                if($preserveBucketName){
+                    $parts = array_filter(explode(DIRECTORY_SEPARATOR, implode(
+                        ':', $destinationParts)));
+                    $bucket = array_shift($parts);
+                    $target .= $bucket . DIRECTORY_SEPARATOR . $this->encode(implode(DIRECTORY_SEPARATOR, $parts));
+                } else {
+                    $target .= $this->encode(
+                        implode(
+                            ':', 
+                            $destinationParts
+                        )
+                    ) ;
+                }
+            }
+
+            $this->execute(
+                'moveto',
+                $target,
+                (
+                    $decodeSource 
+                    ? array_shift($sourceParts) 
+                    . ':'
+                    . $this->decode(
+                        implode(
+                            ':', 
+                            $sourceParts
+                        )
+                    )
+                    : $source
+                ),
+                false, 
+                false, 
+                $flags
+            );
+        } catch(Exception $e) {
+            var_dump($e->getMessage());
+            return false;
+        }
+        return true;
+    }
+
+
+
+    public function sync(string $source, string $destination, bool $encodeDestination = true, bool $decodeSource = false, bool $preserveBucketName = true, array $flags = []): bool {
+        try{
+            $destinationParts = explode(':', $destination);
+            $sourceParts = explode(':', $source);
+            $target = $destination;
+            if($encodeDestination) {
+                $target = array_shift($destinationParts) 
+                . ':';
+                if($preserveBucketName){
+                    $parts = array_filter(explode(DIRECTORY_SEPARATOR, implode(
+                        ':', $destinationParts)));
+                    $bucket = array_shift($parts);
+                    $target .= $bucket . DIRECTORY_SEPARATOR . $this->encode(implode(DIRECTORY_SEPARATOR, $parts));
+                } else {
+                    $target .= $this->encode(
+                        implode(
+                            ':', 
+                            $destinationParts
+                        )
+                    ) ;
+                }
+            }
+
+            $this->execute(
+                'sync',
+                $target,
+                (
+                    $decodeSource 
+                    ? array_shift($sourceParts) 
+                    . ':'
+                    . $this->decode(
+                        implode(
+                            ':', 
+                            $sourceParts
+                        )
+                    )
+                    : $source
+                ),
+                false, 
+                false, 
+                $flags
+            );
+        } catch(Exception $e) {
+            var_dump($e->getMessage());
+            return false;
+        }
+        return true;
     }
 
     private function execute(string $command, string $destination, ?string $source = null, bool $remoteSource = false, bool $remoteDestination = true, array $flags = [], bool $passthru = false) {
@@ -246,8 +384,8 @@ class Operations {
                 '--log-level ERROR',
                 $command,
                 ...$flags,
-                !is_null($source) ? escapeshellarg(($remoteSource ? $this->rCloneDestination . $source : $source)) : '',
-                $remoteDestination ? escapeshellarg($this->rCloneDestination . $destination) : $destination,
+                !is_null($source) ? escapeshellarg(($remoteSource ? $this->rCloneDestination . ( $this->encoded ? $this->encode($source) : $source): $source)) : '',
+                escapeshellarg($remoteDestination ? $this->rCloneDestination . ( $this->encoded ? $this->encode($destination) : $destination) : $destination),
                 '2>&1'
             ]
             );
@@ -261,7 +399,7 @@ class Operations {
             );
         }
         if($result_code !== 0){
-            throw new Exception('RClone exited with an error code: '. PHP_EOL . implode(PHP_EOL, $response));
+            throw new Exception(PHP_EOL.'RClone exited with an error code: '. (!empty($response) ? PHP_EOL . implode(PHP_EOL, $response) : 'No Response'));
         }
         return implode(PHP_EOL, $response);
     }
