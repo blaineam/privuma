@@ -36,7 +36,7 @@ class Operations {
                 return $object;
             }, $files);
 
-            $response = $objects ? $response : ['.','..', array_column($response, 'Name')];
+            $response = $objects ? $response : ['.','..', ...array_column($response, 'Name')];
             return  $response;
         } catch(Exception $e) {
             error_log($e->getMessage());
