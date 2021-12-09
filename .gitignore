@@ -13,6 +13,7 @@ docker/etc/ssh/**
 docker/db/
 **/job.lock
 **/cookies.txt
+**/config.php
 **/.DS_Store
 web/jobs/*
 !web/jobs/cleanup
@@ -23,4 +24,6 @@ web/jobs/*
 !web/jobs/mirror-sync
 !web/jobs/sync
 !web/jobs/test
+web/jobs/test/testing/
+web/jobs/test/dGVzdGluZw==/
 cron.log

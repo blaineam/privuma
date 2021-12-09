@@ -3,11 +3,36 @@
 require(__DIR__ . '/../../helpers/cloud-fs-operations.php'); 
 
 $ops = new cloudFS\Operations(__DIR__);
-file_put_contents(__DIR__ . '/testing/potatoes/example.txt', 'hello');
+
+if(!is_dir(__DIR__ . '/testing/potatoes')){
+    mkdir(__DIR__ . '/testing/potatoes', 0777, true);
+}
+
+if(!is_dir(__DIR__ . '/testing/frank')){
+    mkdir(__DIR__ . '/testing/frank', 0777, true);
+}
+file_put_contents(__DIR__ . '/testing/potatoes/example.txt', '');
+file_put_contents(__DIR__ . '/testing/potatoes/sample.jpeg', '');
+file_put_contents(__DIR__ . '/testing/frank/fred.mp4', '');
+
 clearstatcache();
+
+
+
+$ops->mkdir('/testing/potatoes', 0777, true);
+$ops->mkdir('/testing/frank', 0777, true);
+$ops->file_put_contents('/testing/potatoes/example.txt', '');
+$ops->file_put_contents('/testing/potatoes/sample.jpeg', '');
+$ops->file_put_contents('/testing/frank/fred.mp4', '');
+
+$scandirTest = scandir(__DIR__ . '/testing');
+sort($scandirTest);
+$scandirTest2 = scandir(__DIR__ . '/testing/potatoes');
+sort($scandirTest2);
+
 $fsTests = [
-    scandir(__DIR__ . '/testing'),
-    scandir(__DIR__ . '/testing/potatoes'),
+    $scandirTest,
+    $scandirTest2,
     is_dir(__DIR__ . '/testing'),
     is_dir(__DIR__ . '/testing/potatoes/example.txt'),
     file_exists(__DIR__ . '/testing/potatoes/example.txt'),
@@ -26,9 +51,16 @@ $fsTests = [
     unlink(__DIR__ . '/testing/potatoes2/sample.jpeg'),
     rmdir(__DIR__ . '/testing/potatoes2'),
 ];
+
+
+$scandirTest3 = $ops->scandir('/testing');
+sort($scandirTest3);
+$scandirTest4 = $ops->scandir('/testing/potatoes');
+sort($scandirTest4);
+
 $opsTests = [
-    $ops->scandir('/testing'),
-    $ops->scandir('/testing/potatoes'),
+    $scandirTest3,
+    $scandirTest4,
     $ops->is_dir('/testing'),
     $ops->is_dir('/testing/potatoes/example.txt'),
     $ops->file_exists('/testing/potatoes/example.txt'),
@@ -48,7 +80,19 @@ $opsTests = [
     $ops->rmdir('/testing/potatoes2'),
 ];
 
+//var_dump([$opsTests, $fsTests]);
+
 $ops->file_put_contents('/testing/potatoes/example.txt', file_get_contents($ops->pull('/testing/potatoes/example.txt')) . ' Friends');
+$encoded = $ops->encode('/testing/potatoes/example.chips.txt');
+$opsEncodingTest = $encoded !== '/testing/potatoes/example.chips.txt' && $ops->decode($encoded) == '/testing/potatoes/example.chips.txt' && pathinfo($encoded, PATHINFO_EXTENSION) == 'txt';
 $opsExclusiveTest = $ops->file_get_contents('/testing/potatoes/example.txt') == 'hello Friends';
 $filemtimeTest = is_int($ops->filemtime('/testing/potatoes/example.txt')) && is_int(filemtime(__DIR__ . '/testing/potatoes/example.txt'));
-echo 'Ops Tests Pass?: ' .( ($opsTests == $fsTests && $opsExclusiveTest && $filemtimeTest) ? 'Yes' : 'No');
+
+var_dump([
+    "file operations tests" => $opsTests == $fsTests,
+    "operations exclusive functionality test" => $opsExclusiveTest,
+    "file modification time test" => $filemtimeTest,
+    "operations encoding test" => $opsEncodingTest
+]);
+
+echo 'Ops Tests Pass?: ' .( ($opsTests == $fsTests && $opsExclusiveTest && $filemtimeTest && $opsEncodingTest) ? 'Yes' : 'No');
