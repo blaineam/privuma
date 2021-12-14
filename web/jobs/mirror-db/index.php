@@ -1,5 +1,5 @@
 <?php
-include(__DIR__.'/../../helpers/dotenv.php');
+require_once(__DIR__.'/../../helpers/dotenv.php');
 loadEnv(__DIR__ . '/../../config/.env');
 
 if(!get_env('MIRROR_DB')){

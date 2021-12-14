@@ -1,13 +1,11 @@
 <?php
-include(__DIR__.'/../../helpers/dotenv.php');
+require_once(__DIR__.'/../../helpers/dotenv.php');
 loadEnv(__DIR__ . '/../../config/.env');
 $RCLONE_MIRROR = get_env('RCLONE_MIRROR');
 $RCLONE_DESTINATION = get_env('RCLONE_DESTINATION');
 if (!get_env('MIRROR_FILES')){
     exit();
 }
-
-
 require(__DIR__ . '/../../helpers/cloud-fs-operations.php'); 
 $opsDest = new cloudFS\Operations($RCLONE_DESTINATION, false);
 function syncEncodedPath($path) {
@@ -25,8 +23,10 @@ function syncEncodedPath($path) {
                 }
             }
         }else if($child['IsDir']) {
-            echo PHP_EOL.$target;
-            syncEncodedPath($target);
+            if(!in_array(basename($opsDest->decode($target)), ['@eaDir'])){
+                echo PHP_EOL.$target;
+                syncEncodedPath($target);
+            }
         }
     }
 }
@@ -42,13 +42,13 @@ function syncNoEncodePath($path) {
         $childPath = $child['Name'];
         $target = str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR, $path . DIRECTORY_SEPARATOR . $childPath);
         if(!$child['IsDir']) {
-            if(strpos($target, '.lock') === false || strpos($target, '.txt') === false){
+            if(strpos($opsDest->decode($target), '.lock') === false || strpos($opsDest->decode($target), '.txt') === false){
                 if($opsDest->sync($RCLONE_DESTINATION . $target, $RCLONE_MIRROR . dirname($target), false, false, false,  ['--track-renames --ignore-existing --size-only --transfers 2 --checkers 2  --s3-chunk-size 64M '])){
                     echo PHP_EOL . "synced: " . $target;
                }
             }
         }else if($child['IsDir']) {
-            if(!in_array(basename($target), ['ZGF0YQ==', 'data', '#recycle', '@eaDir']) && !(strpos($target, 'jobs') !== false && in_array(basename($target), ['scratch'])) ){
+            if(!in_array(basename($opsDest->decode($target)), ['ZGF0YQ==', 'data', '#recycle', '@eaDir']) && !(strpos($opsDest->decode($target), 'jobs') !== false && in_array(basename($opsDest->decode($target)), ['scratch'])) ){
                 echo PHP_EOL.$target;
                 syncNoEncodePath($target);
             }

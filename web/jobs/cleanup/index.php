@@ -5,7 +5,7 @@ require(__DIR__ . '/../../helpers/cloud-fs-operations.php');
 
 $ops = new cloudFS\Operations();
 $SYNC_FOLDER = "/data/privuma";
-include(__DIR__ . '/../../helpers/dotenv.php');
+require_once(__DIR__ . '/../../helpers/dotenv.php');
 loadEnv(__DIR__ . '/../../config/.env');
 $host = get_env('MYSQL_HOST');
 $db   = get_env('MYSQL_DATABASE');
@@ -71,7 +71,7 @@ function realFilePath($filePath)
 
     $dupe = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
                 
-    $files = $ops->scandir($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
+    $files = $ops->glob($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
     if ($ops->is_file($filePath)) {
         return $filePath;
     } else if ($ops->is_file($compressedFile)) {

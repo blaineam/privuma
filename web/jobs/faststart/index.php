@@ -23,6 +23,8 @@ function getDirContents($dir, &$results = array())
                 $tempFile = $ops->pull($path);
 
                 $newFileTemp = tempnam(sys_get_temp_dir(), 'PVMA');
+                rename($newFileTemp, $newFileTemp . '.mp4');
+                $newFileTemp = $newFileTemp  . '.mp4';
                 exec("/usr/bin/ffmpeg -threads 1 -hide_banner -loglevel error -y -i '" . $tempFile . "' -c copy -map 0 -movflags +faststart '" . $newFileTemp . "'", $void, $response);
                 unset($void);
                 if ($response == 0 ) {

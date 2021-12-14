@@ -26,4 +26,6 @@ web/jobs/*
 !web/jobs/test
 web/jobs/test/testing/
 web/jobs/test/dGVzdGluZw==/
+web/dGVzdGluZw==
+web/ZGF0YQ==
 cron.log

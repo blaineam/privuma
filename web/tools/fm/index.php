@@ -1,3 +1,3 @@
 <?php
-include('tinycloudfilemanager.php');
+require_once('tinycloudfilemanager.php');
 ?>

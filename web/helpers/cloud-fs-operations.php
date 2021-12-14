@@ -3,6 +3,8 @@
 namespace cloudFS;
 use Exception;
 
+require_once(__DIR__.'/dotenv.php');
+
 class Operations {
 
     private string $rCloneBinaryPath;
@@ -11,13 +13,17 @@ class Operations {
     private bool   $encoded;
 
     function __construct(string $rCloneDestination = 'privuma:', bool $encoded = true, string $rCloneBinaryPath = '/usr/bin/rclone', string $rCloneConfigPath = __DIR__ . '/../config/rclone/rclone.conf') {
-        exec($rCloneBinaryPath . ' version', $void, $code);
+        exec($rCloneBinaryPath . ' version 2>&1', $void, $code);
         if($code !== 0) {
             $rCloneBinaryPath = __DIR__ . '/../bin/rclone';
         }
+
+
+        loadEnv(__DIR__ . '/../config/.env');
+
         $this->rCloneBinaryPath = $rCloneBinaryPath;
         $this->rCloneConfigPath = $rCloneConfigPath;
-        $this->rCloneDestination = $rCloneDestination;
+        $this->rCloneDestination = get_env('RCLONE_DESTINATION') ?? $rCloneDestination;
         $this->encoded = $encoded;
     }
 
@@ -33,6 +39,7 @@ class Operations {
             });
             $response = array_map(function($object) {
                 $object['Name'] = ($this->encoded ? $this->decode($object['Name']) : $object['Name']);
+                $object['Path'] = ($this->encoded ? $this->decode($object['Path']) : $object['Path']);
                 return $object;
             }, $files);
 
@@ -43,6 +50,32 @@ class Operations {
             return false;
         }
     }
+
+
+    public function glob($pattern): array {
+        $recursiveParts = explode('**', $pattern);
+        $wildcards = explode('*', str_replace('**','',$pattern));
+        if(count($recursiveParts) > 1 ) {
+            $wildcardParent = substr($recursiveParts[0], -1) === DIRECTORY_SEPARATOR ? $recursiveParts[0] : dirname($recursiveParts[0]) . DIRECTORY_SEPARATOR;
+            $scan = $this->scandir($wildcardParent, true, true);
+            if($scan === false) {
+                return [];
+            }
+            $paths = array_column($scan, 'Path');
+        } else {
+            $wildcardParent = substr($wildcards[0], -1) === DIRECTORY_SEPARATOR ? $wildcards[0] : dirname($wildcards[0]) . DIRECTORY_SEPARATOR;
+            $scan = $this->scandir($wildcardParent, true);
+            if($scan === false) {
+                return [];
+            }
+            $paths = array_column($scan, 'Path');
+        }
+
+        return array_values(array_filter(array_map(function($path) use ($pattern, $wildcardParent) {
+            return fnmatch($pattern, $wildcardParent . $path) ? DIRECTORY_SEPARATOR . trim($wildcardParent, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR) : null;
+        }, $paths)));
+    }
+
 
     private function getPathInfo(string $path, bool $modTime = true, bool $mimetype = true, bool $onlyDirs = false, bool $onlyFiles = false, bool $showMD5 = false) {
         try {
@@ -163,7 +196,12 @@ class Operations {
 
     public function public_link(string $path, string $expire = "1d") {   
         if($this->file_exists($path)){
+        	  try{
             return array_pop(explode(PHP_EOL, $this->execute('link', $path, null, false, true, ['--expire', $expire])));
+            } catch(Exception $e) {
+                error_log($e->getMessage());
+                return false;
+            }
         }  
         return false;
     }
@@ -259,14 +297,18 @@ class Operations {
     public function encode(string $path) : string {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         return implode(DIRECTORY_SEPARATOR, array_map(function($part) use ($ext) {
-            return base64_encode(basename($part, '.' . $ext));
+            return implode('*', array_map(function($p) use ($ext) {
+                return base64_encode(basename($p, '.' . $ext));
+            }, explode('*', $part)));
         }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
     }
 
     public function decode(string $path) : string {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         return implode(DIRECTORY_SEPARATOR, array_map(function($part) use ($ext) {
-            return base64_decode(basename($part, '.' . $ext));
+            return implode('*', array_map(function($p) use ($ext) {
+                return base64_decode(basename($p, '.' . $ext));
+            }, explode('*',$part)));
         }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
     }
 
@@ -278,7 +320,7 @@ class Operations {
             $destinationParts = explode(':', $destination);
             $sourceParts = explode(':', $source);
             $target = $destination;
-            if($encodeDestination) {
+            if($encodeDestination && count($destinationParts) > 1) {
                 $target = array_shift($destinationParts) 
                 . ':';
                 if($preserveBucketName){
@@ -294,6 +336,8 @@ class Operations {
                         )
                     ) ;
                 }
+            }else if($encodeDestination) {
+                $target = $this->rCloneDestination . $this->encode(str_replace($this->rCloneDestination,'',$destination));
             }
 
             $this->execute(
@@ -328,8 +372,8 @@ class Operations {
         try{
             $destinationParts = explode(':', $destination);
             $sourceParts = explode(':', $source);
-            $target = $destination;
-            if($encodeDestination) {
+            $target = $destination;  
+            if($encodeDestination && count($destinationParts) > 1) {
                 $target = array_shift($destinationParts) 
                 . ':';
                 if($preserveBucketName){
@@ -345,6 +389,8 @@ class Operations {
                         )
                     ) ;
                 }
+            }else if($encodeDestination) {
+                $target = $this->rCloneDestination . $this->encode(str_replace($this->rCloneDestination,'',$destination));
             }
 
             $this->execute(
@@ -364,7 +410,7 @@ class Operations {
                 ),
                 false, 
                 false, 
-                $flags
+                [...$flags, '--ignore-existing']
             );
         } catch(Exception $e) {
             var_dump($e->getMessage());
@@ -384,8 +430,8 @@ class Operations {
                 '--log-level ERROR',
                 $command,
                 ...$flags,
-                !is_null($source) ? escapeshellarg(($remoteSource ? $this->rCloneDestination . ( $this->encoded ? $this->encode($source) : $source): $source)) : '',
-                escapeshellarg($remoteDestination ? $this->rCloneDestination . ( $this->encoded ? $this->encode($destination) : $destination) : $destination),
+                !is_null($source) ? escapeshellarg(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,($remoteSource ? $this->rCloneDestination . ( $this->encoded ? $this->encode($source) : $source): $source))) : '',
+                escapeshellarg(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR, $remoteDestination ? $this->rCloneDestination . ( $this->encoded ? $this->encode($destination) : $destination) : $destination)),
                 '2>&1'
             ]
             );
@@ -399,7 +445,7 @@ class Operations {
             );
         }
         if($result_code !== 0){
-            throw new Exception(PHP_EOL.'RClone exited with an error code: '. (!empty($response) ? PHP_EOL . implode(PHP_EOL, $response) : 'No Response'));
+            throw new Exception(PHP_EOL.'RClone cmd: "' .$cmd . '" exited with an error code: '. (!empty($response) ? PHP_EOL . implode(PHP_EOL, $response) : 'No Response'));
         }
         return implode(PHP_EOL, $response);
     }
