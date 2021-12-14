@@ -35,6 +35,8 @@ function compressVideo($filePath) {
     $tempFile = $ops->pull($filePath);
 
     $newFileTemp = tempnam(sys_get_temp_dir(), 'PVMA');
+    rename($newFileTemp, $newFileTemp . '.mp4');
+    $newFileTemp = $newFileTemp  . '.mp4';
     
     exec("/usr/bin/ffmpeg -threads 1 -hide_banner -loglevel error -y -i '".$tempFile."' -c:v h264 -crf 24 -c:a aac -movflags frag_keyframe+empty_moov  -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '".$newFileTemp."'", $void, $response);
 

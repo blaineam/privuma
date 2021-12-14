@@ -8,11 +8,11 @@ require(__DIR__ . '/../../helpers/cloud-fs-operations.php');
 
 $ops = new cloudFS\Operations();
 $SYNC_FOLDER = "/data/privuma";
-$DEBUG = PHP_OS_FAMILY == 'Darwin' ? true : false;
+$DEBUG = PHP_OS_FAMILY == 'Darwin' ? true : true;
 $ffmpegThreadCount = PHP_OS_FAMILY == 'Darwin' ? 4 : 1;
 $ffmpegVideoCodec = PHP_OS_FAMILY == 'Darwin' ? "h264_videotoolbox" : "h264";
 $ffmpegPath =  PHP_OS_FAMILY == 'Darwin' ? "/usr/local/bin/ffmpeg" : "/usr/bin/ffmpeg";
-include(__DIR__.'/../../helpers/dotenv.php');
+require_once(__DIR__.'/../../helpers/dotenv.php');
 loadEnv(PHP_OS_FAMILY == 'Darwin' ? __DIR__ . '/../../config/mac.env' : __DIR__ . '/../../config/.env');
 $host = get_env('MYSQL_HOST');
 $db   = get_env('MYSQL_DATABASE');
@@ -159,8 +159,14 @@ function processVideoFile($filePath)
 
     $tempFile = $ops->pull($filePath);
 
+    rename($tempFile, $tempFile . '.mp4');
+    $tempFile = $tempFile . '.mp4';
     $newFileTemp = tempnam(sys_get_temp_dir(), 'PVMA');
+    rename($newFileTemp, $newFileTemp . '.mp4');
+    $newFileTemp = $newFileTemp  . '.mp4';
     $newThumbTemp = tempnam(sys_get_temp_dir(), 'PVMA');
+    rename($newThumbTemp, $newThumbTemp . '.mp4');
+    $newThumbTemp = $newThumbTemp  . '.mp4';
 
     exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -i '" . $tempFile . "' -vcodec mjpeg -vframes 1 -an -f rawvideo -ss `$ffmpegPath -threads $ffmpegThreadCount -y -i '" . $tempFile . "' 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'` '" . $newThumbTemp . "' > /dev/null", $void, $response);
     if (strtolower($ext) == "mp4" && $ops->is_file($newFilePath)) {
@@ -189,6 +195,8 @@ function processVideoFile($filePath)
         $ops->copy($newThumbTemp, $thumbnailPath, false);
 
         $newFastFileTemp = tempnam(sys_get_temp_dir(), 'PVMA');
+        rename($newFastFileTemp, $newFastFileTemp . '.mp4');
+        $newFastFileTemp = $newFastFileTemp  . '.mp4';
         exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -i '" . $newFileTemp . "' -c copy -map 0 -movflags +faststart '" . $newFastFileTemp . "'", $void, $response3);
         if ($response3 == 0 && is_file($newFastFileTemp)) {
             $ops->copy($newFastFileTemp, $newFilePath, false);
@@ -196,6 +204,8 @@ function processVideoFile($filePath)
             $ops->copy($newFileTemp, $newFilePath, false);
         }
 
+
+        unlink($newFastFileTemp);
     } else {
             echo PHP_EOL."Video Conversion Failed: " . $filename;
             $filenameParts = explode("---", $filename);
@@ -209,7 +219,6 @@ function processVideoFile($filePath)
 
         unlink($newThumbTemp);
         unlink($newFileTemp);
-        unlink($newFastFileTemp);
         unlink($tempFile);
     
         unset($void);
@@ -242,7 +251,7 @@ function realFilePath($filePath)
 
     $dupe = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
                 
-    $files = $ops->scandir($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
+    $files = $ops->glob($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
     if($files === false) {
         $files = [];
     }

@@ -144,7 +144,7 @@ $ip_blacklist = array(
 // if User has the customized config file, try to use it to override the default config above
 $config_file = __DIR__.'/config.php';
 if (is_readable($config_file)) {
-    @include($config_file);
+    @require_once($config_file);
 }
 
 require($path_to_cloud_fs_operations);

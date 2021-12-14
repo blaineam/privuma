@@ -19,8 +19,8 @@ clearstatcache();
 
 
 
-$ops->mkdir('/testing/potatoes', 0777, true);
-$ops->mkdir('/testing/frank', 0777, true);
+$ops->mkdir('/testing/potatoes');
+$ops->mkdir('/testing/frank');
 $ops->file_put_contents('/testing/potatoes/example.txt', '');
 $ops->file_put_contents('/testing/potatoes/sample.jpeg', '');
 $ops->file_put_contents('/testing/frank/fred.mp4', '');
@@ -30,9 +30,17 @@ sort($scandirTest);
 $scandirTest2 = scandir(__DIR__ . '/testing/potatoes');
 sort($scandirTest2);
 
+function formatGlobForComparison($glob) {
+    return array_map(function($path) {
+        return basename(dirname($path)) . DIRECTORY_SEPARATOR . basename($path);
+    }, $glob);
+}
+
 $fsTests = [
     $scandirTest,
     $scandirTest2,
+    formatGlobForComparison(glob(__DIR__ . '/testing/**/exam*.*')),
+    formatGlobForComparison(glob(__DIR__ . '/testing/potatoes/*.*')),
     is_dir(__DIR__ . '/testing'),
     is_dir(__DIR__ . '/testing/potatoes/example.txt'),
     file_exists(__DIR__ . '/testing/potatoes/example.txt'),
@@ -61,6 +69,8 @@ sort($scandirTest4);
 $opsTests = [
     $scandirTest3,
     $scandirTest4,
+    formatGlobForComparison($ops->glob('/testing/**/exam*.*')),
+    formatGlobForComparison($ops->glob('/testing/potatoes/*.*')),
     $ops->is_dir('/testing'),
     $ops->is_dir('/testing/potatoes/example.txt'),
     $ops->file_exists('/testing/potatoes/example.txt'),
@@ -80,7 +90,7 @@ $opsTests = [
     $ops->rmdir('/testing/potatoes2'),
 ];
 
-//var_dump([$opsTests, $fsTests]);
+var_dump([$opsTests, $fsTests]);
 
 $ops->file_put_contents('/testing/potatoes/example.txt', file_get_contents($ops->pull('/testing/potatoes/example.txt')) . ' Friends');
 $encoded = $ops->encode('/testing/potatoes/example.chips.txt');

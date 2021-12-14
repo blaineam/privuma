@@ -8,7 +8,7 @@ date_default_timezone_set('America/Los_Angeles');
 
 session_start();
 
-include(__DIR__.'/helpers/dotenv.php');
+require_once(__DIR__.'/helpers/dotenv.php');
 loadEnv(__DIR__ . '/config/.env');
 require(__DIR__ . '/helpers/cloud-fs-operations.php'); 
 
@@ -24,6 +24,7 @@ $FALLBACK_ENDPOINT = get_env('FALLBACK_ENDPOINT');
 $ENDPOINT = get_env('ENDPOINT');
 $AUTHTOKEN = get_env('AUTHTOKEN');
 $RCLONE_DESTINATION = get_env('RCLONE_DESTINATION');
+$USE_X_Accel_Redirect = get_env('USE_X_Accel_Redirect');
 
 $host = get_env('MYSQL_HOST');
 $db   = get_env('MYSQL_DATABASE');
@@ -167,7 +168,7 @@ function realFilePath($filePath)
 
     $dupe = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
                 
-    $files = $ops->scandir($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
+    $files = $ops->glob($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
     if($files === false) {
         $files = [];
     }
@@ -233,6 +234,7 @@ function run()
     global $USE_MIRROR;
     global $ops;
     global $opsMirror;
+    global $USE_X_Accel_Redirect;
 
     if (isset($_GET['album']) || isset($_GET['amp;album'])) {
         $albumName = $_GET['album'] ?? $_GET['amp;album'];
@@ -323,9 +325,18 @@ function run()
             $path = $_GET['media'];
             $realFile = realFilePath(str_replace('-----', DIRECTORY_SEPARATOR, $path));
             $url = $opsMirror->public_link(DIRECTORY_SEPARATOR .'data'.DIRECTORY_SEPARATOR . 'privuma' . DIRECTORY_SEPARATOR . basename(dirname($realFile)).'/'.basename($realFile));
+            if($url === false) {
+            	  header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+                header("Cache-Control: post-check=0, pre-check=0", false);
+                header("Pragma: no-cache");
+                header('Location: ' . getProtectedUrlForMediaPath($path, true) . '&direct');
+                die();
+
+            }
+            
             $headers = get_headers($url, TRUE);
             $head = array_change_key_case($headers);
-            if ($url === false || strpos($headers[0], '200') === FALSE || $head['content-type'] !== $ops->mime_content_type(DIRECTORY_SEPARATOR .'data'.DIRECTORY_SEPARATOR . 'privuma' . DIRECTORY_SEPARATOR . basename(dirname($realFile)).'/'.basename($realFile))) {
+            if ( strpos($headers[0], '200') === FALSE || $head['content-type'] !== $ops->mime_content_type(DIRECTORY_SEPARATOR .'data'.DIRECTORY_SEPARATOR . 'privuma' . DIRECTORY_SEPARATOR . basename(dirname($realFile)).'/'.basename($realFile))) {
                 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
                 header("Cache-Control: post-check=0, pre-check=0", false);
                 header("Pragma: no-cache");
@@ -377,6 +388,10 @@ function run()
 
         if (!$ops->is_file($file)) {
             die('Media file not found' . $file);
+        }
+        
+        if ($USE_X_Accel_Redirect){
+        	header('X-Accel-Redirect: ' . $ops->encode($file));
         }
 
         streamMedia($file, true);
