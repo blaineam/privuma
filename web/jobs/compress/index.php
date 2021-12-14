@@ -63,12 +63,15 @@ function compressPhoto($filePath){
     $newFilePath = dirname($filePath) . DIRECTORY_SEPARATOR . $filename . "---compressed." . $ext;
 
     $tempFile = $ops->pull($filePath);
+    rename($tempFile, $tempFile . '.' . $ext);
+    $tempFile = $tempFile . '.' . $ext;
 
     $newFileTemp = tempnam(sys_get_temp_dir(), 'PVMA');
-
+    rename($newFileTemp, $newFileTemp . '.' . $ext);
+    $newFileTemp = $newFileTemp . '.' . $ext;
 
     if (strtolower($ext) === "gif") {
-	    exec("/usr/bin/gifsicle --colors=72 -O3 --lossy=100 --color-method=median-cut --resize-fit 1920x1920 '" . $tempFile . "' -o '" . $newFileTemp . "'", $void, $response);
+	    exec("/usr/bin/gifsicle --conserve-memory --no-ignore-errors --no-warnings --colors=72 -O3 --lossy=100 --color-method=median-cut --resize-fit 1920x1920 '" . $tempFile . "' -o '" . $newFileTemp . "'", $void, $response);
 	    unset($void);
 	    if($response == 0 ) {
             $ops->copy($newFileTemp, $newFilePath, false);
