@@ -66,6 +66,9 @@ $rclone_bin = '/usr/bin/rclone';
 // use encoded paths
 $encoded_paths = true;
 
+// use encoded paths
+$use_x_accel_redirect = true;
+
 // path to rclone config
 $rclone_config = __DIR__.'/rclone.conf';
 
@@ -879,15 +882,23 @@ if (isset($_GET['st'])) {
     }
     if ($st != '' && $ops->is_file($path . '/' . $st)) {
 
+        global $use_x_accel_redirect;
+
         $cloudUrl = $ops->public_link($path . '/' . $st, '15m');
-
-        $head = array_change_key_case(get_headers($cloudUrl, TRUE));
-        if($head['content-type'] == $ops->mime_content_type($path . '/' . $st)){
-            header('Location: ' . $cloudUrl);
-            exit;
+        if($cloudUrl !== false) {
+            $head = array_change_key_case(get_headers($cloudUrl, TRUE));
+            if($head['content-type'] == $ops->mime_content_type($path . '/' . $st)){
+                header('Location: ' . $cloudUrl);
+                exit;
+            }
+        
+            $ops->remove_public_link($path . '/' . $st);
         }
-
-        $ops->remove_public_link($path . '/' . $st);
+    
+        if (strpos($rclone_destination, ':') === false && $use_x_accel_redirect) {
+            header('X-Accel-Redirect: ' . $ops->encode(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR, $rclone_destination . DIRECTORY_SEPARATOR . $path . '/' . $st)));
+            exit();
+        }
 
         header('Accept-Ranges: bytes');
         header('Content-Disposition: inline');
@@ -2843,9 +2854,24 @@ function fm_download_file($fileLocation, $fileName, $chunkSize  = 1024)
 {
 
     global $ops;
+    global $rclone_destination;
+    global $use_x_accel_redirect;
 
-    header('Location: ' . $ops->public_link($fileLocation, '15m'));
-    exit;
+    $cloudUrl = $ops->public_link($fileLocation, '15m');
+    if($cloudUrl !== false) {
+        $head = array_change_key_case(get_headers($cloudUrl, TRUE));
+        if($head['content-type'] == $ops->mime_content_type($fileLocation)){
+            header('Location: ' . $cloudUrl);
+            exit;
+        }
+    
+        $ops->remove_public_link($fileLocation);
+    }
+
+    if (strpos($rclone_destination, ':') === false && $use_x_accel_redirect) {
+        header('X-Accel-Redirect: ' . $ops->encode(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR, $rclone_destination . DIRECTORY_SEPARATOR . $fileLocation)));
+        exit();
+    }
 
     if (connection_status() != 0)
         return (false);

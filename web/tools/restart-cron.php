@@ -1,6 +1,6 @@
 <?php
 
-exec('pkill -f privuma');
+//exec('pkill -f privuma');
 
 $dir_iterator = new RecursiveDirectoryIterator(__DIR__ .'/../jobs');
 $iterator = new RecursiveIteratorIterator($dir_iterator, RecursiveIteratorIterator::SELF_FIRST);
