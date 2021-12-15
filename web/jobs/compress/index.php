@@ -24,6 +24,40 @@ function getDirContents($dir, &$results = array()) {
 
 getDirContents($SYNC_FOLDER);
 
+
+function generateThumbnail($filePath) {
+
+    global $ops;
+    echo PHP_EOL. "Regenerating video thumbnail: ".$filePath;    
+    $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+
+    $filename = basename($filePath, ".".$ext);
+    $newFilePath = dirname($filePath) . DIRECTORY_SEPARATOR . str_replace('---compressed.', '.', $filename) . ".jpg";
+
+    $tempFile = $ops->pull($filePath);
+
+    $newFileTemp = tempnam(sys_get_temp_dir(), 'PVMA');
+    rename($newFileTemp, $newFileTemp . '.jpg');
+    $newFileTemp = $newFileTemp  . '.jpg';
+    
+    exec("/usr/bin/ffmpeg -threads 1 -hide_banner -loglevel error -y -i '" . $tempFile . "' -vcodec mjpeg -vframes 1 -an -f rawvideo -ss `/usr/bin/ffmpeg -threads 1 -y -i '" . $tempFile . "' 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'` '" . $newFileTemp . "' > /dev/null", $void, $response);
+
+    unset($void);
+
+    if($response == 0){
+        echo PHP_EOL . "Thumbnail generation was successful for: " . $filename;
+
+        $ops->copy($newFileTemp, $newFilePath, false);
+
+    }
+
+    unlink($tempFile);
+    unlink($newFileTemp);
+
+
+}
+
+
 function compressVideo($filePath) {
     global $ops;
     echo PHP_EOL. "Compressing video: ".$filePath;    
@@ -43,7 +77,7 @@ function compressVideo($filePath) {
     unset($void);
 
     if($response == 0){
-        echo PHP_EOL . "Video Conversion Was Successful for: " . $filename;
+        echo PHP_EOL . "Video conversion was successful for: " . $filename;
 
         $ops->copy($newFileTemp, $newFilePath, false);
         
@@ -98,7 +132,7 @@ function processFilePath($filePath) {
     global $ops;
     global $DEBUG;
     $allowedPhotos = ["BMP", "GIF", "HEIC", "ICO", "JPG", "JPEG", "PNG", "TIFF", "WEBP"];
-    if(is_dir($filePath)) {
+    if($ops->is_dir($filePath)) {
         return;
     }
 
@@ -116,6 +150,17 @@ function processFilePath($filePath) {
     }
 
     if (strpos(basename($filePath, "." . $ext), "---compressed") !== false) {
+
+        if(strtolower($ext) === "mp4") {
+            if (!($ops->is_file(basename($filePath, "---compressed." . $ext) . ".jpg") || $ops->is_file(basename($filePath, "." . $ext) . ".jpg"))) {
+                if ($DEBUG) {
+                    echo PHP_EOL. "Missing video thumbnail, regenerating one now";
+                }
+
+                generateThumbnail($filePath);
+            }
+        }
+
         if ($DEBUG) {
 	        echo PHP_EOL. "File has already been compressed, skipping file";
         }
@@ -128,7 +173,7 @@ function processFilePath($filePath) {
 
     if (count($fileParts) < 2 || $fileParts[1] !== $ops->md5_file($filePath)) {
         if ($DEBUG) {
-            echo  PHP_EOL."Missing or Mismatched MD5 file hash";
+            echo  PHP_EOL."Missing or mismatched MD5 file hash";
         }
 
         return;

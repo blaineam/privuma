@@ -61,6 +61,9 @@ $rclone_bin = '/usr/bin/rclone';
 // use encoded paths
 $encoded_paths = true;
 
+// use encoded paths
+$use_x_accel_redirect = true;
+
 // path to rclone config
 $rclone_config = __DIR__.'/rclone.conf';
 
