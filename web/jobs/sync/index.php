@@ -166,9 +166,9 @@ function processVideoFile($filePath)
     $newFileTemp = $newFileTemp  . '.mp4';
     $newThumbTemp = tempnam(sys_get_temp_dir(), 'PVMA');
     rename($newThumbTemp, $newThumbTemp . '.jpg');
-    $newThumbTemp = $newThumbTemp  . '.jpb';
+    $newThumbTemp = $newThumbTemp  . '.jpg';
 
-    exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -i '" . $tempFile . "' -vcodec mjpeg -vframes 1 -an -f rawvideo -ss `$ffmpegPath -threads $ffmpegThreadCount -y -i '" . $tempFile . "' 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'` '" . $newThumbTemp . "' > /dev/null", $void, $response);
+    exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -ss `$ffmpegPath -threads $ffmpegThreadCount -y -i '" . $tempFile . "' 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'` -i '" . $tempFile . "' -vcodec mjpeg -vframes 1 -an -f rawvideo '" . $newThumbTemp . "' > /dev/null", $void, $response);
     if (strtolower($ext) == "mp4" && $ops->is_file($newFilePath)) {
 
         if($DEBUG) {

@@ -24,6 +24,8 @@ web/jobs/*
 !web/jobs/mirror-sync
 !web/jobs/sync
 !web/jobs/test
+!web/jobs/thumbails
+!web/jobs/media-dirs
 web/jobs/test/testing/
 web/jobs/test/dGVzdGluZw==/
 web/dGVzdGluZw==

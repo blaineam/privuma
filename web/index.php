@@ -26,6 +26,10 @@ $AUTHTOKEN = get_env('AUTHTOKEN');
 $RCLONE_DESTINATION = get_env('RCLONE_DESTINATION');
 $USE_X_Accel_Redirect = get_env('USE_X_Accel_Redirect');
 
+// header("Content-Type: application/json");
+// echo json_encode(array_column(get_data_dirs(dirname($SYNC_FOLDER)),'Path'), JSON_PRETTY_PRINT+JSON_UNESCAPED_SLASHES);
+// die();
+
 $host = get_env('MYSQL_HOST');
 $db   = get_env('MYSQL_DATABASE');
 $user = get_env('MYSQL_USER');
@@ -115,33 +119,6 @@ if (session_status() == PHP_SESSION_ACTIVE && isset($_SESSION['SessionAuth']) &&
     die("Malformed Request");
 }
 
-function getDirContents($dir, &$results = array())
-{
-    $files = scandir($dir);
-    foreach ($files as $key => $value) {
-        $path = realpath($dir . DIRECTORY_SEPARATOR . $value);
-        if (!is_dir($path)) {
-            $results[] = $path;
-        }
-    }
-
-    return $results;
-}
-
-function getDirs($dir, &$results = array())
-{
-    $files = scandir($dir);
-    foreach ($files as $key => $value) {
-        $path = realpath($dir . DIRECTORY_SEPARATOR . $value);
-        if (!is_dir($path)) {
-        } else if (is_dir($path) && $value != "." && $value != "..") {
-            $results[] = $path;
-        }
-    }
-
-    return $results;
-}
-
 function normalizeString($str = '')
 {
     //remove accents
@@ -154,21 +131,24 @@ function normalizeString($str = '')
     return preg_replace('/[^a-zA-Z0-9_\-\s\(\)~]+/', '', $str);
 }
 
-function realFilePath($filePath)
+function realFilePath($filePath, $dirnamed_sync_folder = false)
 {
     global $SYNC_FOLDER;
     global $ops;
+
+    $root = $dirnamed_sync_folder ? dirname($SYNC_FOLDER) : $SYNC_FOLDER;
+
     $ext = pathinfo($filePath, PATHINFO_EXTENSION);
 
     $filename = basename($filePath, "." . $ext);
     $album = normalizeString(basename(dirname($filePath)));
 
-    $filePath = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename . "." . $ext;
-    $compressedFile = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---compressed." . $ext;
+    $filePath = $root . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename . "." . $ext;
+    $compressedFile = $root . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---compressed." . $ext;
 
-    $dupe = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
+    $dupe = $root . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
                 
-    $files = $ops->glob($SYNC_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
+    $files = $ops->glob($root . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
     if($files === false) {
         $files = [];
     }
@@ -234,6 +214,7 @@ function run()
     global $USE_MIRROR;
     global $ops;
     global $opsMirror;
+    global $RCLONE_MIRROR;
     global $USE_X_Accel_Redirect;
 
     if (isset($_GET['album']) || isset($_GET['amp;album'])) {
@@ -302,6 +283,46 @@ function run()
             unset($photoPath);
         }
 
+        if(empty($media)) {
+            $albumFSPath = str_replace('-----', DIRECTORY_SEPARATOR, $albumName);
+            $scan = $ops->scandir(dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath, false, false, [...array_map(function($ext) {
+                return '+ *.' . $ext;
+            }, ['mp4','jpg','jpeg','gif','png','heif']), '-**']);
+            if($scan === false) {
+                $scan = [];
+            }
+            natcasesort($scan);
+            foreach(array_diff($scan, ['.','..']) as $file) {
+                $filePath = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $file;
+
+                $ext = pathinfo($file, PATHINFO_EXTENSION);
+                $filename = basename($file, "." . $ext);
+
+                $videoPathTest = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename .".mp4";
+                $thumbailPathTest = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename .".jpg";
+                $hash = md5(dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename);
+                $fileParts = explode('---', basename($filePath, "." . $ext));
+                $relativePath = str_replace(DIRECTORY_SEPARATOR, '-----', $filePath);
+
+                if (strtolower($ext) === "mp4") {
+                    $videoPath = (getProtectedUrlForMediaPath($relativePath));
+                    $relativeThumbnail = str_replace(DIRECTORY_SEPARATOR, '-----', $thumbailPathTest);
+                    $photoPath = (getProtectedUrlForMediaPath($relativeThumbnail));
+                } else if($ops->is_file($videoPathTest)) {
+                    $relativeVideo = str_replace(DIRECTORY_SEPARATOR, '-----', $videoPathTest);
+                    $videoPath = (getProtectedUrlForMediaPath($relativeVideo));
+                    $photoPath = (getProtectedUrlForMediaPath($relativePath));
+                } else {
+                    unset($videoPath);
+                    $photoPath = (getProtectedUrlForMediaPath($relativePath));
+                }
+
+                $mime = (isset($videoPath)) ? "video/mp4": ((strtolower($ext) === "gif") ? "image/gif" :  ((strtolower($ext) === "png") ? "image/png" : "image/jpg")) ;
+
+                $media[$hash] = array("img" => $photoPath ?? "", "updated" => 1, "video" => $videoPath ?? "", "id" => (string)$hash, "filename" => (string)$fileParts[0], "mime" => (string)$mime, "epoch" => 1);
+            }
+        }
+
         $media = array_values($media);
         $photos = array("gtoken" => urlencode($ENDPOINT."...".$AUTHTOKEN), "gdata" => $media);
         header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
@@ -311,20 +332,36 @@ function run()
         print(json_encode($photos, JSON_UNESCAPED_SLASHES));
 
     } else if (isset($_GET['media'])) {
-        if($USE_MIRROR && !isset($_GET['direct'])){
-            if(is_base64_encoded($_GET['media'])) {
-                $_GET['media'] = base64_decode($_GET['media']);
-            }
+        if(is_base64_encoded($_GET['media'])) {
+            $_GET['media'] = base64_decode($_GET['media']);
+        }
 
-            if ($_GET['media'] === "blank.gif") {
-                header('Content-Type: image/gif');
-                echo base64_decode('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==');
-                return;
-            }
+        if ($_GET['media'] === "blank.gif") {
+            header('Content-Type: image/gif');
+            echo base64_decode('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==');
+            return;
+        }
 
+        $mediaPath = str_replace('..', '', str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,str_replace('-----', DIRECTORY_SEPARATOR, $_GET['media'])));
+
+        if($USE_X_Accel_Redirect && is_file(__DIR__ .  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR))){
+            header('Content-Type: ' . mime_content_type(__DIR__ .  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR)));
+        	header('X-Accel-Redirect: ' . DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR));
+            die();
+        }
+
+        if($USE_MIRROR && strpos($RCLONE_MIRROR, ':') !== false && !isset($_GET['direct'])){
             $path = $_GET['media'];
             $realFile = realFilePath(str_replace('-----', DIRECTORY_SEPARATOR, $path));
-            $url = $opsMirror->public_link(DIRECTORY_SEPARATOR .'data'.DIRECTORY_SEPARATOR . 'privuma' . DIRECTORY_SEPARATOR . basename(dirname($realFile)).'/'.basename($realFile));
+
+            $mediaPath = str_replace('..', '', str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,str_replace('-----', DIRECTORY_SEPARATOR, $_GET['media'])));
+            $file = realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath);
+    
+            if($file === false) {
+                $file =  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR);
+            }
+
+            $url = $opsMirror->public_link($file);
             if($url === false) {
             	  header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
                 header("Cache-Control: post-check=0, pre-check=0", false);
@@ -372,8 +409,12 @@ function run()
             return;
         }
 
-        $mediaPath = str_replace('-----', DIRECTORY_SEPARATOR, $_GET['media']);
         $file = realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath);
+
+        if($file === false) {
+            $file =  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR);
+        }
+
         $ext = pathinfo($mediaPath, PATHINFO_EXTENSION);
         $album = explode(DIRECTORY_SEPARATOR, $mediaPath)[0];
         if (!$ops->is_file($file)) {
@@ -392,12 +433,25 @@ function run()
         
         if ($USE_X_Accel_Redirect){
         	header('X-Accel-Redirect: ' . $ops->encode($file));
+            die();
         }
 
         streamMedia($file, true);
     } else {
-        $result = $conn->query('select filename, album, max(time) as time, hash FROM media where dupe = 0 GROUP by album order by time DESC;');
         $realbums = [];
+
+        foreach(get_data_dirs(dirname($SYNC_FOLDER)) as $folderObj) {
+            if($folderObj['HasThumbnailJpg']) {
+                $ext = pathinfo($folderObj["Name"], PATHINFO_EXTENSION);
+                $hash = md5(dirname($folderObj['Path']) . DIRECTORY_SEPARATOR . basename($folderObj['Path'], "." . $ext));
+                $photoPath = $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=".urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path']) . "-----" . "1.jpg"));
+            } else {
+                $photoPath = $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=blank.gif";;
+                $hash = "checkCache";
+            }
+            $realbums[] = array("id" => (string)urlencode(base64_encode(implode('-----', explode(DIRECTORY_SEPARATOR, $folderObj['Path'])))), "updated" => (string)(strtotime(explode('.', $folderObj['ModTime'])[0])*1000), "title" => (string)implode('---', explode(DIRECTORY_SEPARATOR, $folderObj['Path'])), "img" => (string)$photoPath , "mediaId" => (string)$hash);
+        }
+        $result = $conn->query('select filename, album, max(time) as time, hash FROM media where dupe = 0 GROUP by album order by time DESC;');
         while ($album = $result->fetch_assoc()) {
             $ext = pathinfo($album["filename"], PATHINFO_EXTENSION);
             $filename = basename($album["filename"], "." . $ext);
@@ -426,6 +480,35 @@ function run()
     }
 }
 
+function get_data_dirs($dir)
+{
+    global $SYNC_FOLDER;
+    global $ops;
+    $scans = $ops->scandir($dir, true, true, ["+.mediadir", "+1.jpg", "-" . basename($SYNC_FOLDER) . "/**", "-@eaDir/**", "-**"], false, true);
+    $paths = array_column($scans, "Path");
+    array_multisort ($paths, SORT_NATURAL, $scans);
+    $output = [];
+    foreach($scans as $scan) {
+
+        if($scan['Name'] === ".mediadir") {
+            $scan['Path'] = dirname($scan['Path']);
+        }
+
+        if(!isset($output[$scan['Path']]['HasThumbnailJpg'])){
+            $scan['HasThumbnailJpg'] = false;
+        }
+        if($scan['Name'] === "1.jpg") {
+            $scan['Path'] = dirname($scan['Path']);
+            $scan['HasThumbnailJpg'] = true;
+        }
+
+        if(isset($output[rtrim(dirname($scan['Path']), DIRECTORY_SEPARATOR)])) {
+            unset($output[rtrim(dirname($scan['Path']), DIRECTORY_SEPARATOR)]);
+        }
+        $output[$scan['Path']] = $scan;
+    }
+    return $output;
+}
 
 function get_mime_by_filename($filename) {
     if (!is_file(__DIR__ .'/mimes.json')) {

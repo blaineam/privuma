@@ -23,6 +23,9 @@ $conn = new mysqli(
     $port
 );
 
+
+exec('find ' . dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . ' -type d -name ' . $ops->encode('@eaDir') . ' -prune -exec rm -rf {} \;');
+
 // Check connection
 if ($conn->connect_error) {
     echo "DB Connection failed: " . $conn->connect_error;

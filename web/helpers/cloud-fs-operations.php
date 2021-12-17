@@ -27,13 +27,21 @@ class Operations {
         $this->encoded = $encoded;
     }
 
-    public function scandir(string $directory, bool $objects = false, bool $recursive = false, ?string $filter = null) {
+    public function scandir(string $directory, bool $objects = false, bool $recursive = false, ?array $filters = null, $dirsOnly = false, $filesOnly = false) {
         if(!$this->is_dir($directory) && $directory !== DIRECTORY_SEPARATOR) {
             error_log("not a dir");
             return false;
         }
         try {
-            $files = json_decode($this->execute('lsjson', $directory, null, false, true, [($recursive !== false) ? '--recursive': '', (!is_null($filter)) ? '--include ' . escapeshellarg($this->encoded ? $this->encode($filter) : $filter): '']), true);
+            $filter = null;
+            if(is_array($filters)) {
+                $filter = "";
+                foreach($filters as $internal_filter) {
+                    $filterType = substr($internal_filter, 0, 1) === "-" ? "--filter '- ": "--filter '+ ";
+                    $filter .= " " . $filterType . ($this->encoded ? $this->encode(ltrim($internal_filter, "+- ")) : ltrim($internal_filter, "+- ")) . "'";
+                }
+            }
+            $files = json_decode($this->execute('lsjson', $directory, null, false, true, [($dirsOnly ? '--dirs-only' : '' ),($filesOnly ? '--files-only' : '' ), ($recursive !== false) ? '--recursive': '', (!is_null($filter)) ? $filter : '']), true);
             usort($files, function($a, $b) {
                 return strtotime(explode('.', $b['ModTime'])[0]) <=> strtotime(explode('.', $a['ModTime'])[0]);
             });
@@ -169,6 +177,7 @@ class Operations {
             $this->execute('copyto', $path, $tmpfile);
         } catch(Exception $e) {
             error_log($e->getMessage());
+            unlink($tmpfile);
             return false;
         }
         unlink($tmpfile);
@@ -286,6 +295,7 @@ class Operations {
             try{
                 $this->execute('copyto', $tmpfile, $path, true, false);  
             } catch(Exception $e) {
+                unlink($tmpfile);
                 error_log($e->getMessage());
                 return false;
             }
@@ -298,7 +308,10 @@ class Operations {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         return implode(DIRECTORY_SEPARATOR, array_map(function($part) use ($ext) {
             return implode('*', array_map(function($p) use ($ext) {
-                return base64_encode(basename($p, '.' . $ext));
+                if(strpos($p, '.') !== 0){
+                    return base64_encode(basename($p, '.' . $ext));
+                }
+                return "";
             }, explode('*', $part)));
         }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
     }
@@ -307,7 +320,10 @@ class Operations {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         return implode(DIRECTORY_SEPARATOR, array_map(function($part) use ($ext) {
             return implode('*', array_map(function($p) use ($ext) {
-                return base64_decode(basename($p, '.' . $ext));
+                if(strpos($p, '.') !== 0){
+                    return base64_decode(basename($p, '.' . $ext));
+                }
+                return "";
             }, explode('*',$part)));
         }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
     }

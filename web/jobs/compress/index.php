@@ -10,11 +10,12 @@ $DEBUG = false;
 
 function getDirContents($dir, &$results = array()) {
     global $ops;
-    $files = $ops->scandir($dir);
+    $files = $ops->scandir($dir, true);
 
-    foreach ($files as $key => $value) {
-        $path = realpath($dir . DIRECTORY_SEPARATOR . $value);
-        if (!is_dir($path)) {
+    foreach ($files as $obj) {
+        $value = $obj['Name'];
+        $path = $dir . DIRECTORY_SEPARATOR . $value;
+        if (!$obj['IsDir']) {
             processFilePath($path);
         } else if ($value != "." && $value != "..") {
             getDirContents($path);
@@ -40,7 +41,7 @@ function generateThumbnail($filePath) {
     rename($newFileTemp, $newFileTemp . '.jpg');
     $newFileTemp = $newFileTemp  . '.jpg';
     
-    exec("/usr/bin/ffmpeg -threads 1 -hide_banner -loglevel error -y -i '" . $tempFile . "' -vcodec mjpeg -vframes 1 -an -f rawvideo -ss `/usr/bin/ffmpeg -threads 1 -y -i '" . $tempFile . "' 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'` '" . $newFileTemp . "' > /dev/null", $void, $response);
+    exec("/usr/bin/ffmpeg -threads 1 -hide_banner -loglevel error -y -ss `/usr/bin/ffmpeg -threads 1 -y -i '" . $tempFile . "' 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'` -i '" . $tempFile . "' -vcodec mjpeg -vframes 1 -an -f rawvideo '" . $newFileTemp . "' > /dev/null", $void, $response);
 
     unset($void);
 
