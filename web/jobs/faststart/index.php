@@ -9,10 +9,12 @@ $dest = '/data/privuma';
 function getDirContents($dir, &$results = array())
 {
     global $ops;
-    $files = $ops->scandir($dir);
-    foreach ($files as $value) {
-        $path = realpath($dir . DIRECTORY_SEPARATOR . $value);
-        if (!is_dir($path)) {
+    $files = $ops->scandir($dir, true);
+
+    foreach ($files as $obj) {
+        $value = $obj['Name'];
+        $path = $dir . DIRECTORY_SEPARATOR . $value;
+        if (!$obj['IsDir']) {
             $ext = pathinfo($path, PATHINFO_EXTENSION);
             $filename = basename($path, "." . $ext);
             $filenameParts = explode("---", $filename);
