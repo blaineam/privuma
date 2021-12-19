@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  webdav:
+    build: .
+    environment:
+      - WEBDAV_USERNAME=admin
+      - WEBDAV_PASSWORD=admin
+      - SKIP_PERMISSIONS_FIX=no
+    volumes:
+      - public:/var/webdav/public
+      - data:/var/webdav/data
+    ports:
+      - 8123:80
+
+volumes:
+  public:
+  data:

@@ -45,3 +45,41 @@ function getDirContents($dir, &$results = array()) {
 }
 
 getDirContents($SYNC_FOLDER);
+
+echo PHP_EOL . "marked mediadirs with dot files";
+
+
+function get_data_dirs($dir)
+{
+    global $SYNC_FOLDER;
+    global $ops;
+    $scans = $ops->scandir($dir, true, true, ["+.mediadir", "+1.jpg", "-" . basename($SYNC_FOLDER) . "/**", "-@eaDir/**", "-**"], false, true);
+    $paths = array_column($scans, "Path");
+    array_multisort ($paths, SORT_NATURAL, $scans);
+    $output = [];
+    foreach($scans as $scan) {
+
+        if($scan['Name'] === ".mediadir") {
+            $scan['Path'] = dirname($scan['Path']);
+        }
+
+        if(!isset($output[$scan['Path']]['HasThumbnailJpg'])){
+            $scan['HasThumbnailJpg'] = false;
+        }
+        if($scan['Name'] === "1.jpg") {
+            $scan['Path'] = dirname($scan['Path']);
+            $scan['HasThumbnailJpg'] = true;
+        }
+
+        if(isset($output[rtrim(dirname($scan['Path']), DIRECTORY_SEPARATOR)])) {
+            unset($output[rtrim(dirname($scan['Path']), DIRECTORY_SEPARATOR)]);
+        }
+        $output[$scan['Path']] = $scan;
+    }
+    return $output;
+}
+
+file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . "mediadirs.json", json_encode(get_data_dirs($SYNC_FOLDER)));
+
+echo PHP_EOL . "mediadirs cache saved to : " . __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . "mediadirs.json";
+
