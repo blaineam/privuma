@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+  sut:
+    image: ${DOCKER_IMAGE}
+    networks: [sut]
+    container_name: sut
+    environment:
+      - WEBDAV_USERNAME=admin
+      - WEBDAV_PASSWORD=admin
+      - SKIP_PERMISSIONS_FIX=no
+  
+  tester:
+    build: test/
+    networks: [sut]
+    container_name: tester
+    depends_on:
+      - sut
+  
+networks:
+  sut:

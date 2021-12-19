@@ -21,7 +21,7 @@ services:
             - php-web
             - mysqldb
         cpu_shares: 256
-        mem_limit: 128M
+        mem_limit: 256M
     php-web:
         image: cenode/privuma-php
         restart: always
@@ -39,7 +39,7 @@ services:
             - mysqldb
             - db
         cpu_shares: 256
-        mem_limit: 512M
+        mem_limit: 1G
     php-cron:
         image: cenode/privuma-php
         restart: always
@@ -89,6 +89,20 @@ services:
         volumes:
             - ./docker/db:/var/lib/mysql
             - ./docker/images/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
+    webdav:
+        build: ./docker/images/webdav
+        container_name: privuma_webdav
+        volumes:
+            - "./web/ZGF0YQ==:/var/webdav/public"
+        ports:
+            - "8787:80"
+        environment:
+            - WEBDAV_USERNAME=${WEBDAV_USERNAME}
+            - WEBDAV_PASSWORD=${WEBDAV_PASSWORD}
+            - SKIP_PERMISSIONS_FIX=yes
+        restart: always
+        cpu_shares: 256
+        mem_limit: 256M
     adminer:
         image: adminer
         restart: always

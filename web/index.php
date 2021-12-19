@@ -440,7 +440,7 @@ function run()
     } else {
         $realbums = [];
 
-        foreach(get_data_dirs(dirname($SYNC_FOLDER)) as $folderObj) {
+        foreach(json_decode(file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . "mediadirs.json"), true) as $folderObj) {
             if($folderObj['HasThumbnailJpg']) {
                 $ext = pathinfo($folderObj["Name"], PATHINFO_EXTENSION);
                 $hash = md5(dirname($folderObj['Path']) . DIRECTORY_SEPARATOR . basename($folderObj['Path'], "." . $ext));
@@ -478,36 +478,6 @@ function run()
         print(json_encode($realbums, JSON_UNESCAPED_SLASHES, 10));
         exit();
     }
-}
-
-function get_data_dirs($dir)
-{
-    global $SYNC_FOLDER;
-    global $ops;
-    $scans = $ops->scandir($dir, true, true, ["+.mediadir", "+1.jpg", "-" . basename($SYNC_FOLDER) . "/**", "-@eaDir/**", "-**"], false, true);
-    $paths = array_column($scans, "Path");
-    array_multisort ($paths, SORT_NATURAL, $scans);
-    $output = [];
-    foreach($scans as $scan) {
-
-        if($scan['Name'] === ".mediadir") {
-            $scan['Path'] = dirname($scan['Path']);
-        }
-
-        if(!isset($output[$scan['Path']]['HasThumbnailJpg'])){
-            $scan['HasThumbnailJpg'] = false;
-        }
-        if($scan['Name'] === "1.jpg") {
-            $scan['Path'] = dirname($scan['Path']);
-            $scan['HasThumbnailJpg'] = true;
-        }
-
-        if(isset($output[rtrim(dirname($scan['Path']), DIRECTORY_SEPARATOR)])) {
-            unset($output[rtrim(dirname($scan['Path']), DIRECTORY_SEPARATOR)]);
-        }
-        $output[$scan['Path']] = $scan;
-    }
-    return $output;
 }
 
 function get_mime_by_filename($filename) {
