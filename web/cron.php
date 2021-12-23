@@ -1,5 +1,5 @@
 <?php
-    $DEBUG = false;
+    $DEBUG = true;
 
     $phpPath = PHP_BINARY ?? exec("which php") ?? exec("whereis php") ?? "/usr/local/bin/php" ;
 
@@ -19,7 +19,7 @@
         var_dump($currentTime);
     }
 
-    exec("find " . sys_get_temp_dir() . DIRECTORY_SEPARATOR . " -maxdepth 1  -type f-mmin +30 -exec rm {} \;");
+    exec("find " . sys_get_temp_dir() . DIRECTORY_SEPARATOR . " -maxdepth 1 -type f -mmin +30 -exec rm {} \;");
 
     foreach(array_diff(scandir(__DIR__ . "/jobs"), ['.', '..']) as $job) {
         $jobDir = __DIR__ . "/jobs/" . $job . "/";

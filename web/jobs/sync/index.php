@@ -328,8 +328,8 @@ function processFilePath($filePath)
         $hash = $fileParts[1];
     } else {
         $hash = $ops->md5_file($filePath);
-
-        if ($hash == 'd41d8cd98f00b204e9800998ecf8427e' || $ops->filesize($filePath) == 0) {
+        $size = $ops->filesize($filePath);
+        if ($hash === 'd41d8cd98f00b204e9800998ecf8427e' || $size === false || $size === 0) {
             echo PHP_EOL."Found Empty File: " . $filePath;
             if ($ops->is_file($filePath)){
                 $ops->unlink($filePath);
