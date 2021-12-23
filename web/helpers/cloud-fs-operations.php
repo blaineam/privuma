@@ -174,7 +174,7 @@ class Operations {
         $tmpfile = tempnam(sys_get_temp_dir(), 'PVMA');
         file_put_contents($tmpfile, $contents);
         try{
-            $this->execute('copyto', $path, $tmpfile);
+            $this->execute('copyto', $path, $tmpfile, false, true, [], false, false);
         } catch(Exception $e) {
             error_log($e->getMessage());
             unlink($tmpfile);
@@ -286,7 +286,7 @@ class Operations {
                 return false;
             }
         }
-        return true;
+        return false;
     }
 
     public function pull(string $path) {   
@@ -435,7 +435,7 @@ class Operations {
         return true;
     }
 
-    private function execute(string $command, string $destination, ?string $source = null, bool $remoteSource = false, bool $remoteDestination = true, array $flags = [], bool $passthru = false) {
+    private function execute(string $command, string $destination, ?string $source = null, bool $remoteSource = false, bool $remoteDestination = true, array $flags = [], bool $passthru = false, bool $encodeSource = true) {
         $cmd = implode(
             ' ', 
             [
@@ -446,7 +446,7 @@ class Operations {
                 '--log-level ERROR',
                 $command,
                 ...$flags,
-                !is_null($source) ? escapeshellarg(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,($remoteSource ? $this->rCloneDestination . ( $this->encoded ? $this->encode($source) : $source): $source))) : '',
+                !is_null($source) ? escapeshellarg(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,($remoteSource ? $this->rCloneDestination . ( $this->encoded && $encodeSource ? $this->encode($source) : $source): $source))) : '',
                 escapeshellarg(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR, $remoteDestination ? $this->rCloneDestination . ( $this->encoded ? $this->encode($destination) : $destination) : $destination)),
                 '2>&1'
             ]
