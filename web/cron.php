@@ -1,5 +1,5 @@
 <?php
-    $DEBUG = true;
+    $DEBUG = false;
 
     $phpPath = PHP_BINARY ?? exec("which php") ?? exec("whereis php") ?? "/usr/local/bin/php" ;
 
@@ -60,26 +60,35 @@
 
         file_put_contents($cron, json_encode($cronConfig, JSON_PRETTY_PRINT));
 
-        exec(implode(' ', [
+$cmd = implode(' ', [
             // path to flock in container
             '/usr/bin/flock',
             // flag to exit if lock already exists
             '-n',
             // path to job lock file
             $lock,
+            '-c',
             // use php to script each cron job
+            '"',
             $phpPath,
             // path to normal cron job definition
             $command,
-            // overrite the log file with new log entries
+            // overwrite the log file with new log entries
             '>',
             // logs go to the same logs folder for easy tailing with multiple -f flags
             $log,
             // redirect any errors to the log file
             '2>&1',
-            // background the task so that it can continue to run to its completion
-            '&'
-        ]));
+              // background the task so that it can continue to run to its completion
+            '&',
+            '"'
+          ]);
+            
+          if ($DEBUG) {
+              var_dump($cmd);
+          }
+
+        exec($cmd);
 
         if ($DEBUG) {
             var_dump("EXECUTED COMMAND: " . $command);
