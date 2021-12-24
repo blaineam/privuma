@@ -17,7 +17,7 @@ function getDirContents($dir, &$results = array()) {
         $path = $dir . DIRECTORY_SEPARATOR . $value;
         if (!$obj['IsDir']) {
             processFilePath($path);
-        } else if ($value != "." && $value != ".." && $value !== "privuma") {
+        } else if ($value != "." && $value != "..") {
             getDirContents($path);
         }
     }
@@ -49,6 +49,12 @@ function generateThumbnail($filePath) {
     var_dump($cmd);
     
     exec($cmd, $void, $response);
+
+    if ($response !== 0) {
+        unset($response);
+        unset($void);
+        exec("/usr/bin/ffmpeg -threads 1 -hide_banner -loglevel error -y -ss 00:00:01.00 -i '" . $tempFile . "' -vcodec mjpeg -vframes 1 -an -f rawvideo '" . $newFileTemp . "' > /dev/null", $void, $response); 
+    }
 
     unset($void);
 

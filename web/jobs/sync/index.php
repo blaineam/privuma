@@ -169,6 +169,12 @@ function processVideoFile($filePath)
     $newThumbTemp = $newThumbTemp  . '.jpg';
 
     exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -ss `$ffmpegPath -threads $ffmpegThreadCount -y -i '" . $tempFile . "' 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'` -i '" . $tempFile . "' -vcodec mjpeg -vframes 1 -an -f rawvideo '" . $newThumbTemp . "' > /dev/null", $void, $response);
+    if ($response !== 0) {
+        unset($response);
+        unset($void);
+        exec("$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -ss 00:00:01.00 -i '" . $tempFile . "' -vcodec mjpeg -vframes 1 -an -f rawvideo '" . $newThumbTemp . "' > /dev/null", $void, $response); 
+    }
+    
     if (strtolower($ext) == "mp4" && $ops->is_file($newFilePath)) {
 
         if($DEBUG) {
@@ -330,7 +336,7 @@ function processFilePath($filePath)
         $hash = $ops->md5_file($filePath);
         $size = $ops->filesize($filePath);
         if ($hash === 'd41d8cd98f00b204e9800998ecf8427e' || $size === false || $size === 0) {
-            echo PHP_EOL."Found Empty File: " . $filePath;
+            echo PHP_EOL."Found Empty File: " . $filePath . ", Hash: " . $hash . ", Size: " . $size;
             if ($ops->is_file($filePath)){
                 $ops->unlink($filePath);
             }

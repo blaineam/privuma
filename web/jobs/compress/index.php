@@ -43,6 +43,12 @@ function generateThumbnail($filePath) {
     
     exec("/usr/bin/ffmpeg -threads 1 -hide_banner -loglevel error -y -ss `/usr/bin/ffmpeg -threads 1 -y -i '" . $tempFile . "' 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'` -i '" . $tempFile . "' -vcodec mjpeg -vframes 1 -an -f rawvideo '" . $newFileTemp . "' > /dev/null", $void, $response);
 
+    if ($response !== 0) {
+        unset($response);
+        unset($void);
+        exec("/usr/bin/ffmpeg -threads 1 -hide_banner -loglevel error -y -ss 00:00:01.00 -i '" . $tempFile . "' -vcodec mjpeg -vframes 1 -an -f rawvideo '" . $newFileTemp . "' > /dev/null", $void, $response); 
+    }
+
     unset($void);
 
     if($response == 0){
