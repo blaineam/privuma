@@ -470,6 +470,12 @@ function run()
 
             $realbums[] = array("id" => (string)urlencode(base64_encode($album["album"])), "updated" => (string)(strtotime($album["time"])*1000), "title" => (string)$album["album"], "img" => (string)$photoPath , "mediaId" => (string)$album["hash"]);
         }
+
+        usort($realbums, function ($a1, $a2) {
+            return $a2['updated'] <=> $a1['updated'];
+        });
+        
+
         $realbums = array("gtoken" => urlencode($ENDPOINT."...".$AUTHTOKEN), "gdata" => $realbums);
         header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
         header("Cache-Control: post-check=0, pre-check=0", false);

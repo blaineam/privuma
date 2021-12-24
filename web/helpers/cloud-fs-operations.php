@@ -145,11 +145,15 @@ class Operations {
     }
 
     public function filesize(string $file) {
-        $info = $this->getPathInfo($file, false,false,false,true,false);
-        if ($info !== false) {
-            return strtotime(explode('.', $info['Size'])[0]);
+        try {
+            $data = json_decode($this->execute('size', $file, null, false, true, [
+                '--json'
+            ]), true);
+        } catch(Exception $e) {
+            error_log($e->getMessage());
+            return false;
         }
-        return false;
+        return is_null($data) ? false : $data['bytes'];
     }
 
     public function is_dir(string $directory) : bool {
