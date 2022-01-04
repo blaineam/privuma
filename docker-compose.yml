@@ -27,7 +27,7 @@ services:
         restart: always
         container_name: privuma_php_web
         env_file:
-            - ".env"
+            - "web/config/.env"
         links:
             - mysqldb
             - db
@@ -46,7 +46,7 @@ services:
         restart: always
         container_name: privuma_php_cron
         env_file:
-            - ".env"
+            - "web/config/.env"
         links:
             - mysqldb
             - db
