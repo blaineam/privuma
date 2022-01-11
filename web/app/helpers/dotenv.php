@@ -1,15 +1,23 @@
 <?php
 
-function loadEnv($path) :void
+namespace privuma\helpers;
+
+use privuma\privuma;
+
+class dotenv
+{
+    public function __construct(?string $path = null)
     {
+
+        $path = $path ?? privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . '.env';
+
         if (!is_readable($path)) {
-            //throw new \RuntimeException(sprintf('%s file is not readable', $path));
+            throw new \RuntimeException(sprintf('%s file is not readable', $path));
             return;
         }
 
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
-
             if (strpos(trim($line), '#') === 0) {
                 continue;
             }
@@ -26,20 +34,20 @@ function loadEnv($path) :void
         }
     }
 
-    function get_env($key = null) {
+    public function get($key = null)
+    {
         $output = [];
-        foreach($_ENV as $name => $value) {
-
-            if(is_scalar($value)) {
-                if(is_numeric($value)) {
+        foreach ($_ENV as $name => $value) {
+            if (is_scalar($value)) {
+                if (is_numeric($value)) {
                     $value = $value + 0;
                 }
     
-                if(strtolower($value) == 'true') {
+                if (strtolower($value) == 'true') {
                     $value = true;
                 }
     
-                if(strtolower($value) == 'false') {
+                if (strtolower($value) == 'false') {
                     $value = false;
                 }
             }
@@ -49,3 +57,4 @@ function loadEnv($path) :void
 
         return $key ? $output[$key] : $output;
     }
+}
