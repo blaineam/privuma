@@ -1,29 +1,29 @@
 <?php
 
-namespace cloudFS;
+namespace privuma\helpers;
 use Exception;
+use privuma\helpers\dotenv;
+use privuma\privuma;
 
-require_once(__DIR__.'/dotenv.php');
-
-class Operations {
+class cloudFS {
 
     private string $rCloneBinaryPath;
     private string $rCloneConfigPath;
     private string $rCloneDestination;
-    private bool   $encoded;
+    private bool $encoded;
+    private dotenv $env;
 
-    function __construct(string $rCloneDestination = 'privuma:', bool $encoded = true, string $rCloneBinaryPath = '/usr/bin/rclone', string $rCloneConfigPath = __DIR__ . '/../config/rclone/rclone.conf') {
-        exec($rCloneBinaryPath . ' version 2>&1', $void, $code);
+    function __construct(string $rCloneDestination = 'privuma:', bool $encoded = true, string $rCloneBinaryPath = '/usr/bin/rclone', ?string $rCloneConfigPath = null) {
+        exec($rCloneBinaryPath . ' version 2>&1 > /dev/null', $void, $code);
         if($code !== 0) {
             $rCloneBinaryPath = __DIR__ . '/../bin/rclone';
         }
 
-
-        loadEnv(__DIR__ . '/../config/.env');
+        $this->env = new dotenv();
 
         $this->rCloneBinaryPath = $rCloneBinaryPath;
-        $this->rCloneConfigPath = $rCloneConfigPath;
-        $this->rCloneDestination = get_env('RCLONE_DESTINATION') ?? $rCloneDestination;
+        $this->rCloneConfigPath =  $rCloneConfigPath ?? privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'rclone' . DIRECTORY_SEPARATOR . 'rclone.conf';
+        $this->rCloneDestination = $this->env->get('RCLONE_DESTINATION') ?? $rCloneDestination;
         $this->encoded = $encoded;
     }
 
