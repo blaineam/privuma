@@ -65,7 +65,7 @@ class preserveMedia {
             $scan = $this->ops->scandir(dirname($data['preserve'], 2), true, false, null, true);
             if($scan !== false) {
                 $value = $scan[array_search(basename(dirname($data['preserve'])), array_column($scan, 'Name'))];
-                $value['Path'] = substr($data['preserve'], strlen(privuma::getDataFolder() . DIRECTORY_SEPARATOR ));
+                $value['Path'] = substr(ltrim($data['preserve'], DIRECTORY_SEPARATOR), strlen(privuma::getDataFolder() . DIRECTORY_SEPARATOR ));
                 $qm->enqueue(json_encode(['type'=> 'cachePath', 'data' => [
                     'cacheName' => 'mediadirs',
                     'key' => dirname($data['preserve']),
