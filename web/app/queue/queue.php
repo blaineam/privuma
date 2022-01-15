@@ -1,22 +1,27 @@
 <?php
 
+namespace privuma\queue;
+
 // Queue Manager class (essentially a queue) that uses a simple text file for storage
 class QueueManager {
 	private $filename;
+
+    private string $delimiter;
 	
 	public function __construct(string $queueName = "queue") {
-        $this->filename = $queueName.".txt";
+        $this->delimiter = PHP_EOL.'|||';
+        $this->filename = __DIR__ . DIRECTORY_SEPARATOR . $queueName.".txt";
 	}
 	
 	// Add a Queue to the queue and if we are at our limit, drop one off the end.
 	public function enqueue(string $rawMessage) {
 		if (!empty($rawMessage)) {
-            $queueFile = fopen($this->filename, '+a');
+            $queueFile = fopen($this->filename, 'a');
 
             // here it may add some spaces so the message length is multiples of modular.
             // that make it easier to read messages from a file.
 
-            $rawMessage = str_repeat(' ', 64 - (strlen($rawMessage) % 64)).$rawMessage;
+            $rawMessage = $this->delimiter.$rawMessage.str_repeat(' ', 64 - ((strlen($rawMessage) + strlen($this->delimiter)) % 64));
 
             if (flock($queueFile, LOCK_EX)) {
                 fwrite($queueFile, $rawMessage);
@@ -31,14 +36,19 @@ class QueueManager {
 	// Remove a Queue item from the end of our list
 	public function dequeue(): ?string {
 		
-        $file = fopen($this->filename, '+c');
+        $file = fopen($this->filename, 'c+');
 
         // lock file
         if (flock($file, LOCK_EX)) {
             $frame = $this->readFrame($file, 1);
-            ftruncate($file, fstat($file)['size'] - strlen($frame));
-            rewind($file);
-            $rawMessage = substr(trim($frame), 1);
+            $length = fstat($file)['size'] - strlen($frame) - strlen($this->delimiter);
+            if($length > 0) {
+                ftruncate($file, $length);
+                rewind($file);
+            }else{
+                file_put_contents($this->filename, '');
+            }
+            $rawMessage = trim($frame);
             flock($file, LOCK_UN); // unlock the file
         } else {
             // flock() returned false, no lock obtained
@@ -57,8 +67,10 @@ class QueueManager {
         if ('' == $frame) {
             return '';
         }
-        if (false !== strpos($frame, '|{')) {
-            return $frame;
+        $position = strpos($frame, $this->delimiter);
+        $sub = substr($frame, $position + strlen($this->delimiter));
+        if (false !== $position && !empty($sub)) {
+            return $sub;
         }
         return $this->readFrame($file, $frameNumber + 1).$frame;
     }

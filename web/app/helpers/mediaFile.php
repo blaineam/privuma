@@ -2,11 +2,12 @@
 
 namespace privuma\helpers;
 use DateTime;
+use PDO;
 use privuma\helpers\cloudFS;
 use privuma\privuma;
 
 class mediaFile {
-    const MEDIA_FOLDER = 'privuma';
+    public const MEDIA_FOLDER = 'privuma';
     private ?int $id;
     private ?string $hash;
     private string $album;
@@ -15,12 +16,13 @@ class mediaFile {
     private DateTime $date;
     private bool $dupe;
     private cloudFS $cloudFS;
-    private string $sanitizedFilesPath;
+    private PDO $pdo;
+    public const SANITIZED_PATH = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'sanitizedFiles.json';
 
     function __construct(string $filename, string $album, ?int $id = null, ?string $hash = null, ?DateTime $date = null, ?bool $dupe = null)
     {
         $this->id = $id;
-        $this->hash = $hash ?? $this->hash();
+        $this->hash = $hash;
         $this->album = $album;
         $this->filename = $filename;
         $this->extension = pathinfo($filename, PATHINFO_EXTENSION);
@@ -28,6 +30,12 @@ class mediaFile {
         $this->dupe = $dupe ?? strpos($filename, '---dupe') !== false ? 1 : 0;;
         $this->cloudFS = privuma::getCloudFS();
         $this->sanitizedFilesPath = privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'sanitizedFiles.json';
+        $privuma = new privuma();
+        $this->pdo = $privuma->getPDO();
+    }
+
+    public static function getAlbumPath(string $path): string {
+        return basename(dirname($path)) . DIRECTORY_SEPARATOR . basename($path);
     }
 
     public function realPath() {
@@ -38,12 +46,13 @@ class mediaFile {
         $filename = basename($filePath, "." . $ext);
         $album = $this->sanitize(basename(dirname($filePath)));
 
-        $filePath = self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename . "." . $ext;
-        $compressedFile = self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---compressed." . $ext;
+        $filePath = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename . "." . $ext;
 
-        $dupe = self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
+        $compressedFile = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---compressed." . $ext;
+
+        $dupe = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
                     
-        $files = $this->cloudFS->glob(self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
+        $files = $this->cloudFS->glob(privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
         if($files === false) {
             $files = [];
         }
@@ -75,7 +84,7 @@ class mediaFile {
     }
 
     public function path() {
-        return $this->album . DIRECTORY_SEPARATOR . $this->filename;
+        return self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $this->album . DIRECTORY_SEPARATOR . $this->filename;
     }
 
     public function hash() {
@@ -87,42 +96,90 @@ class mediaFile {
         return $this->cloudFS->md5_file($this->realPath());
     }
 
-    public function save() {
+    public function original() {
+        if(is_null($this->hash) && $hash = $this->hash()) {
+            $this->hash = $hash;
+        }
+
+        $stmt = $this->pdo->prepare('SELECT * FROM media WHERE hash = ? AND dupe = 0 AND album != ? limit 1');
+        $stmt->execute([$this->hash, $this->album]);
+        $test = $stmt->fetch();
+
+        if ($test === false) {
+            return false;
+        }
+
+        return self::MEDIA_FOLDER . DIRECTORY_SEPARATOR .$test['album'] . DIRECTORY_SEPARATOR . $test['filename'];
+    }
+
+
+    public function hashConflict() {
+        if(is_null($this->hash) && $hash = $this->hash()) {
+            $this->hash = $hash;
+        }
+
+        $stmt = $this->pdo->prepare('SELECT * FROM media WHERE hash = ? AND album = ? limit 1');
+        $stmt->execute([$this->hash, $this->album]);
+        $test = $stmt->fetch();
+
+        if ($test === false) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function dupe() : bool {
+        return $this->original() === false ? false : true;
+    }
+
+    public function save(): bool {
+        if(is_null($this->hash) && $hash = $this->hash()) {
+            $this->hash = $hash;
+        }
+
         $fileParts = explode('---', $this->filename);
-        $stmt = privuma::getPDO()->prepare('SELECT * FROM media WHERE hash = ? AND album = ? AND filename LIKE "' . trim($fileParts[0],'-') . '%"  ORDER BY time ASC');
+        $stmt = $this->pdo->prepare('SELECT * FROM media WHERE hash = ? AND album = ? AND filename LIKE "' . trim($fileParts[0],'-') . '%"  ORDER BY time ASC');
         $stmt->execute([$this->hash, $this->album]);
         $test = $stmt->fetch();
 
         if ($test === false) {
             $date = date('Y-m-d H:i:s');
-            $stmt = privuma::getPDO()->prepare('INSERT INTO media (dupe, album, hash, filename, time)
+            $stmt = $this->pdo->prepare('INSERT INTO media (dupe, album, hash, filename, time)
             VALUES (?, ?, ?, ?, ?)');
-            $stmt->execute([$$this->dupe, $this->album, $this->hash, $this->filename, $date]);
+            return $stmt->execute([
+                $this->dupe() ? 1 : 0, 
+                $this->album, 
+                $this->hash, 
+                $this->filename, 
+                $date
+            ]) !== false;
         }
+        return false;
     }
 
     public function delete(?string $hash = null) {
         if(!is_null($hash)){
-            $stmt = privuma::getPDO()->prepare('DELETE FROM media WHERE hash = ?');
+            $stmt = $this->pdo->prepare('DELETE FROM media WHERE hash = ?');
             $stmt->execute([$hash]);
             return;
         }
 
         if(!is_null($this->id)){
-            $stmt = privuma::getPDO()->prepare('DELETE FROM media WHERE id = ?');
+            $stmt = $this->pdo->prepare('DELETE FROM media WHERE id = ?');
             $stmt->execute([$this->id]);
             $this->cloudFS->unlink($this->path());
             return;
         }
 
         $fileParts = explode('---', $this->filename);
-        $stmt = privuma::getPDO()->prepare('DELETE FROM media WHERE album = ? AND filename LIKE "' . trim($fileParts[0],'-') . '%"');
+        $stmt = $this->pdo->prepare('DELETE FROM media WHERE album = ? AND filename LIKE "' . trim($fileParts[0],'-') . '%"');
         $stmt->execute([$this->album]);
 
         $this->cloudFS->unlink($this->path());
     }
 
-    public function titleCase(string $name): string {
+    public static function titleCase(string $name): string {
         $result = "";
         $pattern = '/([;:,-.\/ X])/';
         $array = preg_split($pattern, $name, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
@@ -132,7 +189,7 @@ class mediaFile {
         return $result;
     }
 
-    public static function sanitize(string $name): string {
+    public static function sanitize(string $name, ?string $storedValue = null): string {
         //remove accents
         $str = strtr(utf8_decode($name), utf8_decode('àáâãäçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiinooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
         //replace directory symbols
@@ -142,10 +199,15 @@ class mediaFile {
         //replace foreign characters
         $sanitized = preg_replace('/[^a-zA-Z0-9_\-\s\(\)~]+/', '', $str);
 
+        $parts = explode(DIRECTORY_SEPARATOR, $name);
+        if(count($parts) > 1) {
+            $sanitized =  implode(DIRECTORY_SEPARATOR, array_map('self::sanitize', $parts));
+        }
+
         if($sanitized !== $name) {
-            $sanitizedFiles = json_decode(file_get_contents(self::$sanitizedFilesPath), true) ?? [];
-            $sanitizedFiles[$sanitized] = $name;
-            file_put_contents(self::$sanitizedFilesPath, json_encode($sanitizedFiles, JSON_PRETTY_PRINT));
+            $sanitizedFiles = json_decode(file_get_contents(self::SANITIZED_PATH), true) ?? [];
+            $sanitizedFiles[$sanitized] = $storedValue ?? $name;
+            file_put_contents(self::SANITIZED_PATH, json_encode($sanitizedFiles, JSON_PRETTY_PRINT));
         }
 
         return $sanitized;
@@ -153,8 +215,8 @@ class mediaFile {
     }
 
     public static function desanitize(string $name) {
-        $sanitizedFiles = json_decode(file_get_contents(self::$sanitizedFilesPath), true) ?? [];
-        if (isset($satiizedFiles[$name])) {
+        $sanitizedFiles = json_decode(file_get_contents(self::SANITIZED_PATH), true) ?? [];
+        if (!empty($sanitizedFiles[$name])) {
             return $sanitizedFiles[$name];
         }
         return $name;

@@ -1,5 +1,14 @@
 <?php
 //Default Configuration
+$CONFIG = '{"lang":"en","error_reporting":true,"show_hidden":true}';
+
+use privuma\privuma;
+use privuma\helpers\cloudFS;
+use \Exception as Exception;
+use \stdClass as stdClass;
+use \COM as COM;
+
+//Default Configuration
 $CONFIG = '{"lang":"en","error_reporting":false,"show_hidden":false,"hide_Cols":true,"calc_folder":false,"theme":"dark"}';
 
 /**
@@ -72,9 +81,6 @@ $use_x_accel_redirect = true;
 // path to rclone config
 $rclone_config = __DIR__.'/rclone.conf';
 
-// path to cloud-fs-operations.php file
-$path_to_cloud_fs_operations = __DIR__ . '/cloud-fs-operations.php';
-
 // Server hostname. Can set manually if wrong
 $http_host = $_SERVER['HTTP_HOST'];
 
@@ -144,15 +150,15 @@ $ip_blacklist = array(
     '::'            // non-routable meta ipv6
 );
 
+
+
 // if User has the customized config file, try to use it to override the default config above
-$config_file = __DIR__.'/config.php';
+$config_file = privuma::getConfigDirectory().'/filemanager-config.php';
 if (is_readable($config_file)) {
     @require_once($config_file);
 }
 
-require($path_to_cloud_fs_operations);
-
-$ops = new cloudFS\Operations($rclone_destination, $encoded_paths, $rclone_bin, $rclone_config); 
+$ops = new cloudFS($rclone_destination, $encoded_paths, $rclone_bin, $rclone_config); 
 
 // --- EDIT BELOW CAREFULLY OR DO NOT EDIT AT ALL ---
 
@@ -2015,27 +2021,6 @@ fm_show_footer();
 // Functions
 
 /**
- * Check if the filename is allowed.
- * @param string $filename
- * @return bool
- */
-function fm_is_file_allowed($filename)
-{
-    // By default, no file is allowed
-    $allowed = false;
-
-    if (FM_EXTENSION) {
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-
-        if (in_array($ext, explode(',', strtolower(FM_EXTENSION)))) {
-            $allowed = true;
-        }
-    }
-
-    return $allowed;
-}
-
-/**
  * Delete  file or folder (recursively)
  * @param string $path
  * @return bool
@@ -2823,7 +2808,7 @@ function fm_get_file_mimes($extension)
          $files = array();
          error_log($dir);
          error_log($filter);
-         $search = $ops->scandir($dir, true, true, $filter);
+         $search = $ops->scandir($dir, true, true, [$filter]);
          if($search === false) {
              return $files;
          }

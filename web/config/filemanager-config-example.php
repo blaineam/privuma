@@ -67,9 +67,6 @@ $use_x_accel_redirect = true;
 // path to rclone config
 $rclone_config = __DIR__.'/rclone.conf';
 
-// path to cloud-fs-operations.php file
-$path_to_cloud_fs_operations = __DIR__ . '/cloud-fs-operations.php';
-
 // Server hostname. Can set manually if wrong
 $http_host = $_SERVER['HTTP_HOST'];
 

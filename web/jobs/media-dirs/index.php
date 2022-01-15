@@ -1,11 +1,13 @@
 <?php
 
+use privuma\privuma;
 
-require(__DIR__ . '/../../helpers/cloud-fs-operations.php'); 
+require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
 
-$ops = new cloudFS\Operations();
+$privuma = new privuma();
+$ops = $privuma->getCloudFS();
 
-$SYNC_FOLDER = "/data/";
+$SYNC_FOLDER = DIRECTORY_SEPARATOR . $privuma->getDataFolder() . DIRECTORY_SEPARATOR;
 $DEBUG = true;
 
 function getDirContents($dir, &$results = array()) {
@@ -79,7 +81,24 @@ function get_data_dirs($dir)
     return $output;
 }
 
-file_put_contents(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . "mediadirs.json", json_encode(get_data_dirs($SYNC_FOLDER)));
+$privuma->getQueueManager()->enqueue(json_encode([
+    'type' => 'cachePath',
+    'data' => [
+        'cacheName' => 'mediadirs',
+        'emptyCache' => true,
+    ],
+]));
 
-echo PHP_EOL . "mediadirs cache saved to : " . __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . "mediadirs.json";
+foreach(get_data_dirs($SYNC_FOLDER) as $key => $value) {
+    $privuma->getQueueManager()->enqueue(json_encode([
+        'type' => 'cachePath',
+        'data' => [
+            'cacheName' => 'mediadirs',
+            'key' => $key,
+            'value' => $value,
+        ],
+    ]));
+}
+
+echo PHP_EOL . "mediadirs cache updates queued ";
 

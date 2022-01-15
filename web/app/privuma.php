@@ -13,8 +13,9 @@ use privuma\helpers\cloudFS;
 use privuma\helpers\dotenv;
 
 use PDO;
+use privuma\queue\QueueManager;
 
-class Privuma {
+class privuma {
 
     public static string $binDirectory;
 
@@ -22,26 +23,39 @@ class Privuma {
 
     public static string $dataDirectory;
 
+    public static string $dataFolder;
+
+    public static string $outputDirectory;
+
+    public static dotenv $env;
+
     public static cloudFS $cloudFS;
 
-    public static PDO $pdo;
+    private PDO $pdo;
+
+    public static QueueManager $queueManager;
 
     function __construct(
         string $configDirectory = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'config', 
         string $binDirectory = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bin', 
-        string $dataDirectory = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . "data"
+        string $dataDirectory = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . "data",
+        string $outputDirectory = __DIR__ . DIRECTORY_SEPARATOR . "output"
     ) {
-        self::$configDirectory = $configDirectory;
-        self::$binDirectory = $binDirectory;
-        self::$dataDirectory = $dataDirectory;
+        self::$configDirectory = self::canonicalizePath($configDirectory);
+        self::$binDirectory = self::canonicalizePath($binDirectory);
+        self::$dataFolder = basename($dataDirectory);
+        $dataDirectory = dirname($dataDirectory) . DIRECTORY_SEPARATOR . cloudFS::encode(basename($dataDirectory));
+        self::$dataDirectory = self::canonicalizePath($dataDirectory);
+        self::$outputDirectory = self::canonicalizePath($outputDirectory);
         self::$cloudFS = new cloudFS(self::$dataDirectory);
+        self::$queueManager = new QueueManager();
 
-        $env = new dotenv();
+        self::$env = new dotenv();
 
-        $host = $env->get('MYSQL_HOST');
-        $db   = $env->get('MYSQL_DATABASE');
-        $user = $env->get('MYSQL_USER');
-        $pass =  $env->get('MYSQL_PASSWORD');
+        $host = self::$env->get('MYSQL_HOST');
+        $db   = self::$env->get('MYSQL_DATABASE');
+        $user = self::$env->get('MYSQL_USER');
+        $pass =  self::$env->get('MYSQL_PASSWORD');
         $charset = 'utf8mb4';
         $port = 3306;
 
@@ -76,6 +90,8 @@ class Privuma {
             FULLTEXT KEY `media_filename_FULL_TEXT_IDX` (`filename`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
 
+        $this->pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+
     }
 
     public static function getBinDirectory() {
@@ -90,11 +106,49 @@ class Privuma {
         return self::$dataDirectory;
     }
 
-    public static function getCloudFS() {
-        return self::$dataDirectory;
+    public static function getDataFolder() {
+        return self::$dataFolder;
     }
 
-    public static function getPDO() {
-        return self::$pdo;
+    public static function getOutputDirectory() {
+        return self::$outputDirectory;
+    }
+
+    public static function getCloudFS() {
+        return self::$cloudFS;
+    }
+
+    public static function getQueueManager() {
+        return self::$queueManager;
+    }
+
+    public static function getEnv(?string $key = null) {
+        return self::$env->get($key);
+    }
+
+    public function getPDO() {
+        return $this->pdo;
+    }
+
+    public static function canonicalizePath($path): string
+    {
+        $path = explode(DIRECTORY_SEPARATOR, $path);
+        $stack = array();
+        foreach ($path as $seg) {
+            if ($seg == '..') {
+                // Ignore this segment, remove last segment from stack
+                array_pop($stack);
+                continue;
+            }
+    
+            if ($seg == '.') {
+                // Ignore this segment
+                continue;
+            }
+    
+            $stack[] = $seg;
+        }
+    
+        return implode(DIRECTORY_SEPARATOR, $stack);
     }
 }
