@@ -85,7 +85,7 @@ class cloudFS {
     }
 
 
-    private function getPathInfo(string $path, bool $modTime = true, bool $mimetype = true, bool $onlyDirs = false, bool $onlyFiles = false, bool $showMD5 = false) {
+    public function getPathInfo(string $path, bool $modTime = true, bool $mimetype = true, bool $onlyDirs = false, bool $onlyFiles = false, bool $showMD5 = false) {
         try {
             $list = json_decode($this->execute('lsjson', $path, null, false, true, [
                 '--stat',
@@ -308,7 +308,7 @@ class cloudFS {
         return false;
     }
 
-    public function encode(string $path) : string {
+    public static function encode(string $path) : string {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         return implode(DIRECTORY_SEPARATOR, array_map(function($part) use ($ext) {
             return implode('*', array_map(function($p) use ($ext) {
@@ -320,7 +320,7 @@ class cloudFS {
         }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
     }
 
-    public function decode(string $path) : string {
+    public static function decode(string $path) : string {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         return implode(DIRECTORY_SEPARATOR, array_map(function($part) use ($ext) {
             return implode('*', array_map(function($p) use ($ext) {
@@ -440,6 +440,8 @@ class cloudFS {
     }
 
     private function execute(string $command, string $destination, ?string $source = null, bool $remoteSource = false, bool $remoteDestination = true, array $flags = [], bool $passthru = false, bool $encodeSource = true) {
+        $source = is_null($source) ? null : (strpos(explode(DIRECTORY_SEPARATOR, $source)[0], ':') === false ? DIRECTORY_SEPARATOR . ltrim($source, DIRECTORY_SEPARATOR) : $source);
+        $destination = strpos(explode(DIRECTORY_SEPARATOR, $destination)[0], ':') === false ? DIRECTORY_SEPARATOR . ltrim($destination, DIRECTORY_SEPARATOR) : $destination;
         $cmd = implode(
             ' ', 
             [
