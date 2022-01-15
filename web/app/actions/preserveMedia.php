@@ -14,7 +14,6 @@ class preserveMedia {
     function __construct(array $data) {
         $qm = new QueueManager();
         $this->ops = privuma::getCloudFS();
-        var_dump($data);
         if(isset($data['album']) && isset($data['filename'])) {
             echo PHP_EOL."creating media file with: " . json_encode([
                 "filename" => $data['filename'],
@@ -22,7 +21,7 @@ class preserveMedia {
                 "path" => $data['path'],
                 "hash" => md5_file($data['path'])
             ]);
-            $mediaFile = new mediaFile($data['filename'], $data['album'], null, md5_file($data['path']));
+            $mediaFile = new mediaFile(str_replace('.webm', '.mp4', $data['filename']), $data['album'], null, md5_file($data['path']));
             echo PHP_EOL."New mediaFile: " . $mediaFile->path();
             if($mediaFile->hashConflict()) {
                 echo PHP_EOL."There was a hash conflict";
@@ -63,9 +62,15 @@ class preserveMedia {
         }
 
         if(isset($data['preserve']) && $this->ops->rename($data['path'], $data['preserve'], false) !== false) {
-            $scan = $this->ops->scandir(dirname($data['preserve']), true, false, null, true);
+            $scan = $this->ops->scandir(dirname($data['preserve'], 2), true, false, null, true);
             if($scan !== false) {
-                $qm->enqueue(json_encode(['type'=> 'cachePath', 'data' => $scan[0]]));
+                $value = $scan[array_search(basename(dirname($data['preserve'])), array_column($scan, 'Name'))];
+                $value['Path'] = substr($data['preserve'], strlen(privuma::getDataFolder() . DIRECTORY_SEPARATOR ));
+                $qm->enqueue(json_encode(['type'=> 'cachePath', 'data' => [
+                    'cacheName' => 'mediadirs',
+                    'key' => dirname($data['preserve']),
+                    'value' => $value,
+                ]]));
             }
             $qm->enqueue(json_encode(['type'=> 'generateThumbnail', 'data' => ['path' => $data['preserve']]]));
         }
@@ -97,7 +102,7 @@ class preserveMedia {
         rename($newFileTemp, $newFileTemp . '.mp4');
         $newFileTemp = $newFileTemp . '.mp4';
         $cmd = "$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $file . "' -c:v " . $ffmpegVideoCodec . " -r 24 -crf 24 -c:a aac -movflags +faststart -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFileTemp . "'";
-        echo PHP_EOL."Runnning command: " . $cmd;
+        //echo PHP_EOL."Runnning command: " . $cmd;
         exec($cmd, $void, $response);
 
         if ($response == 0) {

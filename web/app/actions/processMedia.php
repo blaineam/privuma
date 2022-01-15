@@ -14,28 +14,31 @@ class processMedia {
             $mediaFile = new mediaFile($data['filename'], $data['album']);
             $existingFile = $mediaFile->realPath();
             echo PHP_EOL."Loaded MediaFile: " . $mediaFile->path();
-            if(isset($data['url']) && !$existingFile) {
-                if($tempPath = $this->downloadUrl($data['url'])) {
-                    echo PHP_EOL."Downloaded Media File to: " . $tempPath;
-                    $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['path' => $tempPath, 'album' => $data['album'], 'filename' => $data['filename']]]));
+            if(isset($data['url'])) {
+                if($existingFile === false) {
+                    if($tempPath = $this->downloadUrl($data['url'])) {
+                        echo PHP_EOL."Downloaded Media File to: " . $tempPath;
+                        $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['path' => $tempPath, 'album' => $data['album'], 'filename' => $data['filename']]]));
+                    } else {
+                        echo PHP_EOL."Failed to obtain media file from url: " . $data['url'];
+                    }
                 } else {
-                    echo PHP_EOL."Failed to obtain media file from url: " . $data['url'];
+                    echo PHP_EOL."Existing MediaFile located at: " . $existingFile . " For: " . $data['path']; 
                 }
-                return;
-            } else {
-                echo PHP_EOL."Existing MediaFile located at: " . $existingFile;
                 return;
             }
 
-            if(isset($data['path']) && !$existingFile ) {
-                if($tempPath = $this->loadPath($data['path'], $data['local'] ?? false)) {
-                    echo PHP_EOL."Pulled Media File to: " . $tempPath;
-                    $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['path' => $tempPath, 'album' => $data['album'], 'filename' => $data['filename']]]));
+            if(isset($data['path'])) {
+                if( $existingFile === false ) {
+                    if($tempPath = $this->loadPath($data['path'], $data['local'] ?? false)) {
+                        echo PHP_EOL."Pulled Media File to: " . $tempPath;
+                        $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['path' => $tempPath, 'album' => $data['album'], 'filename' => $data['filename']]]));
+                    } else {
+                        echo PHP_EOL."Failed to obtain media file from path: " . $data['path'];
+                    }
                 } else {
-                    echo PHP_EOL."Failed to obtain media file from path: " . $data['path'];
+                    echo PHP_EOL."Existing MediaFile located at: " . $existingFile . " For: " . $data['path'];
                 }
-            } else {
-                echo PHP_EOL."Existing MediaFile located at: " . $existingFile;
             }
             return;
         }
