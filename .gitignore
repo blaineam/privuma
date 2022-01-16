@@ -5,9 +5,12 @@
 web/.auth
 .gitmodules
 web/data/**
+web/app/queue/*.txt
 web/config/*
 !web/config/*-example.*
-web/logs/*.txt
+web/app/output/logs/*.txt
+web/app/output/cache/*
+web/app/output/temp/*
 docker/etc/ssh/**
 !docker/etc/ssh/*-example.*
 docker/db/
@@ -16,6 +19,7 @@ docker/db/
 **/config.php
 **/.DS_Store
 web/jobs/*
+!web/jobs/queue-worker-1
 !web/jobs/cleanup
 !web/jobs/compress
 !web/jobs/faststart
@@ -26,6 +30,7 @@ web/jobs/*
 !web/jobs/test
 !web/jobs/thumbails
 !web/jobs/media-dirs
+!web/jobs/deovr-cacher
 web/jobs/test/testing/
 web/jobs/test/dGVzdGluZw==/
 web/dGVzdGluZw==

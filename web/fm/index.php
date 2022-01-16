@@ -6,4 +6,4 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' 
 
 $privuma = new privuma();
 
-require_once($privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'format' . DIRECTORY_SEPARATOR . 'deovr.php');
+require_once($privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'format' . DIRECTORY_SEPARATOR . 'filemanager.php');

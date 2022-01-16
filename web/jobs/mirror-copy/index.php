@@ -1,23 +1,49 @@
 <?php
-require_once(__DIR__.'/../../helpers/dotenv.php');
-loadEnv(__DIR__ . '/../../config/.env');
-$RCLONE_MIRROR = get_env('RCLONE_MIRROR');
-$RCLONE_DESTINATION = get_env('RCLONE_DESTINATION');
-if (!get_env('MIRROR_FILES')){
+
+use privuma\privuma;
+use privuma\helpers\cloudFS;
+
+require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
+
+$privuma = new privuma();
+$RCLONE_MIRROR = $privuma->getEnv('RCLONE_MIRROR');
+$RCLONE_DESTINATION = $privuma->getEnv('RCLONE_DESTINATION');
+
+$MAX_DEPTH = 20;
+if (!$privuma->getEnv('MIRROR_FILES')){
     exit();
 }
-require(__DIR__ . '/../../helpers/cloud-fs-operations.php'); 
-$opsDest = new cloudFS\Operations($RCLONE_DESTINATION, false);
+
+var_dump([$RCLONE_DESTINATION, $RCLONE_MIRROR]);
+
+$opsDest = new cloudFS($RCLONE_DESTINATION, false);
+$currentDepth = 0;
 function syncEncodedPath($path) {
     global $opsDest;
     global $RCLONE_DESTINATION;
     global $RCLONE_MIRROR;
+    global $currentDepth;
+    global $MAX_DEPTH;
 
-    foreach($opsDest->scandir($path, true) as $child) {
+    if($currentDepth > $MAX_DEPTH) {
+        echo PHP_EOL."MAX DEPTH reached in recursion";
+        return;
+    };
+    $currentDepth++;
+    
+
+    $scan = $opsDest->scandir($path, true);
+    if($scan === false) {
+        $scan = [];
+    }
+    foreach($scan as $child) {
         $childPath = $child['Name'];
+        if($childPath === '.DS_Store') {
+            continue;
+        }
         $target = str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR, $path . DIRECTORY_SEPARATOR . $childPath);
         if(!$child['IsDir']) {
-            if((strpos($opsDest->decode($target), 'privuma') === false && strpos($opsDest->decode($target), '.webm') === false) || strpos($opsDest->decode($target), '---compressed.') !== false || strpos($opsDest->decode($target), '.pdf') !== false){
+            if((strpos($opsDest->decode($target), 'privuma') === false && strpos($opsDest->decode($target), '.webm') === false) || strpos($opsDest->decode($target), '.mp4') !== false ||strpos($opsDest->decode($target), '.jpeg') !== false ||strpos($opsDest->decode($target), '.jpg') !== false || strpos($opsDest->decode($target), '.gif') !== false || strpos($opsDest->decode($target), '.png') !== false || strpos($opsDest->decode($target), '.pdf') !== false){
                 if($opsDest->sync($RCLONE_DESTINATION . $target, $RCLONE_MIRROR . dirname($target), false, false, false,  ['--track-renames --ignore-existing --size-only --transfers 2 --checkers 2  --s3-chunk-size 64M '])){
                     echo PHP_EOL . "synced: " . $target;
                 }
@@ -32,14 +58,31 @@ function syncEncodedPath($path) {
 }
 syncEncodedPath(DIRECTORY_SEPARATOR.'ZGF0YQ==');
 
-$opsDest = new cloudFS\Operations($RCLONE_DESTINATION, false);
+$opsDest = new cloudFS($RCLONE_DESTINATION, false);
+$currentDepth = 0;
 function syncNoEncodePath($path) {
     global $opsDest;
     global $RCLONE_DESTINATION;
     global $RCLONE_MIRROR;
 
-    foreach($opsDest->scandir($path, true) as $child) {
+    global $currentDepth;
+    global $MAX_DEPTH;
+
+    if($currentDepth > $MAX_DEPTH) {
+        echo PHP_EOL."MAX DEPTH reached in recursion";
+        return;
+    };
+    $currentDepth++;
+
+    $scan = $opsDest->scandir($path, true);
+    if($scan === false) {
+        $scan = [];
+    }
+    foreach($scan as $child) {
         $childPath = $child['Name'];
+        if($childPath === '.DS_Store') {
+            continue;
+        }
         $target = str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR, $path . DIRECTORY_SEPARATOR . $childPath);
         if(!$child['IsDir']) {
             if(strpos($opsDest->decode($target), '.lock') === false || strpos($opsDest->decode($target), '.txt') === false){
@@ -56,4 +99,3 @@ function syncNoEncodePath($path) {
     }
 }
 syncNoEncodePath(DIRECTORY_SEPARATOR);
-//exec(__DIR__ . '/../../bin/rclone --config ' . __DIR__ . '/../../config/rclone/rclone.conf --exclude "#recycle/**" --exclude "@eaDir/**" --exclude "@eaDir/"  --exclude "jobs/**/scratch/" --track-renames --ignore-existing --size-only --transfers 2 --checkers 2  --s3-chunk-size 64M -v --log-file=' . realpath(__DIR__ . '/../../logs/mirror-copy-out.txt') .' copy ' . $RCLONE_DESTINATION . '/ZGF0YQ==/ ' . $RCLONE_MIRROR . '/ZGF0YQ==/');

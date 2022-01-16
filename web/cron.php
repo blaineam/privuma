@@ -1,6 +1,12 @@
 <?php
     $DEBUG = false;
 
+use privuma\privuma;
+
+require_once(__DIR__ . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
+
+$privuma = new privuma();
+
     $phpPath = PHP_BINARY ?? exec("which php") ?? exec("whereis php") ?? "/usr/local/bin/php" ;
 
     if ($DEBUG) {
@@ -26,7 +32,7 @@
         $command = $jobDir . "index.php";
         $cron = $jobDir   . "cron.json";
         $lock = $jobDir   . "job.lock";
-        $log = __DIR__ . "/logs/" . $job . "-out.txt";
+        $log = $privuma->getOutputDirectory() . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . $job . ".txt";
 
         if(!is_file($command)) {
             if ($DEBUG) {
