@@ -81,13 +81,13 @@ function get_data_dirs($dir)
     return $output;
 }
 
-$privuma->getQueueManager()->enqueue(json_encode([
-    'type' => 'cachePath',
-    'data' => [
-        'cacheName' => 'mediadirs',
-        'emptyCache' => true,
-    ],
-]));
+// $privuma->getQueueManager()->enqueue(json_encode([
+//     'type' => 'cachePath',
+//     'data' => [
+//         'cacheName' => 'mediadirs',
+//         'emptyCache' => true,
+//     ],
+// ]));
 
 foreach(get_data_dirs($SYNC_FOLDER) as $key => $value) {
     $privuma->getQueueManager()->enqueue(json_encode([

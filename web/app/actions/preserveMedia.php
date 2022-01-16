@@ -55,6 +55,7 @@ class preserveMedia {
                 }
                 $qm->enqueue(json_encode(['type'=> 'generateThumbnail', 'data' => ['path' => privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path()]]));
             } else {
+                unlink($data['path']);
                 echo PHP_EOL."Compression Failed for: " . $data['path'];
             }
 

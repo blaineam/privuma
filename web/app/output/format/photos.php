@@ -1,6 +1,5 @@
 <?php
 
-
 namespace privuma\output\format;
 
 //uncomment to allow app to reauth
@@ -195,6 +194,14 @@ function getProtectedUrlForMediaPath($path, $use_fallback = false) {
     return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
 }
 
+function getProtectedUrlForMediaHash($hash, $use_fallback = false) {
+    global $ENDPOINT;
+    global $FALLBACK_ENDPOINT;
+    global $AUTHTOKEN;
+    $uri = "?token=" . rollingTokens($AUTHTOKEN)[1]  . "&media=" . urlencode($hash);
+    return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
+}
+
 function streamMedia($file, bool $useOps = false) {
     global $ops;
     header('Accept-Ranges: bytes');
@@ -211,6 +218,10 @@ function streamMedia($file, bool $useOps = false) {
     }
     exit;
 }
+
+function isValidMd5($md5 ='') {
+    return strlen($md5) == 32 && ctype_xdigit($md5);
+  }
 
 
 function run()
@@ -271,11 +282,11 @@ function run()
             $relativePath = normalizeString($item['album']) . "-----" . basename($filePath);
 
             if (strtolower($ext) === "mp4") {
-                $videoPath = (getProtectedUrlForMediaPath($relativePath));
+                $videoPath = (getProtectedUrlForMediaHash($hash));
                 $relativeThumbnail = $item['album'] . "-----" . basename($filePath, ".".$ext) . ".jpg";
-                $photoPath = (getProtectedUrlForMediaPath($relativeThumbnail));
+                $photoPath = (getProtectedUrlForMediaHash("t-".$hash));
             } else {
-                $photoPath = (getProtectedUrlForMediaPath($relativePath));
+                $photoPath = (getProtectedUrlForMediaHash($hash));
             }
 
             $mime = (isset($videoPath)) ? "video/mp4": ((strtolower($ext) === "gif") ? "image/gif" :  ((strtolower($ext) === "png") ? "image/png" : "image/jpg")) ;
@@ -313,16 +324,16 @@ function run()
                 $relativePath = str_replace(DIRECTORY_SEPARATOR, '-----', $filePath);
 
                 if (strtolower($ext) === "mp4") {
-                    $videoPath = (getProtectedUrlForMediaPath($relativePath));
+                    $videoPath = (getProtectedUrlForMediaHash($hash));
                     $relativeThumbnail = str_replace(DIRECTORY_SEPARATOR, '-----', $thumbailPathTest);
-                    $photoPath = (getProtectedUrlForMediaPath($relativeThumbnail));
+                    $photoPath = (getProtectedUrlForMediaHash("t-".$hash));
                 } else if($ops->is_file($videoPathTest)) {
                     $relativeVideo = str_replace(DIRECTORY_SEPARATOR, '-----', $videoPathTest);
-                    $videoPath = (getProtectedUrlForMediaPath($relativeVideo));
-                    $photoPath = (getProtectedUrlForMediaPath($relativePath));
+                    $videoPath = (getProtectedUrlForMediaHash($hash));
+                    $photoPath = (getProtectedUrlForMediaHash("t-".$hash));
                 } else {
                     unset($videoPath);
-                    $photoPath = (getProtectedUrlForMediaPath($relativePath));
+                    $photoPath = (getProtectedUrlForMediaHash($hash));
                 }
 
                 $mime = (isset($videoPath)) ? "video/mp4": ((strtolower($ext) === "gif") ? "image/gif" :  ((strtolower($ext) === "png") ? "image/png" : "image/jpg")) ;
@@ -340,9 +351,21 @@ function run()
         print(json_encode($photos, JSON_UNESCAPED_SLASHES));
 
     } else if (isset($_GET['media'])) {
-        if(is_base64_encoded($_GET['media'])) {
+
+        if(strpos($_GET['media'], 't-') === 0 ) {
+            $hash = str_replace('t-','',$_GET['media']);
+            $file = (str_replace(mediaFile::MEDIA_FOLDER.DIRECTORY_SEPARATOR, '', (new mediaFile('foo','bar',null, $hash))->original()));
+
+            $ext = pathinfo($file, PATHINFO_EXTENSION);
+            $filename = basename($file, "." . $ext);
+            $_GET['media'] = str_Replace(DIRECTORY_SEPARATOR, '-----',dirname($file) . DIRECTORY_SEPARATOR . $filename . "." . $ext);
+        }else if(isValidMd5($_GET['media'])) {
+            $hash = $_GET['media'];
+            $_GET['media'] = str_Replace(DIRECTORY_SEPARATOR, '-----', str_replace(mediaFile::MEDIA_FOLDER.DIRECTORY_SEPARATOR, '', (new mediaFile('foo','bar',null, $_GET['media']))->original()));
+            
+        }else if(is_base64_encoded($_GET['media'])) {
             $_GET['media'] = base64_decode($_GET['media']);
-        }
+        } 
 
         if ($_GET['media'] === "blank.gif") {
             header('Content-Type: image/gif');
@@ -364,8 +387,9 @@ function run()
         }
 
         if($USE_X_Accel_Redirect && is_file(privuma::canonicalizePath(privuma::getDataDirectory() .  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR)))){
+            
             header('Content-Type: ' . mime_content_type(privuma::canonicalizePath(privuma::getDataDirectory() .  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR))));
-        	header('X-Accel-Redirect: ' . DIRECTORY_SEPARATOR . basename(privuma::getDataDirectory()) .  DIRECTORY_SEPARATOR  . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR));
+        	header('X-Accel-Redirect: ' . DIRECTORY_SEPARATOR . $ops->encode(basename(privuma::getDataFolder()) .  DIRECTORY_SEPARATOR  . ltrim($mediaPath), DIRECTORY_SEPARATOR));
             die();
         }
 
@@ -385,7 +409,7 @@ function run()
             	  header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
                 header("Cache-Control: post-check=0, pre-check=0", false);
                 header("Pragma: no-cache");
-                header('Location: ' . getProtectedUrlForMediaPath($path, true) . '&direct');
+                header('Location: ' . (is_null($hash) ? getProtectedUrlForMediaPath($path, true) : getProtectedUrlForMediaHash($hash, true)) . '&direct');
                 die();
 
             }
@@ -396,7 +420,7 @@ function run()
                 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
                 header("Cache-Control: post-check=0, pre-check=0", false);
                 header("Pragma: no-cache");
-                header('Location: ' . getProtectedUrlForMediaPath($path, true) . '&direct');
+                header('Location: ' . (is_null($hash) ? getProtectedUrlForMediaPath($path, true) : getProtectedUrlForMediaHash($hash, true)) . '&direct');
                 die();
             }
 
@@ -437,6 +461,7 @@ function run()
         $ext = pathinfo($mediaPath, PATHINFO_EXTENSION);
         $album = explode(DIRECTORY_SEPARATOR, $mediaPath)[0];
         if (!$ops->is_file($file)) {
+            //(new mediaFile(basename($file), $album))->delete();
             die('Media file not found' . $file);
         }
         
@@ -447,11 +472,13 @@ function run()
         }
 
         if (!$ops->is_file($file)) {
+            //(new mediaFile(basename($file), $album))->delete();
             die('Media file not found' . $file);
         }
         
         if ($USE_X_Accel_Redirect){
-        	header('X-Accel-Redirect: ' . $ops->encode($file));
+            header('Content-Type: ' . mime_content_type(privuma::canonicalizePath(ltrim( $ops->encode($file), DIRECTORY_SEPARATOR))));
+        	header('X-Accel-Redirect: ' . DIRECTORY_SEPARATOR . $ops->encode($file));
             die();
         }
 
@@ -478,9 +505,9 @@ function run()
             $relativePath = $album['album'] . "-----" . basename($filePath);
             if (strtolower($ext) === "mp4") {
                 $relativeThumbnail = $album['album'] . "-----" . basename($filePath, ".".$ext) . ".jpg";
-                $photoPath = (getProtectedUrlForMediaPath($relativeThumbnail));
+                $photoPath = (getProtectedUrlForMediaHash("t-".$album['hash']));
             } else {
-                $photoPath = (getProtectedUrlForMediaPath($relativePath));
+                $photoPath = (getProtectedUrlForMediaHash($album['hash']));
             }
             
             if (empty($photoPath)) {
