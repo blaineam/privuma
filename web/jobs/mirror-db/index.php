@@ -1,16 +1,19 @@
 <?php
-require_once(__DIR__.'/../../helpers/dotenv.php');
-loadEnv(__DIR__ . '/../../config/.env');
 
-if(!get_env('MIRROR_DB')){
+use privuma\privuma;
+
+require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
+
+$privuma = new privuma();
+if(!$privuma->getEnv('MIRROR_DB')){
     exit();
 }
-$host = get_env('MYSQL_HOST');
-$hostExternal = get_env('MYSQL_HOST_EXTERNAL');
-$db   = get_env('MYSQL_DATABASE');
-$user = get_env('MYSQL_USER');
-$pass =  get_env('MYSQL_PASSWORD');
-$RESET = get_env('MYSQL_RESET_EXTERNAL') ?? false;
+$host = $privuma->getEnv('MYSQL_HOST');
+$hostExternal = $privuma->getEnv('MYSQL_HOST_EXTERNAL');
+$db   = $privuma->getEnv('MYSQL_DATABASE');
+$user = $privuma->getEnv('MYSQL_USER');
+$pass =  $privuma->getEnv('MYSQL_PASSWORD');
+$RESET = $privuma->getEnv('MYSQL_RESET_EXTERNAL') ?? false;
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -58,7 +61,3 @@ foreach(array_chunk($new_ids, 2000) as $key => $chunk_ids) {
 
     echo PHP_EOL.$counter . " inserted new media in chunk " . $key . "/" . ceil(count($new_ids) / 2000) . " to mirrored database";
 }
-
-
-
-//exec('/usr/bin/pt-table-sync --print -verbose --verbose --execute --no-check-slave --databases ofether_privuma --tables media h=' . $host . ',D=' . $db . ',t=media,p=' . $pass . ',u=' . $user . ' h=' . $hostExternal . ',D=' . $db . ',t=media,p=' . $pass . ',u=' . $user);
