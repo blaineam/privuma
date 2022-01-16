@@ -37,6 +37,7 @@ class processMedia {
                         echo PHP_EOL."Failed to obtain media file from path: " . $data['path'];
                     }
                 } else {
+                    unlink($data['path']);
                     echo PHP_EOL."Existing MediaFile located at: " . $existingFile . " For: " . $data['path'];
                 }
             }

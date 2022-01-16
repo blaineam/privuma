@@ -30,6 +30,7 @@ web/jobs/*
 !web/jobs/test
 !web/jobs/thumbails
 !web/jobs/media-dirs
+!web/jobs/deovr-cacher
 web/jobs/test/testing/
 web/jobs/test/dGVzdGluZw==/
 web/dGVzdGluZw==
