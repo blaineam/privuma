@@ -30,7 +30,7 @@ class processMedia {
 
             if(isset($data['path'])) {
                 if( $existingFile === false ) {
-                    if($tempPath = $this->loadPath($data['path'], $data['local'] ?? false)) {
+                    if($tempPath = $this->loadPath($data['path'], (isset($data['local']) ? true : false))) {
                         echo PHP_EOL."Pulled Media File to: " . $tempPath;
                         $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['path' => $tempPath, 'album' => $data['album'], 'filename' => $data['filename']]]));
                     } else {
@@ -43,7 +43,7 @@ class processMedia {
             }
             return;
         }
-        if(isset($data['url']) && isset($data['preserve']) && !privuma::getCloudFS()->is_file($data['preserve'])) {
+        if((isset($data['url']) || isset($data['path'])) && isset($data['preserve']) && !privuma::getCloudFS()->is_file($data['preserve'])) {
             if($this->getDirectorySize(sys_get_temp_dir()) >= 1024 * 1024 * 1024 * 10) {
                 echo PHP_EOL."Temp Directory full, cleaning temp director";
                 foreach (glob(sys_get_temp_dir().DIRECTORY_SEPARATOR."*") as $file) {
@@ -55,12 +55,24 @@ class processMedia {
                 $qm->enqueue(json_encode(['type'=> 'processMedia', 'data' => $data]));
                 return;
             }
-            if($tempPath = $this->downloadUrl($data['url'])) {
-                echo PHP_EOL."Downloaded Media File to: " . $tempPath;
-                $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['preserve' => $data['preserve'], 'path' => $tempPath]]));
-            } else {
-                echo PHP_EOL."Failed to obtain preserve file from url: " . $data['url'];
+
+            if(isset($data['url'])) {
+                if($tempPath = $this->downloadUrl($data['url'])) {
+                    echo PHP_EOL."Downloaded Media File to: " . $tempPath;
+                    $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['preserve' => $data['preserve'], 'path' => $tempPath]]));
+                } else {
+                    echo PHP_EOL."Failed to obtain preserve file from url: " . $data['url'];
+                }
+            } else if(isset($data['path'])) {
+
+                if($tempPath = $this->loadPath($data['path'], (isset($data['local']) ? true : false))) {
+                    echo PHP_EOL."Using Media File at: " . $tempPath;
+                    $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['preserve' => $data['preserve'], 'path' => $tempPath]]));
+                } else {
+                    echo PHP_EOL."Failed to obtain preserve file from filesystem path: " . $data['path'];
+                }
             }
+
         } else {
             echo PHP_EOL."Existing preserve file located at: " . $data['preserve'];
         }
@@ -72,8 +84,21 @@ class processMedia {
     }
 
     private function loadPath(string $path, bool $directPath = false): ?string {
-        if($directPath) {
-            return $path;
+
+        if(is_file($path)) {
+            clearstatcache();
+            if(!filesize($path)) {
+                return null;
+            }
+
+            if($directPath) {
+                return $path;
+            }
+            $tmpfile = tempnam(sys_get_temp_dir(), 'PVMA');
+            copy($path, $tmpfile);
+            rename( $tmpfile, $tmpfile . "." . pathinfo($path, PATHINFO_EXTENSION) );
+
+            return $tmpfile . "." . pathinfo($path, PATHINFO_EXTENSION);
         }
 
         return privuma::getCloudFS()->pull($path);

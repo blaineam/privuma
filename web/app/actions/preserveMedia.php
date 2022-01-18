@@ -112,7 +112,7 @@ class preserveMedia {
             is_file($newFileTemp) && unlink($newFileTemp);
             return $result;
         }else {
-            echo PHP_EOL.implode(PHP_EOL.$void);
+            echo PHP_EOL.implode(PHP_EOL,$void);
             unset($void);
         }
 
@@ -138,7 +138,7 @@ class preserveMedia {
                 echo PHP_EOL."gifsicle was successful";
                 $output =  privuma::getCloudFS()->rename($newFileTemp, $filePath, false);
             }else{
-                echo PHP_EOL.implode(PHP_EOL.$void);
+                echo PHP_EOL.implode(PHP_EOL,$void);
                 unset($void);
                 $output =  false;
             }
@@ -149,14 +149,20 @@ class preserveMedia {
                 $path = '/usr/bin/mogrify';
             }
             exec($path . " -resize 1920x1920 -quality 60 -fuzz 7% '".$ext.':'.$tempFile."'", $void, $response);
+            $is = getimagesize($tempFile);
             if($response == 0 ) {
                 echo PHP_EOL."mogrify was successful";
                 $output =  privuma::getCloudFS()->rename($tempFile, $filePath, false);
+            }elseif((exif_imagetype($tempFile) || $is !== false) && filesize($tempFile) < 1024*1024*30) {
+                echo PHP_EOL."mogrify failed but this is a reasonably sized image (<30MB), lets save it anyways";
+                $output =  privuma::getCloudFS()->rename($tempFile, $filePath, false);
             }else{
-                echo PHP_EOL.implode(PHP_EOL.$void);
+                echo PHP_EOL.implode(PHP_EOL,$void);
                 unset($void);
                 $output =  false;
             }
+
+            var_dump([$is,$is['height'], exif_imagetype($tempFile), filesize($tempFile) < 1024*1024*30]);
         }
         is_file($tempFile) && unlink($tempFile);
         is_file($newFileTemp) && unlink($newFileTemp);

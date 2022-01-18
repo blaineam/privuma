@@ -21,7 +21,7 @@ use PDO;
 
 $ops = privuma::getCloudFS();
 
-$USE_MIRROR= privuma::getEnv('MIRROR_FILES');
+$USE_MIRROR= privuma::getEnv('MIRROR_FILES') || privuma::getEnv('USE_MIRROR');
 $RCLONE_MIRROR = privuma::getEnv('RCLONE_MIRROR');
 $opsMirror = new cloudFS($RCLONE_MIRROR);
 
@@ -278,7 +278,7 @@ function run()
             $filename = basename($item["filename"], "." . $ext);
             $filePath = $SYNC_FOLDER . DIRECTORY_SEPARATOR . normalizeString($item['album']) . DIRECTORY_SEPARATOR . $item["filename"];
             $fileParts = explode('---', basename($filePath, "." . $ext));
-            $hash = $fileParts[1];
+            $hash = $fileParts[1] ?? $item['hash'];
             $relativePath = normalizeString($item['album']) . "-----" . basename($filePath);
 
             if (strtolower($ext) === "mp4") {
@@ -320,20 +320,27 @@ function run()
                 $videoPathTest = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename .".mp4";
                 $thumbailPathTest = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename .".jpg";
                 $hash = md5(dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename);
+                
                 $fileParts = explode('---', basename($filePath, "." . $ext));
                 $relativePath = str_replace(DIRECTORY_SEPARATOR, '-----', $filePath);
-
+                
                 if (strtolower($ext) === "mp4") {
-                    $videoPath = (getProtectedUrlForMediaHash($hash));
+                    $urlHash = mediaFile::sanitize($hash, dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename . "." . $ext) ;
+
+                    $videoPath = (getProtectedUrlForMediaHash($urlHash));
                     $relativeThumbnail = str_replace(DIRECTORY_SEPARATOR, '-----', $thumbailPathTest);
-                    $photoPath = (getProtectedUrlForMediaHash("t-".$hash));
+                    $photoPath = (getProtectedUrlForMediaHash("t-".$urlHash));
                 } else if($ops->is_file($videoPathTest)) {
+                    $urlHash = mediaFile::sanitize($hash, dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename . ".mp4") ;
+
                     $relativeVideo = str_replace(DIRECTORY_SEPARATOR, '-----', $videoPathTest);
-                    $videoPath = (getProtectedUrlForMediaHash($hash));
-                    $photoPath = (getProtectedUrlForMediaHash("t-".$hash));
+                    $videoPath = (getProtectedUrlForMediaHash($urlHash));
+                    $photoPath = (getProtectedUrlForMediaHash("t-".$urlHash));
                 } else {
                     unset($videoPath);
-                    $photoPath = (getProtectedUrlForMediaHash($hash));
+                    $urlHash = mediaFile::sanitize($hash, dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename . "." . $ext) ;
+
+                    $photoPath = (getProtectedUrlForMediaHash($urlHash));
                 }
 
                 $mime = (isset($videoPath)) ? "video/mp4": ((strtolower($ext) === "gif") ? "image/gif" :  ((strtolower($ext) === "png") ? "image/png" : "image/jpg")) ;
@@ -354,15 +361,28 @@ function run()
 
         if(strpos($_GET['media'], 't-') === 0 ) {
             $hash = str_replace('t-','',$_GET['media']);
-            $file = (str_replace(mediaFile::MEDIA_FOLDER.DIRECTORY_SEPARATOR, '', (new mediaFile('foo','bar',null, $hash))->original()));
+            $original = mediaFile::desanitize($hash);
+            if($original !== $hash) {
+                $file = ltrim($original, DIRECTORY_SEPARATOR);
+            }else {
+                $file = (str_replace(mediaFile::MEDIA_FOLDER.DIRECTORY_SEPARATOR, '', (new mediaFile('foo','bar',null, $hash))->original()));
+            }
 
             $ext = pathinfo($file, PATHINFO_EXTENSION);
             $filename = basename($file, "." . $ext);
-            $_GET['media'] = str_Replace(DIRECTORY_SEPARATOR, '-----',dirname($file) . DIRECTORY_SEPARATOR . $filename . "." . $ext);
+            $_GET['media'] = str_Replace(DIRECTORY_SEPARATOR, '-----',dirname($file) . DIRECTORY_SEPARATOR . $filename . ".jpg");
         }else if(isValidMd5($_GET['media'])) {
             $hash = $_GET['media'];
-            $_GET['media'] = str_Replace(DIRECTORY_SEPARATOR, '-----', str_replace(mediaFile::MEDIA_FOLDER.DIRECTORY_SEPARATOR, '', (new mediaFile('foo','bar',null, $_GET['media']))->original()));
-            
+            $original = mediaFile::desanitize($hash);
+            if($original !== $hash) {
+                $file = ltrim($original, DIRECTORY_SEPARATOR);
+                //die($original);
+            }else {
+                $file = (str_replace(mediaFile::MEDIA_FOLDER.DIRECTORY_SEPARATOR, '', (new mediaFile('foo','bar',null, $hash))->original()));
+            }
+            $ext = pathinfo($file, PATHINFO_EXTENSION);
+            $filename = basename($file, "." . $ext);
+            $_GET['media'] = str_Replace(DIRECTORY_SEPARATOR, '-----',dirname($file) . DIRECTORY_SEPARATOR . $filename . "." . $ext);
         }else if(is_base64_encoded($_GET['media'])) {
             $_GET['media'] = base64_decode($_GET['media']);
         } 
@@ -395,13 +415,17 @@ function run()
 
         if($USE_MIRROR && strpos($RCLONE_MIRROR, ':') !== false && !isset($_GET['direct'])){
             $path = $_GET['media'];
-            $realFile = realFilePath(str_replace('-----', DIRECTORY_SEPARATOR, $path));
+            $file = privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $path;
+            //die($file);
+            if(!isset($hash)) {
+                $realFile = realFilePath(str_replace('-----', DIRECTORY_SEPARATOR, $path));
 
-            $mediaPath = str_replace('..', '', str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,str_replace('-----', DIRECTORY_SEPARATOR, $_GET['media'])));
-            $file = realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath);
-    
-            if($file === false) {
-                $file =  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR);
+                $mediaPath = str_replace('..', '', str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,str_replace('-----', DIRECTORY_SEPARATOR, $_GET['media'])));
+                $file = realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath);
+        
+                if($file === false) {
+                    $file =  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR);
+                }
             }
 
             $url = $opsMirror->public_link($file);
@@ -451,8 +475,12 @@ function run()
             echo base64_decode('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==');
             return;
         }
+        if(!isset($hash)) {
+            $file = realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath);
+        }else {
+            $file = privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaPath;
+        }
 
-        $file = realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath);
 
         if($file === false) {
             $file =  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR);
@@ -462,7 +490,7 @@ function run()
         $album = explode(DIRECTORY_SEPARATOR, $mediaPath)[0];
         if (!$ops->is_file($file)) {
             //(new mediaFile(basename($file), $album))->delete();
-            die('Media file not found' . $file);
+            die('Media file not found ' . $file);
         }
         
         $mediaPath = basename(dirname($file)) . DIRECTORY_SEPARATOR . basename($file);
@@ -473,7 +501,7 @@ function run()
 
         if (!$ops->is_file($file)) {
             //(new mediaFile(basename($file), $album))->delete();
-            die('Media file not found' . $file);
+            die('Media file not found ' . $file);
         }
         
         if ($USE_X_Accel_Redirect){
@@ -490,7 +518,9 @@ function run()
             if($folderObj['HasThumbnailJpg']) {
                 $ext = pathinfo($folderObj["Name"], PATHINFO_EXTENSION);
                 $hash = md5(dirname($folderObj['Path']) . DIRECTORY_SEPARATOR . basename($folderObj['Path'], "." . $ext));
-                $photoPath = $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=".urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path']) . "-----" . "1.jpg"));
+                $urlHash = mediaFile::sanitize($hash, str_replace(DIRECTORY_SEPARATOR, '-----', dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path']) . "-----" . "1.jpg") ;
+                $photoPath = (getProtectedUrlForMediaHash($urlHash));
+                //$photoPath = $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=".urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path']) . "-----" . "1.jpg"));
             } else {
                 $photoPath = $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=blank.gif";;
                 $hash = "checkCache";
