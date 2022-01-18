@@ -16,7 +16,26 @@ class QueueManager {
 	// Add a Queue to the queue and if we are at our limit, drop one off the end.
 	public function enqueue(string $rawMessage) {
 		if (!empty($rawMessage)) {
+			
+			
+			$handle = @fopen($this->filename, "r");
+if ($handle)
+{
+    while (!feof($handle))
+    {
+        $buffer = fgets($handle);
+        if(strpos($buffer, $rawMessage) !== FALSE){
+        	echo PHP_EOL."Message already in queue, skipping enqueue";
+        	return;
+        }
+            
+                }
+    fclose($handle);
+}
+
+			
             $queueFile = fopen($this->filename, 'a');
+            
 
             // here it may add some spaces so the message length is multiples of modular.
             // that make it easier to read messages from a file.

@@ -204,7 +204,7 @@ class mediaFile {
             $sanitized =  implode(DIRECTORY_SEPARATOR, array_map('self::sanitize', $parts));
         }
 
-        if($sanitized !== $name) {
+        if($sanitized !== $name || !is_null($storedValue)) {
             $sanitizedFiles = json_decode(file_get_contents(self::SANITIZED_PATH), true) ?? [];
             $sanitizedFiles[$sanitized] = $storedValue ?? $name;
             file_put_contents(self::SANITIZED_PATH, json_encode($sanitizedFiles, JSON_PRETTY_PRINT));
