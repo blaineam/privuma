@@ -525,7 +525,11 @@ function run()
                 $photoPath = $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=blank.gif";;
                 $hash = "checkCache";
             }
-            $realbums[] = array("id" => (string)urlencode(base64_encode(implode('-----', explode(DIRECTORY_SEPARATOR, $folderObj['Path'])))), "updated" => (string)(strtotime(explode('.', $folderObj['ModTime'])[0])*1000), "title" => (string)implode('---', explode(DIRECTORY_SEPARATOR, $folderObj['Path'])), "img" => (string)$photoPath , "mediaId" => (string)$hash);
+            if(!in_array(explode(DIRECTORY_SEPARATOR, $folderObj['Path'])[0], ['SCRATCH'])) {
+
+                $realbums[] = array("id" => (string)urlencode(base64_encode(implode('-----', explode(DIRECTORY_SEPARATOR, $folderObj['Path'])))), "updated" => (string)(strtotime(explode('.', $folderObj['ModTime'])[0])*1000), "title" => (string)implode('---', explode(DIRECTORY_SEPARATOR, $folderObj['Path'])), "img" => (string)$photoPath , "mediaId" => (string)$hash);
+        
+            }
         }
         $result = $conn->query('select filename, album, max(time) as time, hash FROM media where dupe = 0 GROUP by album order by time DESC;');
         while ($album = $result->fetch_assoc()) {
