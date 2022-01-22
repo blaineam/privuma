@@ -35,7 +35,7 @@ function processDir($dir, $sync) {
             if(in_array($ext, ['DS_Store'])) {
                 continue;
             }
-            if(!$sync['preserve'] && in_array(strtolower($ext), ['mp4','jpg','jpeg','gif','png','heif'])) {
+            if(!$sync['preserve'] && in_array(strtolower($ext), ['webm','mov','swf','avi','mkv','m4v','mp4','jpg','jpeg','gif','png','heif'])) {
                 $album = str_replace(DIRECTORY_SEPARATOR, '---', str_replace($sync['path'], 'Syncs', dirname($path)));
                 $filename = mediaFile::sanitize(basename($path, "." . $ext)) . "." . (!in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['jpg','jpeg','gif','png','heif']) ? 'mp4' : pathinfo($path, PATHINFO_EXTENSION));
                 $preserve = privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename;
@@ -53,6 +53,9 @@ function processDir($dir, $sync) {
                             'local' => $sync['removeFromSource']
                         ],
                     ]));
+                } else if($sync['removeFromSource']) {
+                    unlink($path);
+                    exec('rmdir ' . escapeshellarg(dirname($path)) . " 2>&1 > /dev/null");
                 }
             }else if($sync['preserve']){
                 $preserve = privuma::getDataFolder() . DIRECTORY_SEPARATOR . 'SCRATCH' . DIRECTORY_SEPARATOR .'Syncs' . DIRECTORY_SEPARATOR . basename(dirname($path)) . DIRECTORY_SEPARATOR . mediaFile::sanitize(basename($path, "." . pathinfo($path, PATHINFO_EXTENSION))) . "." . pathinfo($path, PATHINFO_EXTENSION);
@@ -66,7 +69,13 @@ function processDir($dir, $sync) {
                             'local' => $sync['removeFromSource']
                         ],
                     ]));
+                } else if($sync['removeFromSource']) {
+                    unlink($path);
+                    exec('rmdir ' . escapeshellarg(dirname($path)) . " 2>&1 > /dev/null");
                 }
+            } else if($sync['removeFromSource']) {
+                unlink($path);
+                exec('rmdir ' . escapeshellarg(dirname($path)) . " 2>&1 > /dev/null");
             }
         } else if ($value != "." && $value != ".." && $value !== "@eaDir") {
             processDir($path, $sync);
