@@ -417,9 +417,8 @@ function run()
             $path = $_GET['media'];
             $file = privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $path;
             //die($file);
-            if(!isset($hash)) {
-                $realFile = realFilePath(str_replace('-----', DIRECTORY_SEPARATOR, $path));
 
+            if(!isset($hash)) {
                 $mediaPath = str_replace('..', '', str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,str_replace('-----', DIRECTORY_SEPARATOR, $_GET['media'])));
                 $file = realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath);
         
@@ -428,19 +427,48 @@ function run()
                 }
             }
 
+            $file = str_replace('-----', DIRECTORY_SEPARATOR, $file);
+            $ext = pathinfo($file, PATHINFO_EXTENSION);
+
+            $filenameSansExtension = basename($file, "." . $ext);
+
+            $compressedFile = dirname($file) . DIRECTORY_SEPARATOR . $filenameSansExtension . "---compressed." . $ext;
+            $dupeFile = dirname($file) . DIRECTORY_SEPARATOR . $filenameSansExtension . "---dupe." . $ext;
+
             $url = $opsMirror->public_link($file);
             if($url === false) {
-            	  header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-                header("Cache-Control: post-check=0, pre-check=0", false);
-                header("Pragma: no-cache");
-                header('Location: ' . (is_null($hash) ? getProtectedUrlForMediaPath($path, true) : getProtectedUrlForMediaHash($hash, true)) . '&direct');
-                die();
+                $file = $compressedFile;
+                $url = $opsMirror->public_link($compressedFile);
+                if($url === false) {
+
+                    if ($ops->is_file($dupeFile)) {
+                        $dupeSource = $ops->file_get_contents($dupeFile);
+
+                        $file = $dupeSource;
+                        $url = $opsMirror->public_link($dupeSource);
+                        if ($url === false) {
+                            header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+                            header("Cache-Control: post-check=0, pre-check=0", false);
+                            header("Pragma: no-cache");
+                            header('Location: ' . (is_null($hash) ? getProtectedUrlForMediaPath($path, true) : getProtectedUrlForMediaHash($hash, true)) . '&direct');
+                            die();
+                        }
+                    } else {
+                        header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+                        header("Cache-Control: post-check=0, pre-check=0", false);
+                        header("Pragma: no-cache");
+                        header('Location: ' . (is_null($hash) ? getProtectedUrlForMediaPath($path, true) : getProtectedUrlForMediaHash($hash, true)) . '&direct');
+                        die();
+                    }
+
+    
+                }
 
             }
             
             $headers = get_headers($url, TRUE);
             $head = array_change_key_case($headers);
-            if ( strpos($headers[0], '200') === FALSE || $head['content-type'] !== $ops->mime_content_type(DIRECTORY_SEPARATOR .'data'.DIRECTORY_SEPARATOR . 'privuma' . DIRECTORY_SEPARATOR . basename(dirname($realFile)).'/'.basename($realFile))) {
+            if ( strpos($headers[0], '200') === FALSE || $head['content-type'] !== $ops->mime_content_type(DIRECTORY_SEPARATOR .'data'.DIRECTORY_SEPARATOR . 'privuma' . DIRECTORY_SEPARATOR . basename(dirname($file)).'/'.basename($file))) {
                 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
                 header("Cache-Control: post-check=0, pre-check=0", false);
                 header("Pragma: no-cache");
