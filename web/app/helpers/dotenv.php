@@ -55,6 +55,25 @@ class dotenv
             $output[$name] = $value;
         }
 
+        foreach ($_SERVER as $name => $value) {
+            if (is_scalar($value)) {
+                if (is_numeric($value)) {
+                    $value = $value + 0;
+                }
+    
+                if (strtolower($value) == 'true') {
+                    $value = true;
+                }
+    
+                if (strtolower($value) == 'false') {
+                    $value = false;
+                }
+            }
+
+            $output[$name] = $value;
+        }
+
+
         return $key ? $output[$key] : $output;
     }
 }
