@@ -132,7 +132,7 @@ class preserveMedia {
         $newFileTemp = $newFileTemp . '.' . $ext;
 
         if (strtolower($ext) === "gif") {
-            exec("/usr/bin/gifsicle --conserve-memory --no-ignore-errors --no-warnings --colors=72 -O3 --lossy=100 --color-method=median-cut --resize-fit 1920x1920 '" . $tempFile . "' -o '" . $newFileTemp . "'", $void, $response);
+            exec("/usr/bin/gifsicle --conserve-memory --careful --no-ignore-errors --no-warnings --crop-transparency --no-comments --no-extensions --no-names --colors=240 --optimize=3 --lossy=15 --dither --resize-fit 1920x1920 '" . $tempFile . "' -o '" . $newFileTemp . "'", $void, $response);
             
             if($response == 0 ) {
                 echo PHP_EOL."gifsicle was successful";

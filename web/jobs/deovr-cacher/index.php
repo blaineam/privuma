@@ -32,7 +32,8 @@ foreach($deovrSites as $url => $config) {
                     
                     $vs = end($vjson['encodings'][$encodingKey]['videoSources']);
                     $videoUrl = $vs['url'];
-                    $vjson['encodings'][$encodingKey]['videoSources'] = [$vs];
+                    $vjson['encodings'] = [$vjson['encodings'][$encodingKey]];
+                    $vjson['encodings'][0]['videoSources'] = [$vs];
         
                     $filename = explode('?', basename($videoUrl))[0];
                     $preserve = mediaFile::sanitize($privuma->getEnv("DEOVR_DATA_DIRECTORY") . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . str_replace('.mp4', '', $filename)) . ".mp4";
