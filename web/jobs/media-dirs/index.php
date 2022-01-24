@@ -24,7 +24,7 @@ function getDirContents($dir, &$results = array()) {
         $path = $dir . DIRECTORY_SEPARATOR . $value;
         if (!$fileObj['IsDir']) {
             $ext = pathinfo($path, PATHINFO_EXTENSION);
-            if(in_array(strtolower($ext), ['mp4','jpg','jpeg','gif','png','heif'])) {
+            if(in_array(strtolower($ext), ['mp4','jpg','jpeg','gif','png','heif']) && strpos($dir, $ops->encode('SCRATCH') === false)) {
                 $mediaDir = true;
             }
         } else if ($value != "." && $value != ".." && $value !== "privuma"  && $value !== "@eaDir") {
