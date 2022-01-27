@@ -23,7 +23,7 @@ class processMedia {
                         echo PHP_EOL."Failed to obtain media file from url: " . $data['url'];
                     }
                 } else {
-                    echo PHP_EOL."Existing MediaFile located at: " . $existingFile . " For: " . $data['path']; 
+                    echo PHP_EOL."Existing MediaFile located at: " . $existingFile . " For: " . $data['path'];
                 }
                 return;
             }

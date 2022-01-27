@@ -30,7 +30,7 @@ class mediaFile {
         $this->dupe = $dupe ?? strpos($filename, '---dupe') !== false ? 1 : 0;;
         $this->cloudFS = privuma::getCloudFS();
         $this->sanitizedFilesPath = privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'sanitizedFiles.json';
-        $privuma = new privuma();
+        $privuma = privuma::getInstance();
         $this->pdo = $privuma->getPDO();
     }
 
@@ -51,7 +51,7 @@ class mediaFile {
         $compressedFile = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---compressed." . $ext;
 
         $dupe = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
-                    
+
         $files = $this->cloudFS->glob(privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
         if($files === false) {
             $files = [];
@@ -148,10 +148,10 @@ class mediaFile {
             $stmt = $this->pdo->prepare('INSERT INTO media (dupe, album, hash, filename, time)
             VALUES (?, ?, ?, ?, ?)');
             return $stmt->execute([
-                $this->dupe() ? 1 : 0, 
-                $this->album, 
-                $this->hash, 
-                $this->filename, 
+                $this->dupe() ? 1 : 0,
+                $this->album,
+                $this->hash,
+                $this->filename,
                 $date
             ]) !== false;
         }
@@ -183,9 +183,9 @@ class mediaFile {
         $result = "";
         $pattern = '/([;:,-.\/ X])/';
         $array = preg_split($pattern, $name, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
-    
+
         foreach ($array as $v) $result .= ucwords(strtolower($v));
-    
+
         return $result;
     }
 
