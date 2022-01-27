@@ -32,59 +32,67 @@ $AUTHTOKEN = privuma::getEnv('AUTHTOKEN');
 $RCLONE_DESTINATION = privuma::getEnv('RCLONE_DESTINATION');
 $USE_X_Accel_Redirect = privuma::getEnv('USE_X_Accel_Redirect');
 
-$host = privuma::getEnv('MYSQL_HOST');
-$db   = privuma::getEnv('MYSQL_DATABASE');
-$user = privuma::getEnv('MYSQL_USER');
-$pass =  privuma::getEnv('MYSQL_PASSWORD');
+function connectToDB() {
+    $host = privuma::getEnv('MYSQL_HOST');
+    $db   = privuma::getEnv('MYSQL_DATABASE');
+    $user = privuma::getEnv('MYSQL_USER');
+    $pass =  privuma::getEnv('MYSQL_PASSWORD');
 
-$charset = 'utf8mb4';
-$port = 3306;
+    $charset = 'utf8mb4';
+    $port = 3306;
 
-$conn = new mysqli(
-    $host,
-    $user,
-    $pass,
-    $db,
-    $port
-);
+    $conn = new mysqli(
+        $host,
+        $user,
+        $pass,
+        $db,
+        $port
+    );
 
-if ($conn->connect_error) {
-    die("DB Connection failed: " . $conn->connect_error);
+    if ($conn->connect_error) {
+        die("DB Connection failed: " . $conn->connect_error);
+    }
+
+    $conn->set_charset("utf8");
+    $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
+    $options = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ];
+
+    try {
+        $pdo = new PDO($dsn, $user, $pass, $options);
+    } catch (\PDOException $e) {
+        throw new \PDOException($e->getMessage(), (int)$e->getCode());
+        exit(1);
+    }
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS  `media` (
+        `id` bigint(20) NOT NULL AUTO_INCREMENT,
+        `dupe` int(11) DEFAULT 0,
+        `hash` varchar(512) DEFAULT NULL,
+        `album` varchar(1000) DEFAULT NULL,
+        `filename` varchar(1000) DEFAULT NULL,
+        `time` datetime DEFAULT NULL,
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `media_id_IDX` (`id`) USING BTREE,
+        KEY `media_hash_IDX` (`hash`) USING BTREE,
+        KEY `media_album_IDX` (`album`(768)) USING BTREE,
+        KEY `media_filename_IDX` (`filename`(768)) USING BTREE,
+        KEY `media_time_IDX` (`time`) USING BTREE,
+        KEY `media_idx_album_dupe_hash` (`album`(255),`dupe`,`hash`(255)),
+        KEY `media_filename_time_IDX` (`filename`(512),`time`) USING BTREE,
+        FULLTEXT KEY `media_filename_FULL_TEXT_IDX` (`filename`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+    return [
+        "pdo" => $pdo,
+        "mysqli" => $conn,
+    ];
+
+
 }
-
-$conn->set_charset("utf8");
-$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (\PDOException $e) {
-    throw new \PDOException($e->getMessage(), (int)$e->getCode());
-    exit(1);
-}
-
-$pdo->exec("CREATE TABLE IF NOT EXISTS  `media` (
-    `id` bigint(20) NOT NULL AUTO_INCREMENT,
-    `dupe` int(11) DEFAULT 0,
-    `hash` varchar(512) DEFAULT NULL,
-    `album` varchar(1000) DEFAULT NULL,
-    `filename` varchar(1000) DEFAULT NULL,
-    `time` datetime DEFAULT NULL,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `media_id_IDX` (`id`) USING BTREE,
-    KEY `media_hash_IDX` (`hash`) USING BTREE,
-    KEY `media_album_IDX` (`album`(768)) USING BTREE,
-    KEY `media_filename_IDX` (`filename`(768)) USING BTREE,
-    KEY `media_time_IDX` (`time`) USING BTREE,
-    KEY `media_idx_album_dupe_hash` (`album`(255),`dupe`,`hash`(255)),
-    KEY `media_filename_time_IDX` (`filename`(512),`time`) USING BTREE,
-    FULLTEXT KEY `media_filename_FULL_TEXT_IDX` (`filename`)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-
 
 function rollingTokens($seed) {
     $d1 = new \DateTime("yesterday");
@@ -154,7 +162,7 @@ function realFilePath($filePath, $dirnamed_sync_folder = false)
     $compressedFile = $root . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---compressed." . $ext;
 
     $dupe = $root . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
-                
+
     $files = $ops->glob($root . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
     if($files === false) {
         $files = [];
@@ -191,6 +199,15 @@ function getProtectedUrlForMediaPath($path, $use_fallback = false) {
     global $FALLBACK_ENDPOINT;
     global $AUTHTOKEN;
     $uri = "?token=" . rollingTokens($AUTHTOKEN)[1]  . "&media=" . urlencode(base64_encode($path));
+    return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
+}
+
+
+function getProtectedUrlForMedia($media, $use_fallback = false) {
+    global $ENDPOINT;
+    global $FALLBACK_ENDPOINT;
+    global $AUTHTOKEN;
+    $uri = "?token=" . rollingTokens($AUTHTOKEN)[1]  . "&media=" . $media;
     return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
 }
 
@@ -236,6 +253,8 @@ function run()
     global $RCLONE_MIRROR;
     global $USE_X_Accel_Redirect;
 
+    $MAX_URL_CHARACTERS = 1600;
+
     if (isset($_GET['album']) || isset($_GET['amp;album'])) {
         $albumName = $_GET['album'] ?? $_GET['amp;album'];
 
@@ -243,15 +262,17 @@ function run()
             $albumName = base64_decode($albumName);
         }
 
-        $stmt = $conn->prepare('select filename, album, time, hash 
-        from media 
-        where hash in 
-        (select hash from media where album = ? and dupe != 0 and hash != "compressed") 
+        $conn = connectToDB()["mysqli"];
+
+        $stmt = $conn->prepare('select filename, album, time, hash
+        from media
+        where hash in
+        (select hash from media where album = ? and dupe != 0 and hash != "compressed")
         and dupe = 0
-        union ALL 
+        union ALL
         select filename, album, time, hash
-        from media 
-        WHERE 
+        from media
+        WHERE
         album = ? and dupe = 0 and hash != "compressed"
         group by filename
          order by
@@ -282,11 +303,29 @@ function run()
             $relativePath = normalizeString($item['album']) . "-----" . basename($filePath);
 
             if (strtolower($ext) === "mp4") {
-                $videoPath = (getProtectedUrlForMediaHash($hash));
-                $relativeThumbnail = $item['album'] . "-----" . basename($filePath, ".".$ext) . ".jpg";
-                $photoPath = (getProtectedUrlForMediaHash("t-".$hash));
+
+
+                $destt = $item['album'] . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext) . ".jpg";
+                $mediat = urlencode(base64_encode($destt));
+                $dest = $item['album'] . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext). ".".$ext;
+                $mediaval = urlencode(base64_encode($dest));
+                if(strlen($mediaval) > $MAX_URL_CHARACTERS) {
+                    mediaFile::sanitize($hash, $dest);
+                    $mediaval = $item['hash'];
+                    $mediat = "t-".$item['hash'];
+                }
+                $videoPath = getProtectedUrlForMedia($mediaval);
+                $photoPath = getProtectedUrlForMedia($mediat);
             } else {
-                $photoPath = (getProtectedUrlForMediaHash($hash));
+
+                $dest = $item['album'] . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext). ".".$ext;
+                $mediaval = urlencode(base64_encode($dest));
+                if(strlen($mediaval) > $MAX_URL_CHARACTERS) {
+                    mediaFile::sanitize($hash, $dest);
+                    $mediaval = $item['hash'];
+                    $mediat = "t-".$item['hash'];
+                }
+                $photoPath = getProtectedUrlForMedia($mediaval);
             }
 
             $mime = (isset($videoPath)) ? "video/mp4": ((strtolower($ext) === "gif") ? "image/gif" :  ((strtolower($ext) === "png") ? "image/png" : "image/jpg")) ;
@@ -320,27 +359,45 @@ function run()
                 $videoPathTest = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename .".mp4";
                 $thumbailPathTest = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename .".jpg";
                 $hash = md5(dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename);
-                
+
                 $fileParts = explode('---', basename($filePath, "." . $ext));
                 $relativePath = str_replace(DIRECTORY_SEPARATOR, '-----', $filePath);
-                
+
                 if (strtolower($ext) === "mp4") {
-                    $urlHash = mediaFile::sanitize($hash, dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename . "." . $ext) ;
-
-                    $videoPath = (getProtectedUrlForMediaHash($urlHash));
-                    $relativeThumbnail = str_replace(DIRECTORY_SEPARATOR, '-----', $thumbailPathTest);
-                    $photoPath = (getProtectedUrlForMediaHash("t-".$urlHash));
+                    $destt = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . basename($filePath, ".".$ext) . ".jpg";
+                    $mediat = urlencode(base64_encode($destt));
+                    $dest = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext). ".".$ext;
+                    $mediai = urlencode(base64_encode($dest));
+                    if(strlen($mediai) > $MAX_URL_CHARACTERS) {
+                        mediaFile::sanitize($hash, $dest);
+                        $mediai = $hash;
+                        $mediat = "t-".$hash;
+                    }
+                    $videoPath = getProtectedUrlForMedia($mediai);
+                    $photoPath = getProtectedUrlForMedia($mediat);
                 } else if($ops->is_file($videoPathTest)) {
-                    $urlHash = mediaFile::sanitize($hash, dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename . ".mp4") ;
 
-                    $relativeVideo = str_replace(DIRECTORY_SEPARATOR, '-----', $videoPathTest);
-                    $videoPath = (getProtectedUrlForMediaHash($urlHash));
-                    $photoPath = (getProtectedUrlForMediaHash("t-".$urlHash));
+                    $destt = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . basename($filePath, ".".$ext) . ".jpg";
+                    $mediat = urlencode(base64_encode($destt));
+                    $dest = $videoPathTest;
+                    $mediai = urlencode(base64_encode($dest));
+                    if(strlen($mediai) > $MAX_URL_CHARACTERS) {
+                        mediaFile::sanitize($hash, $dest);
+                        $mediai = $hash;
+                        $mediat = "t-".$hash;
+                    }
+                    $videoPath = getProtectedUrlForMedia($mediai);
+                    $photoPath = getProtectedUrlForMedia($mediat);
                 } else {
                     unset($videoPath);
-                    $urlHash = mediaFile::sanitize($hash, dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . $filename . "." . $ext) ;
-
-                    $photoPath = (getProtectedUrlForMediaHash($urlHash));
+                    $dest = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $albumFSPath . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext). ".".$ext;
+                    $mediai = urlencode(base64_encode($dest));
+                    if(strlen($mediai) > $MAX_URL_CHARACTERS) {
+                        mediaFile::sanitize($hash, $dest);
+                        $mediai = $hash;
+                        $mediat = "t-".$hash;
+                    }
+                    $photoPath = getProtectedUrlForMedia($mediai);
                 }
 
                 $mime = (isset($videoPath)) ? "video/mp4": ((strtolower($ext) === "gif") ? "image/gif" :  ((strtolower($ext) === "png") ? "image/png" : "image/jpg")) ;
@@ -358,7 +415,7 @@ function run()
         print(json_encode($photos, JSON_UNESCAPED_SLASHES));
 
     } else if (isset($_GET['media'])) {
-
+        set_time_limit(2);
         if(strpos($_GET['media'], 't-') === 0 ) {
             $hash = str_replace('t-','',$_GET['media']);
             $original = mediaFile::desanitize($hash);
@@ -366,6 +423,7 @@ function run()
                 $file = ltrim($original, DIRECTORY_SEPARATOR);
             }else {
                 $file = (str_replace(mediaFile::MEDIA_FOLDER.DIRECTORY_SEPARATOR, '', (new mediaFile('foo','bar',null, $hash))->original()));
+                mediaFile::sanitize($hash, $file);
             }
 
             $ext = pathinfo($file, PATHINFO_EXTENSION);
@@ -376,16 +434,16 @@ function run()
             $original = mediaFile::desanitize($hash);
             if($original !== $hash) {
                 $file = ltrim($original, DIRECTORY_SEPARATOR);
-                //die($original);
             }else {
                 $file = (str_replace(mediaFile::MEDIA_FOLDER.DIRECTORY_SEPARATOR, '', (new mediaFile('foo','bar',null, $hash))->original()));
+                mediaFile::sanitize($hash, $file);
             }
             $ext = pathinfo($file, PATHINFO_EXTENSION);
             $filename = basename($file, "." . $ext);
             $_GET['media'] = str_Replace(DIRECTORY_SEPARATOR, '-----',dirname($file) . DIRECTORY_SEPARATOR . $filename . "." . $ext);
         }else if(is_base64_encoded($_GET['media'])) {
             $_GET['media'] = base64_decode($_GET['media']);
-        } 
+        }
 
         if ($_GET['media'] === "blank.gif") {
             header('Content-Type: image/gif');
@@ -394,37 +452,23 @@ function run()
         }
 
         $mediaPath = str_replace('..', '', str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,str_replace('-----', DIRECTORY_SEPARATOR, $_GET['media'])));
-        
+
         $pos = strpos($mediaPath, 'data' . DIRECTORY_SEPARATOR);
         if ($pos !== false) {
             $mediaPath = substr_replace($mediaPath, '', $pos, strlen('data' . DIRECTORY_SEPARATOR));
         }
 
-        $parts = explode(DIRECTORY_SEPARATOR, $mediaPath);
-        if(count($parts) == 2) {
-            $mediaFile = new mediaFile($parts[1], $parts[0]);
-            $mediaPath = $mediaFile->path();
-        }
-
         if($USE_X_Accel_Redirect && is_file(privuma::canonicalizePath(privuma::getDataDirectory() .  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR)))){
-            
             header('Content-Type: ' . mime_content_type(privuma::canonicalizePath(privuma::getDataDirectory() .  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR))));
         	header('X-Accel-Redirect: ' . DIRECTORY_SEPARATOR . $ops->encode(basename(privuma::getDataFolder()) .  DIRECTORY_SEPARATOR  . ltrim($mediaPath), DIRECTORY_SEPARATOR));
             die();
         }
 
         if($USE_MIRROR && strpos($RCLONE_MIRROR, ':') !== false && !isset($_GET['direct'])){
-            $path = $_GET['media'];
-            $file = privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $path;
-            //die($file);
-
-            if(!isset($hash)) {
-                $mediaPath = str_replace('..', '', str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,str_replace('-----', DIRECTORY_SEPARATOR, $_GET['media'])));
-                $file = realFilePath($SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath);
-        
-                if($file === false) {
-                    $file =  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR);
-                }
+            if (count(explode(DIRECTORY_SEPARATOR, $mediaPath)) == 2) {
+                $file =   DIRECTORY_SEPARATOR . privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . ltrim($mediaPath, DIRECTORY_SEPARATOR);
+            } else {
+                $file = DIRECTORY_SEPARATOR . privuma::getDataFolder() . DIRECTORY_SEPARATOR . ltrim($mediaPath, DIRECTORY_SEPARATOR);
             }
 
             $file = str_replace('-----', DIRECTORY_SEPARATOR, $file);
@@ -433,49 +477,21 @@ function run()
             $filenameSansExtension = basename($file, "." . $ext);
 
             $compressedFile = dirname($file) . DIRECTORY_SEPARATOR . $filenameSansExtension . "---compressed." . $ext;
-            $dupeFile = dirname($file) . DIRECTORY_SEPARATOR . $filenameSansExtension . "---dupe." . $ext;
-
             $url = $opsMirror->public_link($file);
             if($url === false) {
                 $file = $compressedFile;
                 $url = $opsMirror->public_link($compressedFile);
                 if($url === false) {
-
-                    if ($ops->is_file($dupeFile)) {
-                        $dupeSource = $ops->file_get_contents($dupeFile);
-
-                        $file = $dupeSource;
-                        $url = $opsMirror->public_link($dupeSource);
-                        if ($url === false) {
-                            header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-                            header("Cache-Control: post-check=0, pre-check=0", false);
-                            header("Pragma: no-cache");
-                            header('Location: ' . (is_null($hash) ? getProtectedUrlForMediaPath($path, true) : getProtectedUrlForMediaHash($hash, true)) . '&direct');
-                            die();
-                        }
-                    } else {
-                        header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-                        header("Cache-Control: post-check=0, pre-check=0", false);
-                        header("Pragma: no-cache");
-                        header('Location: ' . (is_null($hash) ? getProtectedUrlForMediaPath($path, true) : getProtectedUrlForMediaHash($hash, true)) . '&direct');
-                        die();
-                    }
-
-    
+                    die('Media file not found ' . $file);
                 }
 
             }
-            
+
             $headers = get_headers($url, TRUE);
             $head = array_change_key_case($headers);
-            if ( strpos($headers[0], '200') === FALSE || $head['content-type'] !== $ops->mime_content_type(DIRECTORY_SEPARATOR .'data'.DIRECTORY_SEPARATOR . 'privuma' . DIRECTORY_SEPARATOR . basename(dirname($file)).'/'.basename($file))) {
-                header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-                header("Cache-Control: post-check=0, pre-check=0", false);
-                header("Pragma: no-cache");
-                header('Location: ' . (is_null($hash) ? getProtectedUrlForMediaPath($path, true) : getProtectedUrlForMediaHash($hash, true)) . '&direct');
-                die();
+            if ( strpos($headers[0], '200') === FALSE || (strpos($head['content-type'], 'image') === FALSE && strpos($head['content-type'], 'video') === FALSE) ) {
+                die('Mirror not operational for ' . $file);
             }
-
 
             header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
             header("Cache-Control: post-check=0, pre-check=0", false);
@@ -517,10 +533,9 @@ function run()
         $ext = pathinfo($mediaPath, PATHINFO_EXTENSION);
         $album = explode(DIRECTORY_SEPARATOR, $mediaPath)[0];
         if (!$ops->is_file($file)) {
-            //(new mediaFile(basename($file), $album))->delete();
             die('Media file not found ' . $file);
         }
-        
+
         $mediaPath = basename(dirname($file)) . DIRECTORY_SEPARATOR . basename($file);
         if (strpos($mediaPath, "---dupe") !== false && $ops->filesize($mediaPath) <= 512) {
             $mediaPath = $ops->file_get_contents($file);
@@ -528,10 +543,9 @@ function run()
         }
 
         if (!$ops->is_file($file)) {
-            //(new mediaFile(basename($file), $album))->delete();
             die('Media file not found ' . $file);
         }
-        
+
         if ($USE_X_Accel_Redirect){
             header('Content-Type: ' . mime_content_type(privuma::canonicalizePath(ltrim( $ops->encode($file), DIRECTORY_SEPARATOR))));
         	header('X-Accel-Redirect: ' . DIRECTORY_SEPARATOR . $ops->encode($file));
@@ -542,12 +556,20 @@ function run()
     } else {
         $realbums = [];
 
+        $conn = connectToDB()["mysqli"];
         foreach(json_decode(file_get_contents(privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . "mediadirs.json"), true) as $folderObj) {
-            if($folderObj['HasThumbnailJpg']) {
+            if(isset($folderObj['HasThumbnailJpg']) && $folderObj['HasThumbnailJpg']) {
                 $ext = pathinfo($folderObj["Name"], PATHINFO_EXTENSION);
                 $hash = md5(dirname($folderObj['Path']) . DIRECTORY_SEPARATOR . basename($folderObj['Path'], "." . $ext));
-                $urlHash = mediaFile::sanitize($hash, str_replace(DIRECTORY_SEPARATOR, '-----', dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path']) . "-----" . "1.jpg") ;
-                $photoPath = (getProtectedUrlForMediaHash($urlHash));
+
+                $dest = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path'] . DIRECTORY_SEPARATOR . "1.jpg";
+                $media = urlencode(base64_encode($dest));
+                if(strlen($media) > $MAX_URL_CHARACTERS) {
+                    mediaFile::sanitize($hash, $dest);
+                    $media = "t-".$hash;
+                }
+                $photoPath = getProtectedUrlForMedia($media);
+
                 //$photoPath = $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=".urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path']) . "-----" . "1.jpg"));
             } else {
                 $photoPath = $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=blank.gif";;
@@ -556,7 +578,7 @@ function run()
             if(!in_array(explode(DIRECTORY_SEPARATOR, $folderObj['Path'])[0], ['SCRATCH'])) {
 
                 $realbums[] = array("id" => (string)urlencode(base64_encode(implode('-----', explode(DIRECTORY_SEPARATOR, $folderObj['Path'])))), "updated" => (string)(strtotime(explode('.', $folderObj['ModTime'])[0])*1000), "title" => (string)implode('---', explode(DIRECTORY_SEPARATOR, $folderObj['Path'])), "img" => (string)$photoPath , "mediaId" => (string)$hash);
-        
+
             }
         }
         $result = $conn->query('select filename, album, max(time) as time, hash FROM media where dupe = 0 GROUP by album order by time DESC;');
@@ -566,12 +588,24 @@ function run()
             $filePath = $album['album'] . DIRECTORY_SEPARATOR . $album["filename"];
             $relativePath = $album['album'] . "-----" . basename($filePath);
             if (strtolower($ext) === "mp4") {
-                $relativeThumbnail = $album['album'] . "-----" . basename($filePath, ".".$ext) . ".jpg";
-                $photoPath = (getProtectedUrlForMediaHash("t-".$album['hash']));
+                $dest = $album['album'] . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext) . ".jpg";
+                $media = urlencode(base64_encode($dest));
+                if(strlen($media) > $MAX_URL_CHARACTERS) {
+                    mediaFile::sanitize($hash, $dest);
+                    $media = "t-".$album['hash'];
+                }
+                $photoPath = getProtectedUrlForMedia($media);
             } else {
-                $photoPath = (getProtectedUrlForMediaHash($album['hash']));
+
+                $dest = $album['album'] . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext) . "." . $ext;
+                $media = urlencode(base64_encode($dest));
+                if(strlen($media) > $MAX_URL_CHARACTERS) {
+                    mediaFile::sanitize($hash, $dest);
+                    $media = $album['hash'];
+                }
+                $photoPath = getProtectedUrlForMedia($media);
             }
-            
+
             if (empty($photoPath)) {
                 $photoPath = $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=blank.gif";
             }
@@ -582,7 +616,7 @@ function run()
         usort($realbums, function ($a1, $a2) {
             return $a2['updated'] <=> $a1['updated'];
         });
-        
+
 
         $realbums = array("gtoken" => urlencode($ENDPOINT."...".$AUTHTOKEN), "gdata" => $realbums);
         header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");

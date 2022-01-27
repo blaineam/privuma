@@ -82,7 +82,7 @@ class preserveMedia {
         $allowedVideos = ["MPG", "MOD", "MMV", "TOD", "WMV", "ASF", "AVI", "DIVX", "MOV", "M4V", "3GP", "3G2", "MP4", "M2T", "M2TS", "MTS", "MKV", "WEBM"];
 
         $ext = pathinfo($file, PATHINFO_EXTENSION);
-    
+
         if(in_array(strtoupper($ext), $allowedPhotos)) {
             return self::compressPhoto($file, $preserve);
         } else if(in_array(strtoupper($ext), $allowedVideos)) {
@@ -133,7 +133,7 @@ class preserveMedia {
 
         if (strtolower($ext) === "gif") {
             exec("/usr/bin/gifsicle --conserve-memory --careful --no-ignore-errors --no-warnings --crop-transparency --no-comments --no-extensions --no-names --colors=240 --optimize=3 --lossy=15 --dither --resize-fit 1920x1920 '" . $tempFile . "' -o '" . $newFileTemp . "'", $void, $response);
-            
+
             if($response == 0 ) {
                 echo PHP_EOL."gifsicle was successful";
                 $output =  privuma::getCloudFS()->rename($newFileTemp, $filePath, false);
@@ -142,7 +142,7 @@ class preserveMedia {
                 unset($void);
                 $output =  false;
             }
-        } else { 
+        } else {
             $path = '/usr/local/bin/mogrify';
             exec($path . ' -help 2>&1', $test, $binNotFound);
             if($binNotFound !== 0){
@@ -169,5 +169,5 @@ class preserveMedia {
         return $output;
     }
 
-  
+
 }

@@ -188,14 +188,14 @@ class cloudFS {
         return mb_strlen($contents, '8bit');
     }
 
-    public function file_get_contents(string $path) {   
+    public function file_get_contents(string $path) {
         if($this->file_exists($path)){
             return $this->execute('cat', $path);
-        }  
+        }
         return false;
     }
 
-    public function readfile(string $path) {   
+    public function readfile(string $path) {
         if($this->file_exists($path)){
             try {
                 $this->execute('cat', $path,null,false,true,[],true);
@@ -203,24 +203,27 @@ class cloudFS {
                 error_log($e->getMessage());
                 return false;
             }
-        }  
+        }
         return false;
     }
 
-    public function public_link(string $path, string $expire = "1d") {   
-        if($this->file_exists($path)){
+    public function public_link(string $path, string $expire = "1d") {
+        /* if($this->file_exists($path)){ */
         	  try{
-            return array_pop(explode(PHP_EOL, $this->execute('link', $path, null, false, true, ['--expire', $expire])));
+                  $flags = ['--expire', $expire];
+                  $link = $this->execute('link', $path, null, false, true, $flags, false, true, 0.7);
+                  $lines = explode(PHP_EOL, $link);
+            return array_pop($lines);
             } catch(Exception $e) {
                 error_log($e->getMessage());
                 return false;
             }
-        }  
-        return false;
+        /* } */
+        /* return false; */
     }
 
 
-    public function remove_public_link(string $path): bool {   
+    public function remove_public_link(string $path): bool {
         if($this->file_exists($path)){
             try{
                 $this->execute('link', $path, null, false, true, ['--unlink']);
@@ -229,12 +232,12 @@ class cloudFS {
                 error_log($e->getMessage());
                 return false;
             }
-        }  
+        }
         return false;
     }
 
 
-    public function unlink(string $path): bool {   
+    public function unlink(string $path): bool {
         if($this->file_exists($path)){
             try{
                 $this->execute('delete', $path);
@@ -247,7 +250,7 @@ class cloudFS {
         return false;
     }
 
-    public function rmdir(string $path, bool $recursive = false): bool {   
+    public function rmdir(string $path, bool $recursive = false): bool {
         if($this->is_dir($path)){
             try{
                 $this->execute($recursive ? 'purge' : 'rmdir', $path);
@@ -260,7 +263,7 @@ class cloudFS {
         return false;
     }
 
-    public function rename(string $oldname, string $newname, bool $remoteSource = true): bool {   
+    public function rename(string $oldname, string $newname, bool $remoteSource = true): bool {
         try{
             $this->execute('moveto', $newname, $oldname, $remoteSource);
         } catch(Exception $e) {
@@ -271,7 +274,7 @@ class cloudFS {
     }
 
     public function copy(string $oldname, string $newname, bool $remoteSource = true, bool $remoteDestination = true): bool {
-        try{   
+        try{
             $this->execute('copyto', $newname, $oldname, $remoteSource, $remoteDestination);
         } catch(Exception $e) {
             error_log($e->getMessage());
@@ -293,18 +296,18 @@ class cloudFS {
         return false;
     }
 
-    public function pull(string $path) {   
+    public function pull(string $path) {
         if($this->file_exists($path)){
             $tmpfile = tempnam(sys_get_temp_dir(), 'PVMA');
             try{
-                $this->execute('copyto', $tmpfile, $path, true, false);  
+                $this->execute('copyto', $tmpfile, $path, true, false);
             } catch(Exception $e) {
                 unlink($tmpfile);
                 error_log($e->getMessage());
                 return false;
             }
             return $tmpfile;
-        }  
+        }
         return false;
     }
 
@@ -341,7 +344,7 @@ class cloudFS {
             $sourceParts = explode(':', $source);
             $target = $destination;
             if($encodeDestination && count($destinationParts) > 1) {
-                $target = array_shift($destinationParts) 
+                $target = array_shift($destinationParts)
                 . ':';
                 if($preserveBucketName){
                     $parts = array_filter(explode(DIRECTORY_SEPARATOR, implode(
@@ -351,7 +354,7 @@ class cloudFS {
                 } else {
                     $target .= $this->encode(
                         implode(
-                            ':', 
+                            ':',
                             $destinationParts
                         )
                     ) ;
@@ -364,19 +367,19 @@ class cloudFS {
                 'moveto',
                 $target,
                 (
-                    $decodeSource 
-                    ? array_shift($sourceParts) 
+                    $decodeSource
+                    ? array_shift($sourceParts)
                     . ':'
                     . $this->decode(
                         implode(
-                            ':', 
+                            ':',
                             $sourceParts
                         )
                     )
                     : $source
                 ),
-                false, 
-                false, 
+                false,
+                false,
                 $flags
             );
         } catch(Exception $e) {
@@ -392,9 +395,9 @@ class cloudFS {
         try{
             $destinationParts = explode(':', $destination);
             $sourceParts = explode(':', $source);
-            $target = $destination;  
+            $target = $destination;
             if($encodeDestination && count($destinationParts) > 1) {
-                $target = array_shift($destinationParts) 
+                $target = array_shift($destinationParts)
                 . ':';
                 if($preserveBucketName){
                     $parts = array_filter(explode(DIRECTORY_SEPARATOR, implode(
@@ -404,7 +407,7 @@ class cloudFS {
                 } else {
                     $target .= $this->encode(
                         implode(
-                            ':', 
+                            ':',
                             $destinationParts
                         )
                     ) ;
@@ -417,19 +420,19 @@ class cloudFS {
                 'sync',
                 $target,
                 (
-                    $decodeSource 
-                    ? array_shift($sourceParts) 
+                    $decodeSource
+                    ? array_shift($sourceParts)
                     . ':'
                     . $this->decode(
                         implode(
-                            ':', 
+                            ':',
                             $sourceParts
                         )
                     )
                     : $source
                 ),
-                false, 
-                false, 
+                false,
+                false,
                 [...$flags, '--ignore-existing']
             );
         } catch(Exception $e) {
@@ -439,12 +442,13 @@ class cloudFS {
         return true;
     }
 
-    private function execute(string $command, string $destination, ?string $source = null, bool $remoteSource = false, bool $remoteDestination = true, array $flags = [], bool $passthru = false, bool $encodeSource = true) {
+    private function execute(string $command, string $destination, ?string $source = null, bool $remoteSource = false, bool $remoteDestination = true, array $flags = [], bool $passthru = false, bool $encodeSource = true, ?float $timeout = null) {
         $source = is_null($source) ? null : (strpos(explode(DIRECTORY_SEPARATOR, $source)[0], ':') === false ? DIRECTORY_SEPARATOR . ltrim($source, DIRECTORY_SEPARATOR) : $source);
         $destination = strpos(explode(DIRECTORY_SEPARATOR, $destination)[0], ':') === false ? DIRECTORY_SEPARATOR . ltrim($destination, DIRECTORY_SEPARATOR) : $destination;
         $cmd = implode(
-            ' ', 
+            ' ',
             [
+                is_null($timeout) ? '': 'timeout ' . $timeout . ' ',
                 $this->rCloneBinaryPath,
                 '--config',
                 escapeshellarg($this->rCloneConfigPath),
@@ -454,7 +458,7 @@ class cloudFS {
                 ...$flags,
                 !is_null($source) ? escapeshellarg(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,($remoteSource ? $this->rCloneDestination . ( $this->encoded && $encodeSource ? $this->encode($source) : $source): $source))) : '',
                 escapeshellarg(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR, $remoteDestination ? $this->rCloneDestination . ( $this->encoded ? $this->encode($destination) : $destination) : $destination)),
-                '2>&1'
+                '2>&1',
             ]
             );
         if($passthru) {

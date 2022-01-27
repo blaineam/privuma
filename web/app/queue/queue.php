@@ -7,17 +7,17 @@ class QueueManager {
 	private $filename;
 
     private string $delimiter;
-	
+
 	public function __construct(string $queueName = "queue") {
         $this->delimiter = PHP_EOL.'|||';
         $this->filename = __DIR__ . DIRECTORY_SEPARATOR . $queueName.".txt";
 	}
-	
+
 	// Add a Queue to the queue and if we are at our limit, drop one off the end.
 	public function enqueue(string $rawMessage) {
 		if (!empty($rawMessage)) {
-			
-			
+
+
 			$handle = @fopen($this->filename, "r");
 if ($handle)
 {
@@ -28,14 +28,14 @@ if ($handle)
         	echo PHP_EOL."Message already in queue, skipping enqueue";
         	return;
         }
-            
+
                 }
     fclose($handle);
 }
 
-			
+
             $queueFile = fopen($this->filename, 'a');
-            
+
 
             // here it may add some spaces so the message length is multiples of modular.
             // that make it easier to read messages from a file.
@@ -51,10 +51,10 @@ if ($handle)
             }
 		}
 	}
-	
+
 	// Remove a Queue item from the end of our list
 	public function dequeue(): ?string {
-		
+
         $file = fopen($this->filename, 'c+');
 
         // lock file

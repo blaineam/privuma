@@ -38,15 +38,15 @@ class cachePath {
 
         $file = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . "cache" . DIRECTORY_SEPARATOR . $cache . ".json";
 
-        /* 
-        if file exists, open in read+ plus mode so we can try to lock it 
+        /*
+        if file exists, open in read+ plus mode so we can try to lock it
         -- opening in w+ would truncate the file *before* we could get a lock!
         */
 
         if(version_compare(PHP_VERSION, '5.2.6') >= 0) {
             $mode = 'c+';
         } else {
-            //'c+' would be the ideal $mode to use, but that's only 
+            //'c+' would be the ideal $mode to use, but that's only
             //available in PHP >=5.2.6
 
             $mode = file_exists($file) ? 'r+' : 'w+';
@@ -71,7 +71,7 @@ class cachePath {
             //release write lock -- fclose does this automatically
             //but only in PHP <= 5.3.2
             flock($handle,LOCK_UN);
-            
+
             //close file
             fclose($handle);
         }
