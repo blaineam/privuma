@@ -21,7 +21,7 @@ use PDO;
 
 $ops = privuma::getCloudFS();
 
-$USE_MIRROR= privuma::getEnv('MIRROR_FILES') || privuma::getEnv('USE_MIRROR');
+$USE_MIRROR= privuma::getEnv('USE_MIRROR');
 $RCLONE_MIRROR = privuma::getEnv('RCLONE_MIRROR');
 $opsMirror = new cloudFS($RCLONE_MIRROR);
 
@@ -31,6 +31,124 @@ $ENDPOINT = privuma::getEnv('ENDPOINT');
 $AUTHTOKEN = privuma::getEnv('AUTHTOKEN');
 $RCLONE_DESTINATION = privuma::getEnv('RCLONE_DESTINATION');
 $USE_X_Accel_Redirect = privuma::getEnv('USE_X_Accel_Redirect');
+
+$rcloneConfig = parse_ini_file(privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'rclone' . DIRECTORY_SEPARATOR . 'rclone.conf', true);
+
+
+
+function RClone_S3_PresignedURL($AWSAccessKeyId, $AWSSecretAccessKey, $BucketName, $AWSRegion, $canonical_uri, $S3Endpoint = null, $expires = 86400)
+{
+    $encoded_uri = str_replace('%2F', '/', rawurlencode($canonical_uri));
+    // Specify the hostname for the S3 endpoint
+    if(!is_null($S3Endpoint)) {
+        $hostname = trim($BucketName . "." . $S3Endpoint);
+        $header_string = "host:" . $hostname . "\n";
+        $signed_headers_string = "host";
+    } else if ($AWSRegion == 'us-east-1') {
+        $hostname = trim($BucketName . ".s3.amazonaws.com");
+        $header_string = "host:" . $hostname . "\n";
+        $signed_headers_string = "host";
+    } else {
+        $hostname =  trim($BucketName . ".s3-" . $AWSRegion . ".amazonaws.com");
+        $header_string = "host:" . $hostname . "\n";
+        $signed_headers_string = "host";
+    }
+
+    $currentTime = time();
+    $date_text = gmdate('Ymd', $currentTime);
+
+    $time_text = $date_text . 'T' . gmdate('His', $currentTime) . 'Z';
+    $algorithm = 'AWS4-HMAC-SHA256';
+    $scope = $date_text . "/" . $AWSRegion . "/s3/aws4_request";
+
+    $x_amz_params = array(
+        'X-Amz-Algorithm' => $algorithm,
+        'X-Amz-Credential' => $AWSAccessKeyId . '/' . $scope,
+        'X-Amz-Date' => $time_text,
+        'X-Amz-SignedHeaders' => $signed_headers_string
+    );
+
+    // 'Expires' is the number of seconds until the request becomes invalid
+    $x_amz_params['X-Amz-Expires'] = $expires + 30; // 30seocnds are less
+    ksort($x_amz_params);
+
+    $query_string = "";
+    foreach ($x_amz_params as $key => $value) {
+        $query_string .= rawurlencode($key) . '=' . rawurlencode($value) . "&";
+    }
+    
+    $query_string = substr($query_string, 0, -1);
+
+    $canonical_request = "GET\n" . $encoded_uri . "\n" . $query_string . "\n" . $header_string . "\n" . $signed_headers_string . "\nUNSIGNED-PAYLOAD";
+    $string_to_sign = $algorithm . "\n" . $time_text . "\n" . $scope . "\n" . hash('sha256', $canonical_request, false);
+
+    $signing_key = hash_hmac('sha256', 'aws4_request', hash_hmac('sha256', 's3', hash_hmac('sha256', $AWSRegion, hash_hmac('sha256', $date_text, 'AWS4' . $AWSSecretAccessKey, true), true), true), true);
+
+    $signature = hash_hmac('sha256', $string_to_sign, $signing_key);
+    return 'https://' . $hostname . $encoded_uri . '?' . $query_string . '&X-Amz-Signature=' . $signature;
+}
+
+
+function redirectToMedia($path) {
+    global $ops;
+    global $USE_X_Accel_Redirect;
+    $path = $ops->encode($path);
+
+    if ($USE_X_Accel_Redirect){
+        header('Content-Type: ' . mime_content_type(privuma::canonicalizePath(ltrim( $path, DIRECTORY_SEPARATOR))));
+        header('X-Accel-Redirect: ' . DIRECTORY_SEPARATOR . $path);
+        die();
+    }
+
+    global $USE_MIRROR;
+
+    if($USE_MIRROR) {
+        global $RCLONE_MIRROR;
+        global $rcloneConfig;
+        $mirror_parts = explode(':', $RCLONE_MIRROR);
+        $rclone_config_key = $mirror_parts[0];
+        $bucket = explode(DIRECTORY_SEPARATOR, trim($mirror_parts[1], DIRECTORY_SEPARATOR))[0];
+        $rclone_config = $rcloneConfig[$rclone_config_key];
+        $ext = pathinfo($path, PATHINFO_EXTENSION);
+        $filenameSansExtension = basename($path, "." . $ext);
+        $compressedPath = dirname($path) . DIRECTORY_SEPARATOR . $ops->encode($ops->decode($filenameSansExtension) . "---compressed." . $ext);
+
+        if($rclone_config['type'] == 's3') {
+            $key = $rclone_config['access_key_id'];
+            $secret = $rclone_config['secret_access_key'];
+            $endpoint = $rclone_config['endpoint'];
+    
+            $url = RClone_S3_PresignedURL($key, $secret, $bucket, '', $path, $endpoint, $expires = 86400);
+            $headers = get_headers($url, TRUE);
+            $head = array_change_key_case($headers);
+            if ( strpos($headers[0], '200') === FALSE || (strpos($head['content-type'], 'image') === FALSE && strpos($head['content-type'], 'video') === FALSE) ) {
+                $url = RClone_S3_PresignedURL($key, $secret, $bucket, '', $compressedPath, $endpoint, $expires = 86400);
+                $headers = get_headers($url, TRUE);
+                $head = array_change_key_case($headers);
+                if (strpos($headers[0], '200') === false || (strpos($head['content-type'], 'image') === false && strpos($head['content-type'], 'video') === false)) {
+                    die('Mirror not operational for ' . $compressedPath);
+                }
+            }
+        } else {
+            $url = $ops->public_link($path);
+            if($url == false) {
+                $url = $ops->public_link($compressedPath);
+                if ($url == false) {
+                    die("Mirrored File not found: " . $compressedPath);
+                }
+            }    
+        }
+
+        header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+        header("Cache-Control: post-check=0, pre-check=0", false);
+        header("Pragma: no-cache");
+        header('Location: ' . $url);
+        die();
+    }
+
+
+}
+
 
 function connectToDB() {
     $host = privuma::getEnv('MYSQL_HOST');
@@ -253,6 +371,7 @@ function run()
     global $RCLONE_MIRROR;
     global $USE_X_Accel_Redirect;
 
+
     $MAX_URL_CHARACTERS = 1600;
 
     if (isset($_GET['album']) || isset($_GET['amp;album'])) {
@@ -458,49 +577,12 @@ function run()
             $mediaPath = substr_replace($mediaPath, '', $pos, strlen('data' . DIRECTORY_SEPARATOR));
         }
 
-        if($USE_X_Accel_Redirect && is_file(privuma::canonicalizePath(privuma::getDataDirectory() .  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR)))){
-            header('Content-Type: ' . mime_content_type(privuma::canonicalizePath(privuma::getDataDirectory() .  DIRECTORY_SEPARATOR . ltrim($ops->encode($mediaPath), DIRECTORY_SEPARATOR))));
-        	header('X-Accel-Redirect: ' . DIRECTORY_SEPARATOR . $ops->encode(basename(privuma::getDataFolder()) .  DIRECTORY_SEPARATOR  . ltrim($mediaPath), DIRECTORY_SEPARATOR));
-            die();
+        if (count(explode(DIRECTORY_SEPARATOR, $mediaPath)) == 2) {
+            $file =   DIRECTORY_SEPARATOR . privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . ltrim($mediaPath, DIRECTORY_SEPARATOR);
+        } else {
+            $file = DIRECTORY_SEPARATOR . privuma::getDataFolder() . DIRECTORY_SEPARATOR . ltrim($mediaPath, DIRECTORY_SEPARATOR);
         }
-
-        if($USE_MIRROR && strpos($RCLONE_MIRROR, ':') !== false && !isset($_GET['direct'])){
-            if (count(explode(DIRECTORY_SEPARATOR, $mediaPath)) == 2) {
-                $file =   DIRECTORY_SEPARATOR . privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . ltrim($mediaPath, DIRECTORY_SEPARATOR);
-            } else {
-                $file = DIRECTORY_SEPARATOR . privuma::getDataFolder() . DIRECTORY_SEPARATOR . ltrim($mediaPath, DIRECTORY_SEPARATOR);
-            }
-
-            $file = str_replace('-----', DIRECTORY_SEPARATOR, $file);
-            $ext = pathinfo($file, PATHINFO_EXTENSION);
-
-            $filenameSansExtension = basename($file, "." . $ext);
-
-            $compressedFile = dirname($file) . DIRECTORY_SEPARATOR . $filenameSansExtension . "---compressed." . $ext;
-            $url = $opsMirror->public_link($file);
-            if($url === false) {
-                $file = $compressedFile;
-                $url = $opsMirror->public_link($compressedFile);
-                if($url === false) {
-                    die('Media file not found ' . $file);
-                }
-
-            }
-
-            $headers = get_headers($url, TRUE);
-            $head = array_change_key_case($headers);
-            if ( strpos($headers[0], '200') === FALSE || (strpos($head['content-type'], 'image') === FALSE && strpos($head['content-type'], 'video') === FALSE) ) {
-                die('Mirror not operational for ' . $file);
-            }
-
-            header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-            header("Cache-Control: post-check=0, pre-check=0", false);
-            header("Pragma: no-cache");
-            header('Location: ' . $url);
-            die();
-
-
-        }
+        redirectToMedia($file);
 
         if (strpos($ENDPOINT, $_SERVER['HTTP_HOST']) == false ){
             header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
