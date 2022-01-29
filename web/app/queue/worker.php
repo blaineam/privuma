@@ -11,7 +11,7 @@ class worker {
         for($index = 0; $index < self::BATCH_SIZE; $index++) {
             $raw = $queue->dequeue();
             if(is_null($raw) || empty($raw)) {
-                echo "No Messages in Queue";
+                echo PHP_EOL."No Messages in Queue";
                 break;
             }
             $msg = json_decode($raw, true);
