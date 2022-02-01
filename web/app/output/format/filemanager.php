@@ -158,7 +158,7 @@ if (is_readable($config_file)) {
     @require_once($config_file);
 }
 
-$ops = new cloudFS($rclone_destination, $encoded_paths, $rclone_bin, $rclone_config); 
+$ops = new cloudFS($rclone_destination, $encoded_paths, $rclone_bin, $rclone_config);
 
 // --- EDIT BELOW CAREFULLY OR DO NOT EDIT AT ALL ---
 
@@ -485,7 +485,7 @@ if (isset($_POST['ajax']) && !FM_READONLY) {
         $newFileName = "{$fileName}-{$date}.bak";
         $fullyQualifiedFileName = $fullPath . $fileName;
         try {
-            if (!$ops->file_exists($fullyQualifiedFileName)) {
+            if (!$ops->is_file($fullyQualifiedFileName)) {
                 throw new Exception("File {$fileName} not found");
             }
             if ($ops->copy($fullyQualifiedFileName, $fullPath . $newFileName)) {
@@ -673,7 +673,7 @@ if (isset($_GET['new']) && isset($_GET['type']) && !FM_READONLY) {
             $path .= '/' . FM_PATH;
         }
         if ($_GET['type'] == "file") {
-            if (!$ops->file_exists($path . '/' . $new)) {
+            if (!$ops->is_file($path . '/' . $new)) {
                 if(fm_is_valid_ext($new)) {
                     if ($ops->touch($path . '/' . $new) === false) {
                         die('Cannot open file:  ' . $new);
@@ -752,7 +752,7 @@ if (isset($_GET['copy'], $_GET['finish']) && !FM_READONLY) {
             $loop_count = 0;
             $max_loop = 1000;
             // Check if a file with the duplicate name already exists, if so, make new name (edge case...)
-            while($ops->file_exists($fn_duplicate) & $loop_count < $max_loop){
+            while($ops->is_file($fn_duplicate) & $loop_count < $max_loop){
                $fn_parts = pathinfo($fn_duplicate);
                $fn_duplicate = $fn_parts['dirname'].'/'.$fn_parts['filename'].'-copy'.$extension_suffix;
                $loop_count++;
@@ -897,10 +897,10 @@ if (isset($_GET['st'])) {
                 header('Location: ' . $cloudUrl);
                 exit;
             }
-        
+
             $ops->remove_public_link($path . '/' . $st);
         }
-    
+
         if (strpos($rclone_destination, ':') === false && $use_x_accel_redirect) {
             header('X-Accel-Redirect: ' . $ops->encode(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR, $rclone_destination . DIRECTORY_SEPARATOR . $path . '/' . $st)));
             exit();
@@ -954,7 +954,7 @@ if (!empty($_FILES) && !FM_READONLY) {
         $fullPath = $path . '/' . str_replace("./","_",base64_decode($_REQUEST['fullpath']));
         $folder = substr($fullPath, 0, strrpos($fullPath, "/"));
 
-        if($ops->file_exists ($fullPath) && !$override_file_name) {
+        if($ops->is_file ($fullPath) && !$override_file_name) {
             $ext_1 = $ext ? '.'.$ext : '';
             $fullPath = str_replace($ext_1, '', $fullPath) .'_'. date('ymdHis'). $ext_1;
         }
@@ -968,7 +968,7 @@ if (!empty($_FILES) && !FM_READONLY) {
         if (empty($f['file']['error']) && !empty($tmp_name) && $tmp_name != 'none' && $isFileAllowed) {
             if ($ops->rename($tmp_name, $fullPath, false)) {
                 // Be sure that the file has been uploaded
-                if ( $ops->file_exists($fullPath) ) {
+                if ( $ops->is_file($fullPath) ) {
                     $response = array (
                         'status'    => 'success',
                         'info' => "file upload successful"
@@ -1264,7 +1264,7 @@ if (isset($_POST['copy']) && !FM_READONLY) {
 if (isset($_GET['copy']) && !isset($_GET['finish']) && !FM_READONLY) {
     $copy = $ops->decode($_GET['copy']);
     $copy = fm_clean_path($copy);
-    if ($copy == '' || !$ops->file_exists(FM_ROOT_PATH . '/' . $copy)) {
+    if ($copy == '' || !$ops->is_file(FM_ROOT_PATH . '/' . $copy)) {
         fm_set_msg(lng('File not found'), 'error');
         fm_redirect(FM_SELF_URL . '?p=' . urlencode(base64_encode(FM_PATH)));
     }
@@ -1403,7 +1403,7 @@ if (isset($_GET['settings']) && !FM_READONLY) {
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="form-group row">
                         <label for="js-3-1" class="col-sm-3 col-form-label"><?php echo lng('Theme') ?></label>
                         <div class="col-sm-5">
@@ -1912,7 +1912,7 @@ $tableTheme = (FM_THEME == "dark") ? "text-white bg-dark table-dark" : "bg-white
                 $filelink = '?p=' . urlencode(base64_encode(FM_PATH)) . '&amp;view=' . urlencode(base64_encode($f));
                 $all_files_size += $filesize_raw;
                 $perms = substr(decoct(0700), -4);
-                
+
                 $owner = array('name' => '?');
                 $group = array('name' => '?');
                 ?>
@@ -2111,7 +2111,7 @@ function fm_rename($old, $new)
 
     if(!$isFileAllowed) return false;
 
-    return (!$ops->file_exists($new) && $ops->file_exists($old)) ? $ops->rename($old, $new) : null;
+    return (!$ops->is_file($new) && $ops->is_file($old)) ? $ops->rename($old, $new) : null;
 }
 
 /**
@@ -2156,7 +2156,7 @@ function fm_rcopy($path, $dest, $upd = true, $force = true)
 function fm_mkdir($dir, $force)
 {
     global $ops;
-    if ($ops->file_exists($dir)) {
+    if ($ops->is_dir($dir)) {
         if ($ops->is_dir($dir)) {
             return $dir;
         } elseif (!$force) {
@@ -2178,7 +2178,7 @@ function fm_copy($f1, $f2, $upd)
 {
     global $ops;
     $time1 = $ops->filemtime($f1);
-    if ($ops->file_exists($f2)) {
+    if ($ops->is_file($f2)) {
         $time2 = $ops->filemtime($f2);
         if ($time2 >= $time1 && $upd) {
             return false;
@@ -2849,7 +2849,7 @@ function fm_download_file($fileLocation, $fileName, $chunkSize  = 1024)
             header('Location: ' . $cloudUrl);
             exit;
         }
-    
+
         $ops->remove_public_link($fileLocation);
     }
 
@@ -3698,27 +3698,27 @@ function lng($txt) {
     $tr['en']['Generate']       = 'Generate';               $tr['en']['FullSize']           = 'Full Size';
     $tr['en']['FreeOf']         = 'free of';                $tr['en']['CalculateFolderSize']= 'Calculate folder size';
     $tr['en']['ProcessID']      = 'Process ID';             $tr['en']['Created']    = 'Created';
-    $tr['en']['HideColumns']    = 'Hide Perms/Owner columns';$tr['en']['You are logged in'] = 'You are logged in'; 
+    $tr['en']['HideColumns']    = 'Hide Perms/Owner columns';$tr['en']['You are logged in'] = 'You are logged in';
     $tr['en']['Check Latest Version'] = 'Check Latest Version';$tr['en']['Generate new password hash'] = 'Generate new password hash';
     $tr['en']['Login failed. Invalid username or password'] = 'Login failed. Invalid username or password';
     $tr['en']['password_hash not supported, Upgrade PHP version'] = 'password_hash not supported, Upgrade PHP version';
-    
+
     // new - novos
-    
+
     $tr['en']['Advanced Search']    = 'Advanced Search';    $tr['en']['Error while copying fro']    = 'Error while copying fro';
     $tr['en']['Nothing selected']   = 'Nothing selected';   $tr['en']['Paths must be not equal']    = 'Paths must be not equal';
     $tr['en']['Renamed from']       = 'Renamed from';       $tr['en']['Archive not unpacked']       = 'Archive not unpacked';
-    $tr['en']['Deleted']            = 'Deleted';            $tr['en']['Archive not created']        = 'Archive not created';        
+    $tr['en']['Deleted']            = 'Deleted';            $tr['en']['Archive not created']        = 'Archive not created';
     $tr['en']['Copied from']        = 'Copied from';        $tr['en']['Permissions changed']        = 'Permissions changed';
     $tr['en']['to']                 = 'to';                 $tr['en']['Saved Successfully']         = 'Saved Successfully';
     $tr['en']['not found!']         = 'not found!';         $tr['en']['File Saved Successfully']    = 'File Saved Successfully';
-    $tr['en']['Archive']            = 'Archive';            $tr['en']['Permissions not changed']    = 'Permissions not changed';         
+    $tr['en']['Archive']            = 'Archive';            $tr['en']['Permissions not changed']    = 'Permissions not changed';
     $tr['en']['Select folder']      = 'Select folder';      $tr['en']['Source path not defined']    = 'Source path not defined';
     $tr['en']['already exists']     = 'already exists';     $tr['en']['Error while moving from']    = 'Error while moving from';
     $tr['en']['Create archive?']    = 'Create archive?';    $tr['en']['Invalid file or folder name']    = 'Invalid file or folder name';
     $tr['en']['Archive unpacked']   = 'Archive unpacked';   $tr['en']['File extension is not allowed']  = 'File extension is not allowed';
     $tr['en']['Root path']          = 'Root path';          $tr['en']['Error while renaming from']  = 'Error while renaming from';
-    $tr['en']['File not found']     = 'File not found';     $tr['en']['Error while deleting items'] = 'Error while deleting items';   
+    $tr['en']['File not found']     = 'File not found';     $tr['en']['Error while deleting items'] = 'Error while deleting items';
     $tr['en']['Invalid characters in file name']                = 'Invalid characters in file name';
     $tr['en']['FILE EXTENSION HAS NOT SUPPORTED']               = 'FILE EXTENSION HAS NOT SUPPORTED';
     $tr['en']['Selected files and folder deleted']              = 'Selected files and folder deleted';
@@ -3729,8 +3729,8 @@ function lng($txt) {
     $tr['en']['Invalid characters in file or folder name']      = 'Invalid characters in file or folder name';
     $tr['en']['Operations with archives are not available']     = 'Operations with archives are not available';
     $tr['en']['File or folder with this path already exists']   = 'File or folder with this path already exists';
-    
-    $tr['en']['Moved from']                 = 'Moved from'; 
+
+    $tr['en']['Moved from']                 = 'Moved from';
 
     $i18n = fm_get_translations($tr);
     $tr = $i18n ? $i18n : $tr;
