@@ -55,7 +55,7 @@ function processDir($dir, $sync) {
                     ]));
                 } else if($sync['removeFromSource']) {
                     echo PHP_EOL. "Removing file that already exists in media sync destination: " . $preserve . " for path: " . $path;
-                    /* unlink($path); */
+                    unlink($path);
                     exec('rmdir ' . escapeshellarg(dirname($path)) . " 2>&1 > /dev/null");
                 }
             }else if($sync['preserve']){
@@ -72,7 +72,7 @@ function processDir($dir, $sync) {
                     ]));
                 } else if($sync['removeFromSource']) {
                     echo PHP_EOL. "Removing file that already exists in preserve sync destination: " . $preserve . " for path: " . $path;
-                    /* unlink($path); */
+                    unlink($path);
                     exec('rmdir ' . escapeshellarg(dirname($path)) . " 2>&1 > /dev/null");
                 }
             } else if($sync['removeFromSource']) {
