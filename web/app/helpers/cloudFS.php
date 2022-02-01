@@ -1,5 +1,4 @@
 <?php
-
 namespace privuma\helpers;
 use Exception;
 use privuma\helpers\dotenv;
@@ -189,14 +188,14 @@ class cloudFS {
     }
 
     public function file_get_contents(string $path) {
-        if($this->file_exists($path)){
+        if($this->is_file($path)){
             return $this->execute('cat', $path);
         }
         return false;
     }
 
     public function readfile(string $path) {
-        if($this->file_exists($path)){
+        if($this->is_file($path)){
             try {
                 $this->execute('cat', $path,null,false,true,[],true);
             } catch(Exception $e) {
@@ -208,7 +207,7 @@ class cloudFS {
     }
 
     public function public_link(string $path, string $expire = "1d") {
-        /* if($this->file_exists($path)){ */
+        /* if($this->is_file($path)){ */
         	  try{
                   $flags = ['--expire', $expire];
                   $link = $this->execute('link', $path, null, false, true, $flags, false, true, 0.7);
@@ -224,7 +223,7 @@ class cloudFS {
 
 
     public function remove_public_link(string $path): bool {
-        if($this->file_exists($path)){
+        if($this->is_file($path)){
             try{
                 $this->execute('link', $path, null, false, true, ['--unlink']);
                 return true;
@@ -238,7 +237,7 @@ class cloudFS {
 
 
     public function unlink(string $path): bool {
-        if($this->file_exists($path)){
+        if($this->is_file($path)){
             try{
                 $this->execute('delete', $path);
             } catch(Exception $e) {
@@ -285,7 +284,7 @@ class cloudFS {
 
 
     public function md5_file(string $path) {
-        if ($this->file_exists($path)) {
+        if ($this->is_file($path)) {
             try {
                 return explode(' ', $this->execute('md5sum', $path, null, false, true, ['--download']))[0];
             } catch (Exception $e) {
@@ -297,7 +296,7 @@ class cloudFS {
     }
 
     public function pull(string $path) {
-        if($this->file_exists($path)){
+        if($this->is_file($path)){
             $tmpfile = tempnam(sys_get_temp_dir(), 'PVMA');
             try{
                 $this->execute('copyto', $tmpfile, $path, true, false);

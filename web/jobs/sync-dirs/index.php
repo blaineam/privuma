@@ -5,7 +5,7 @@ use privuma\helpers\mediaFile;
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
 
-$privuma = new privuma();
+$privuma = privuma::getInstance();
 $ops = $privuma->getCloudFS();
 
 $configs = json_decode(file_get_contents($privuma->getConfigDirectory() . DIRECTORY_SEPARATOR . 'sync-dirs.json'), true) ?? [];
@@ -19,7 +19,7 @@ foreach($configs as $sync) {
     if(!is_dir($sync['path'])) {
         echo PHP_EOL."Cannot find sync path: " . $sync['path'];
         continue;
-    } 
+    }
 
     processDir($sync['path'], $sync);
 }
@@ -42,7 +42,7 @@ function processDir($dir, $sync) {
                 if(!$ops->is_dir(dirname($preserve))) {
                     $ops->mkdir(dirname($preserve));
                 }
-                if(!$ops->file_exists($preserve)) {
+                if(!$ops->is_file($preserve)) {
                     echo PHP_EOL."Queue Processing of media file: " . $preserve;
                     $privuma->getQueueManager()->enqueue(json_encode([
                         'type' => 'processMedia',
@@ -54,12 +54,13 @@ function processDir($dir, $sync) {
                         ],
                     ]));
                 } else if($sync['removeFromSource']) {
-                    unlink($path);
+                    echo PHP_EOL. "Removing file that already exists in media sync destination: " . $preserve . " for path: " . $path;
+                    /* unlink($path); */
                     exec('rmdir ' . escapeshellarg(dirname($path)) . " 2>&1 > /dev/null");
                 }
             }else if($sync['preserve']){
                 $preserve = privuma::getDataFolder() . DIRECTORY_SEPARATOR . 'SCRATCH' . DIRECTORY_SEPARATOR .'Syncs' . DIRECTORY_SEPARATOR . basename(dirname($path)) . DIRECTORY_SEPARATOR . mediaFile::sanitize(basename($path, "." . pathinfo($path, PATHINFO_EXTENSION))) . "." . pathinfo($path, PATHINFO_EXTENSION);
-                if(!$ops->file_exists($preserve)) {
+                if(!$ops->is_file($preserve)) {
                     echo PHP_EOL."Queue Processing of preservation file: " . $preserve;
                     $privuma->getQueueManager()->enqueue(json_encode([
                         'type' => 'processMedia',
@@ -70,10 +71,12 @@ function processDir($dir, $sync) {
                         ],
                     ]));
                 } else if($sync['removeFromSource']) {
-                    unlink($path);
+                    echo PHP_EOL. "Removing file that already exists in preserve sync destination: " . $preserve . " for path: " . $path;
+                    /* unlink($path); */
                     exec('rmdir ' . escapeshellarg(dirname($path)) . " 2>&1 > /dev/null");
                 }
             } else if($sync['removeFromSource']) {
+                echo PHP_EOL. "Removing unsupported media file with path: " . $path;
                 unlink($path);
                 exec('rmdir ' . escapeshellarg(dirname($path)) . " 2>&1 > /dev/null");
             }
