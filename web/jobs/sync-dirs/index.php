@@ -37,7 +37,7 @@ function processDir($dir, $sync) {
             }
             if(!$sync['preserve'] && in_array(strtolower($ext), ['webm','mov','swf','avi','mkv','m4v','mp4','jpg','jpeg','gif','png','heif'])) {
                 $album = str_replace(DIRECTORY_SEPARATOR, '---', str_replace($sync['path'], 'Syncs', dirname($path)));
-                $filename = mediaFile::sanitize(basename($path, "." . $ext)) . "." . (!in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['jpg','jpeg','gif','png','heif']) ? 'mp4' : pathinfo($path, PATHINFO_EXTENSION));
+                $filename = mediaFile::sanitize(basename($path, "." . $ext)) . "." . (!in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['jpg','jpeg','gif','png','heif']) ? 'mp4' : strtolower(pathinfo($path, PATHINFO_EXTENSION)));
                 $preserve = privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename;
                 if(!$ops->is_dir(dirname($preserve))) {
                     $ops->mkdir(dirname($preserve));
