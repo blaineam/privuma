@@ -82,7 +82,7 @@ $unauthorizedJson = [
         "authorized" => "-1"
         ];
 
-if( false && !isset($_SESSION['deoAuthozied'])){
+if( !isset($_SESSION['deoAuthozied'])){
     if(isset($_POST['login']) && isset($_POST['password'])) {
         if($_POST['login'] === $DEOVR_LOGIN && $_POST['password'] === $DEOVR_PASSWORD) {
             $_SESSION['deoAuthozied'] = true;
