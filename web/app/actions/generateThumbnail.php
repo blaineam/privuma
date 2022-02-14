@@ -27,7 +27,7 @@ class generateThumbnail {
 
             if ($response == 0) {
                 privuma::getCloudFS()->rename($newThumbTemp, $targetThumbnailPath, false);
-                echo PHP_EOL."Succcessfully generated thumbnail: " . $data['thumbnail'];
+                echo PHP_EOL."Succcessfully generated thumbnail: " . $targetThumbnailPath;
             } else {
                 echo PHP_EOL."Failed to generate thumbnail: " . $targetThumbnailPath . " From: " . $data['path'];
             }
