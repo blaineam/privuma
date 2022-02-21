@@ -161,8 +161,6 @@ class preserveMedia {
                 unset($void);
                 $output =  false;
             }
-
-            var_dump([$is,$is['height'], exif_imagetype($tempFile), filesize($tempFile) < 1024*1024*30]);
         }
         is_file($tempFile) && unlink($tempFile);
         is_file($newFileTemp) && unlink($newFileTemp);

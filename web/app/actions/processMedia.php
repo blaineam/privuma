@@ -111,7 +111,7 @@ class processMedia {
         }
 
         $path   = strval( $path );
-        $io     = popen( "ls -ltrR {$path} |awk '{print \$5}'|awk 'BEGIN{sum=0} {sum=sum+\$1} END {print sum}'", 'r' );
+        $io     = popen( "ls -ltrR {$path} 2>/dev/null |awk '{print \$5}'|awk 'BEGIN{sum=0} {sum=sum+\$1} END {print sum}'", 'r' );
         $size   = intval( fgets( $io, 80 ) );
         pclose( $io );
 
