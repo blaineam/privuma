@@ -82,7 +82,7 @@ $unauthorizedJson = [
         "authorized" => "-1"
         ];
 
-if( !isset($_SESSION['deoAuthozied'])){
+if(!isset($_SESSION['deoAuthozied'])){
     if(isset($_POST['login']) && isset($_POST['password'])) {
         if($_POST['login'] === $DEOVR_LOGIN && $_POST['password'] === $DEOVR_PASSWORD) {
             $_SESSION['deoAuthozied'] = true;
@@ -193,7 +193,7 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                 "videoSources" => [
                   [
                     "resolution" => getResolution($filename),
-                    "url" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, true)
+                    "url" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false)
                   ]
                 ]
               ]

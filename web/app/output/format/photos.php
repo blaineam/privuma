@@ -41,7 +41,8 @@ function RClone_S3_PresignedURL($AWSAccessKeyId, $AWSSecretAccessKey, $BucketNam
     $encoded_uri = str_replace('%2F', '/', rawurlencode($canonical_uri));
     // Specify the hostname for the S3 endpoint
     if(!is_null($S3Endpoint)) {
-        $hostname = trim($BucketName . "." . $S3Endpoint);
+        $hostname = trim(str_replace("https://", '', str_replace("http://", '', $S3Endpoint)));
+        $encoded_uri = "/".$BucketName.$encoded_uri;
         $header_string = "host:" . $hostname . "\n";
         $signed_headers_string = "host";
     } else if ($AWSRegion == 'us-east-1') {
@@ -76,7 +77,7 @@ function RClone_S3_PresignedURL($AWSAccessKeyId, $AWSSecretAccessKey, $BucketNam
     foreach ($x_amz_params as $key => $value) {
         $query_string .= rawurlencode($key) . '=' . rawurlencode($value) . "&";
     }
-    
+
     $query_string = substr($query_string, 0, -1);
 
     $canonical_request = "GET\n" . $encoded_uri . "\n" . $query_string . "\n" . $header_string . "\n" . $signed_headers_string . "\nUNSIGNED-PAYLOAD";
@@ -117,8 +118,8 @@ function redirectToMedia($path) {
             $key = $rclone_config['access_key_id'];
             $secret = $rclone_config['secret_access_key'];
             $endpoint = $rclone_config['endpoint'];
-    
-            $url = RClone_S3_PresignedURL($key, $secret, $bucket, '', $path, $endpoint, $expires = 86400);
+
+            $url = RClone_S3_PresignedURL($key, $secret, $bucket, isset($rclone_config['region']) ? $rclone_config['region'] : '', $path, $endpoint, $expires = 86400);
             $headers = get_headers($url, TRUE);
             $head = array_change_key_case($headers);
             if ( strpos($headers[0], '200') === FALSE || (strpos($head['content-type'], 'image') === FALSE && strpos($head['content-type'], 'video') === FALSE) ) {
@@ -136,7 +137,7 @@ function redirectToMedia($path) {
                 if ($url == false) {
                     die("Mirrored File not found: " . $compressedPath);
                 }
-            }    
+            }
         }
 
         header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
