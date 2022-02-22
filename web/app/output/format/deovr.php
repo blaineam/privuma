@@ -175,7 +175,42 @@ function getResolution($filename) {
     }
 }
 
+$json = json_decode(file_get_contents(privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'deovr.json'), true) ?? [];
 if(isset($_GET['media']) && isset($_GET['id'])) {
+    if($_GET['media'] === 'cached'){
+        foreach($json as $site => $search){
+            foreach($search as $s => $scenes) {
+                foreach($scenes['list'] as $k => $scene) {
+                    if($_GET['id'] == $scenes['list'][$k]['id']) {
+                        $originalUrl = $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"];
+                        $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] = getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"])[0]));
+                        header('Content-Type: application/json');
+                        echo json_encode(array_filter([
+                        "encodings" => [
+                            $scenes['list'][$k]["encodings"][0]
+                        ],
+                        "title" => $scenes['list'][$k]["title"],
+                        "description" => $scenes['list'][$k]["description"],
+                        "id" => $scenes['list'][$k]["id"],
+                        "skipIntro" => 0,
+                        "videoPreview" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['videoPreview'])[0], '.mp4') . "_videoPreview.mp4"),
+                        "thumbnailUrl" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . "_thumbnail.jpg"),
+                        "is3d" => $scenes['list'][$k]['is3d'],
+                        "viewAngle" => $scenes['list'][$k]['viewAngle'],
+                        "stereomode" => $scenes['list'][$k]['stereomode'],
+                        "projection" => $scenes['list'][$k]['projection'],
+                        "projectID" => $scenes['list'][$k]['projectID'],
+                        "screenType" => isset($scenes['list'][$k]['screenType']) ? $scenes['list'][$k]['screenType']: null,
+                        ], function($value) { return !is_null($value) && $value !== ''; }));
+                        die();
+                    }
+                }
+            }
+        }
+
+    }
+
+
     $mediaPath = str_replace('/../', '/', str_replace('-----', DIRECTORY_SEPARATOR, base64_decode($_GET['media'])));
 
     $ext = pathinfo($mediaPath, PATHINFO_EXTENSION);
@@ -215,13 +250,18 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
 
 $media = findMedia($DEOVR_DATA_DIRECTORY);
 
-$json = json_decode(file_get_contents(privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'deovr.json'), true) ?? [];
 
 $cached = [];
 foreach($json as $site => $search){
     foreach($search as $s => $scenes) {
         foreach($scenes['list'] as $k => $scene) {
-            $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] = getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"])[0]));
+            $originalUrl = $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"];
+            $scenes['list'][$k] = [
+                "video_url" => $ENDPOINT . 'deovr/?id=' . $scenes['list'][$k]['id'] . '&media=cached',
+                "videoPreview" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['videoPreview'])[0], '.mp4') . "_videoPreview.mp4"),
+                "thumbnailUrl" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . "_thumbnail.jpg"),
+                "title" => $scenes['list'][$k]["title"],
+            ];
         }
         $cached[] = $scenes;
     }
