@@ -123,7 +123,7 @@ function redirectToMedia($path) {
             $headers = get_headers($url, TRUE);
             $head = array_change_key_case($headers);
             if ( strpos($headers[0], '200') === FALSE || (strpos($head['content-type'], 'image') === FALSE && strpos($head['content-type'], 'video') === FALSE) ) {
-                $url = RClone_S3_PresignedURL($key, $secret, $bucket, '', $compressedPath, $endpoint, $expires = 86400);
+                $url = RClone_S3_PresignedURL($key, $secret, $bucket, isset($rclone_config['region']) ? $rclone_config['region'] : '', $compressedPath, $endpoint, $expires = 86400);
                 $headers = get_headers($url, TRUE);
                 $head = array_change_key_case($headers);
                 if (strpos($headers[0], '200') === false || (strpos($head['content-type'], 'image') === false && strpos($head['content-type'], 'video') === false)) {
