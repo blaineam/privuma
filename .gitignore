@@ -6,6 +6,7 @@ web/.auth
 .gitmodules
 web/data/**
 web/app/queue/*.txt
+web/app/*.sqlite3
 web/config/*
 !web/config/*-example.*
 web/app/output/logs/*.txt
@@ -20,6 +21,7 @@ docker/db/
 **/.DS_Store
 web/jobs/*
 !web/jobs/queue-worker-1
+!web/jobs/fix-broken-links
 !web/jobs/mirror-copy
 !web/jobs/mirror-db
 !web/jobs/sync-dirs

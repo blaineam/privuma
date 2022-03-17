@@ -11,7 +11,7 @@ date_default_timezone_set('America/Los_Angeles');
 
 session_start();
 
-
+use DateTimeZone;
 use privuma\helpers\dotenv;
 use privuma\privuma;
 use privuma\helpers\cloudFS;
@@ -20,6 +20,9 @@ use mysqli;
 use PDO;
 
 $ops = privuma::getCloudFS();
+
+
+$privuma = privuma::getInstance();
 
 $USE_MIRROR= privuma::getEnv('USE_MIRROR');
 $RCLONE_MIRROR = privuma::getEnv('RCLONE_MIRROR');
@@ -96,8 +99,8 @@ function redirectToMedia($path) {
     $path = $ops->encode($path);
 
     if ($USE_X_Accel_Redirect){
-        header('Content-Type: ' . mime_content_type(privuma::canonicalizePath(ltrim( $path, DIRECTORY_SEPARATOR))));
-        header('X-Accel-Redirect: ' . DIRECTORY_SEPARATOR . $path);
+        header('Content-Type: ' . get_mime_by_filename(privuma::canonicalizePath(ltrim( $path, DIRECTORY_SEPARATOR))));
+        header('X-Accel-Redirect: ' . DIRECTORY_SEPARATOR . privuma::canonicalizePath(ltrim( $path, DIRECTORY_SEPARATOR)));
         die();
     }
 
@@ -150,77 +153,43 @@ function redirectToMedia($path) {
 
 }
 
-
-function connectToDB() {
-    $host = privuma::getEnv('MYSQL_HOST');
-    $db   = privuma::getEnv('MYSQL_DATABASE');
-    $user = privuma::getEnv('MYSQL_USER');
-    $pass =  privuma::getEnv('MYSQL_PASSWORD');
-
-    $charset = 'utf8mb4';
-    $port = 3306;
-
-    $conn = new mysqli(
-        $host,
-        $user,
-        $pass,
-        $db,
-        $port
+function roundToNearestMinuteInterval(\DateTime $dateTime, $minuteInterval = 10)
+{
+    return $dateTime->setTime(
+        $dateTime->format('H'),
+        round($dateTime->format('i') / $minuteInterval) * $minuteInterval,
+        0
     );
-
-    if ($conn->connect_error) {
-        die("DB Connection failed: " . $conn->connect_error);
-    }
-
-    $conn->set_charset("utf8");
-    $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
-    $options = [
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES   => false,
-    ];
-
-    try {
-        $pdo = new PDO($dsn, $user, $pass, $options);
-    } catch (\PDOException $e) {
-        throw new \PDOException($e->getMessage(), (int)$e->getCode());
-        exit(1);
-    }
-
-    $pdo->exec("CREATE TABLE IF NOT EXISTS  `media` (
-        `id` bigint(20) NOT NULL AUTO_INCREMENT,
-        `dupe` int(11) DEFAULT 0,
-        `hash` varchar(512) DEFAULT NULL,
-        `album` varchar(1000) DEFAULT NULL,
-        `filename` varchar(1000) DEFAULT NULL,
-        `time` datetime DEFAULT NULL,
-        PRIMARY KEY (`id`),
-        UNIQUE KEY `media_id_IDX` (`id`) USING BTREE,
-        KEY `media_hash_IDX` (`hash`) USING BTREE,
-        KEY `media_album_IDX` (`album`(768)) USING BTREE,
-        KEY `media_filename_IDX` (`filename`(768)) USING BTREE,
-        KEY `media_time_IDX` (`time`) USING BTREE,
-        KEY `media_idx_album_dupe_hash` (`album`(255),`dupe`,`hash`(255)),
-        KEY `media_filename_time_IDX` (`filename`(512),`time`) USING BTREE,
-        FULLTEXT KEY `media_filename_FULL_TEXT_IDX` (`filename`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-
-    return [
-        "pdo" => $pdo,
-        "mysqli" => $conn,
-    ];
-
-
 }
+if (isset($_SERVER["HTTP_CF_CONNECTING_IP"])) {
+    $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_CF_CONNECTING_IP"];
+  }
+  if (isset($_SERVER["HTTP_PVMA_IP"])) {
+      $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_PVMA_IP"];
+    }
 
+
+
+  //die("-" . $_SERVER['HTTP_USER_AGENT'] . "-" . $_SERVER['REMOTE_ADDR'] );
 function rollingTokens($seed) {
-    $d1 = new \DateTime("yesterday");
-    $d2 = new \DateTime("today");
-    $d3 = new \DateTime("tomorrow");
+    $d1 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
+    $d2 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
+    $d3 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
+    $d1->modify('-12 hours');
+    $d3->modify('+12 hours');
+    $d1 = roundToNearestMinuteInterval($d1, 60*12);
+    $d2 = roundToNearestMinuteInterval($d2, 60*12);
+    $d3 = roundToNearestMinuteInterval($d3, 60*12);
     return [
-        sha1(md5($d1->format('Y-m-d'))."-".$seed),
-        sha1(md5($d2->format('Y-m-d'))."-".$seed),
-        sha1(md5($d3->format('Y-m-d'))."-".$seed),
+        sha1(md5($d1->format('Y-m-d H:i:s'))."-".$seed . "-" .
+//          $_SERVER['HTTP_USER_AGENT'] . "-" .
+          $_SERVER['REMOTE_ADDR'] ),
+        sha1(md5($d2->format('Y-m-d H:i:s'))."-".$seed . "-" .
+//          $_SERVER['HTTP_USER_AGENT'] . "-" .
+          $_SERVER['REMOTE_ADDR'] ),
+        sha1(md5($d3->format('Y-m-d H:i:s'))."-".$seed . "-" .
+//          $_SERVER['HTTP_USER_AGENT'] . "-" .
+ $_SERVER['REMOTE_ADDR'] ),
     ];
 };
 
@@ -339,18 +308,98 @@ function getProtectedUrlForMediaHash($hash, $use_fallback = false) {
 }
 
 function streamMedia($file, bool $useOps = false) {
-    global $ops;
-    header('Accept-Ranges: bytes');
-    header('Content-Disposition: inline');
+    global $USE_X_Accel_Redirect;
     if($useOps){
+        global $ops;
+        header('Accept-Ranges: bytes');
+        header('Content-Disposition: inline');
         header('Content-Type: ' . get_mime_by_filename($file));
         header('Content-Length:' . $ops->filesize($file));
         $ops->readfile($file);
-    }else {
-        $head = array_change_key_case(get_headers($file, TRUE));
-        header('Content-Type: ' . $head['content-type']);
+    }else if ($USE_X_Accel_Redirect && filter_var(idn_to_ascii($file), FILTER_VALIDATE_URL)){
+        header('Content-Type: ' . get_mime_by_filename(basename(explode('?', $file)[0])));
+        $protocol = parse_url($file,  PHP_URL_SCHEME);
+        $hostname = parse_url($file,  PHP_URL_HOST);
+        $path = ltrim(parse_url($file,  PHP_URL_PATH) . ((strpos($file, '?') !== false) ? '?' . parse_url($file,  PHP_URL_QUERY) : ''), DIRECTORY_SEPARATOR);
+        $internalMediaPath = DIRECTORY_SEPARATOR . 'media' . DIRECTORY_SEPARATOR . $protocol . DIRECTORY_SEPARATOR . $hostname . DIRECTORY_SEPARATOR . $path . DIRECTORY_SEPARATOR;
+        //die($internalMediaPath);
+        header('X-Accel-Redirect: ' . $internalMediaPath);
+        die();
+    }else if(pathinfo($file, PATHINFO_EXTENSION) !== "mp4" || is_file($file)) {
+
+        $headers = get_headers($file, TRUE);
+        $head = array_change_key_case($headers);
+        header('Accept-Ranges: bytes');
+        header('Content-Disposition: inline');
+        header('Content-Type: ' . get_mime_by_filename($file));
         header('Content-Length:' . $head['content-length']);
         readfile($file);
+    } else {
+        set_time_limit(0);
+        ini_set('max_execution_time', 0);
+        $useragent = "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.96 Safari/537.36";
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_VERBOSE, 1);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 222222);
+        curl_setopt($ch, CURLOPT_URL, $file);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_FRESH_CONNECT, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch, CURLOPT_USERAGENT, $useragent);
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $info = curl_exec($ch);
+        $size = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
+        header("Content-Type: video/mp4");
+
+        header('Accept-Ranges: bytes');
+        header('Cache-Control: public, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        $begin	= 0;
+        $end	= $size - 1;
+        if (isset($_SERVER['HTTP_RANGE']))
+        {
+            if (preg_match('/bytes=\h*(\d+)-(\d*)[\D.*]?/i', $_SERVER['HTTP_RANGE'], $matches))
+            {
+                $begin	= intval($matches[1]);
+                if (!empty($matches[2]))
+                {
+                    $end = intval($matches[2]);
+                }
+            }
+        }
+
+        header('Content-Length:' . (($end - $begin) + 1));
+
+        header("Content-Transfer-Encoding: binary");
+        if (isset($_SERVER['HTTP_RANGE'])) {
+            
+            header('x-meta: ' . $begin . ' + ' . $end);
+            header('HTTP/1.1 206 Partial Content');
+            header("Content-Range: bytes $begin-$end/$size");
+        } else {
+            header('HTTP/1.1 200 OK');
+        }
+        
+        $ch = curl_init();
+        if (isset($_SERVER['HTTP_RANGE'])) {
+            $headers = array(
+                'Range: bytes='.$begin.'-'.$end
+            );
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        }
+        curl_setopt($ch, CURLOPT_VERBOSE, 1);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 222222);
+        curl_setopt($ch, CURLOPT_URL, $file);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_HEADER, false);
+        curl_setopt($ch, CURLOPT_FRESH_CONNECT, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch, CURLOPT_USERAGENT, $useragent);
+        curl_setopt($ch, CURLOPT_NOBODY, false);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
+        curl_exec($ch);
     }
     exit;
 }
@@ -371,6 +420,7 @@ function run()
     global $opsMirror;
     global $RCLONE_MIRROR;
     global $USE_X_Accel_Redirect;
+    global $privuma;
 
 
     $MAX_URL_CHARACTERS = 1600;
@@ -382,38 +432,32 @@ function run()
             $albumName = base64_decode($albumName);
         }
 
-        $conn = connectToDB()["mysqli"];
+        $conn = $privuma->getPDO();
 
-        $stmt = $conn->prepare('select filename, album, time, hash
+
+        $stmt = $conn->prepare("select filename, album, time, hash, url, thumbnail
         from media
         where hash in
-        (select hash from media where album = ? and dupe != 0 and hash != "compressed")
+        (select hash from media where album = ? and hash != 'compressed')
         and dupe = 0
-        union ALL
-        select filename, album, time, hash
-        from media
-        WHERE
-        album = ? and dupe = 0 and hash != "compressed"
         group by filename
          order by
             CASE
-                WHEN filename LIKE "%.gif" THEN 4
-                WHEN filename LIKE "%.mp4" THEN 3
-                WHEN filename LIKE "%.webm" THEN 2
-                ELSE 1
-            END DESC,
-            time DESC
-        ');
-
-        $stmt->bind_param("ss", $albumName, $albumName);
-        $stmt->execute();
-        $result = $stmt->get_result();
+                WHEN filename LIKE '%.gif' THEN 1
+                WHEN filename LIKE '%.mp4' THEN 2
+                WHEN filename LIKE '%.webm' THEN 3
+                ELSE 4
+            END,
+            time DESC");
+        $stmt->execute([$albumName]);
+        $data = $stmt->fetchAll();
 
         $media = [];
-        while ($item = $result->fetch_assoc()) {
+        foreach($data as $item) {
             if (!isset($item["filename"])) {
                 continue;
             }
+
 
             $ext = pathinfo($item["filename"], PATHINFO_EXTENSION);
             $filename = basename($item["filename"], "." . $ext);
@@ -422,7 +466,7 @@ function run()
             $hash = $fileParts[1] ?? $item['hash'];
             $relativePath = normalizeString($item['album']) . "-----" . basename($filePath);
 
-            if (strtolower($ext) === "mp4") {
+            if (strtolower($ext) === "mp4" || strtolower($ext) === "webm") {
 
 
                 $destt = $item['album'] . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext) . ".jpg";
@@ -436,6 +480,11 @@ function run()
                 }
                 $videoPath = getProtectedUrlForMedia($mediaval);
                 $photoPath = getProtectedUrlForMedia($mediat);
+
+                if(!is_null($item['url'])) {
+                    $videoPath = getProtectedUrlForMediaHash(base64_encode($item['url']));
+                    $photoPath = getProtectedUrlForMediaHash(base64_encode($item['thumbnail']));
+                }
             } else {
 
                 $dest = $item['album'] . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext). ".".$ext;
@@ -446,6 +495,10 @@ function run()
                     $mediat = "t-".$item['hash'];
                 }
                 $photoPath = getProtectedUrlForMedia($mediaval);
+
+                if(!is_null($item['url'])) {
+                    $photoPath = getProtectedUrlForMediaHash(base64_encode($item['url']));
+                }
             }
 
             $mime = (isset($videoPath)) ? "video/mp4": ((strtolower($ext) === "gif") ? "image/gif" :  ((strtolower($ext) === "png") ? "image/png" : "image/jpg")) ;
@@ -571,6 +624,10 @@ function run()
             return;
         }
 
+        if (!filter_var(idn_to_ascii($_GET['media']), FILTER_VALIDATE_URL) === false) {
+            streamMedia($_GET['media'], false);
+        }
+
         $mediaPath = str_replace('..', '', str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,str_replace('-----', DIRECTORY_SEPARATOR, $_GET['media'])));
 
         $pos = strpos($mediaPath, 'data' . DIRECTORY_SEPARATOR);
@@ -639,7 +696,8 @@ function run()
     } else {
         $realbums = [];
 
-        $conn = connectToDB()["mysqli"];
+
+
         foreach(json_decode(file_get_contents(privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . "mediadirs.json"), true) as $folderObj) {
             if(isset($folderObj['HasThumbnailJpg']) && $folderObj['HasThumbnailJpg']) {
                 $ext = pathinfo($folderObj["Name"], PATHINFO_EXTENSION);
@@ -664,13 +722,21 @@ function run()
 
             }
         }
-        $result = $conn->query('select filename, album, max(time) as time, hash FROM media where dupe = 0 GROUP by album order by time DESC;');
-        while ($album = $result->fetch_assoc()) {
+
+
+        $conn = $privuma->getPDO();
+
+
+        $stmt = $conn->prepare('select filename, album, url, thumbnail, max(time) as time, hash FROM media where dupe = 0 GROUP by album order by time DESC;');
+        $stmt->execute([]);
+        $data = $stmt->fetchAll();
+
+        foreach($data as $album) {
             $ext = pathinfo($album["filename"], PATHINFO_EXTENSION);
             $filename = basename($album["filename"], "." . $ext);
             $filePath = $album['album'] . DIRECTORY_SEPARATOR . $album["filename"];
             $relativePath = $album['album'] . "-----" . basename($filePath);
-            if (strtolower($ext) === "mp4") {
+            if (strtolower($ext) === "mp4" || strtolower($ext) === "webm") {
                 $dest = $album['album'] . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext) . ".jpg";
                 $media = urlencode(base64_encode($dest));
                 if(strlen($media) > $MAX_URL_CHARACTERS) {
@@ -678,6 +744,9 @@ function run()
                     $media = "t-".$album['hash'];
                 }
                 $photoPath = getProtectedUrlForMedia($media);
+                if(!is_null($album['url'])) {
+                    $photoPath = getProtectedUrlForMediaHash(base64_encode($album['thumbnail']));
+                }
             } else {
 
                 $dest = $album['album'] . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext) . "." . $ext;
@@ -687,6 +756,10 @@ function run()
                     $media = $album['hash'];
                 }
                 $photoPath = getProtectedUrlForMedia($media);
+
+                if(!is_null($album['url'])) {
+                    $photoPath = getProtectedUrlForMediaHash(base64_encode($album['url']));
+                }
             }
 
             if (empty($photoPath)) {
