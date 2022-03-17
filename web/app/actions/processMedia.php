@@ -11,23 +11,29 @@ class processMedia {
     function __construct(array $data) {
         $qm = new QueueManager();
         if(isset($data['album']) && isset($data['filename'])) {
-            $mediaFile = new mediaFile($data['filename'], $data['album']);
-            $existingFile = $mediaFile->realPath();
-            echo PHP_EOL."Loaded MediaFile: " . $mediaFile->path();
             if(isset($data['url'])) {
+                $mediaFile = new mediaFile($data['filename'], $data['album'], null, null, null, null, $data['url'], isset($data['thumbnail']) ? $data['thumbnail'] : null );
+                $existingFile = $mediaFile->source();
+                echo PHP_EOL."Loaded MediaFile: " . $mediaFile->path();
                 if($existingFile === false) {
-                    if($tempPath = $this->downloadUrl($data['url'])) {
+                    if(!isset($data['cache'])) {
+                        $mediaFile->save();
+                        return;
+                    }else if($tempPath = $this->downloadUrl($data['url'])) {
                         echo PHP_EOL."Downloaded Media File to: " . $tempPath;
                         $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['path' => $tempPath, 'album' => $data['album'], 'filename' => $data['filename']]]));
                     } else {
                         echo PHP_EOL."Failed to obtain media file from url: " . $data['url'];
                     }
                 } else {
-                    echo PHP_EOL."Existing MediaFile located at: " . $existingFile . " For: " . $data['path'];
+                    echo PHP_EOL."Existing MediaFile located at: " . $existingFile . " For: " . $data['url'];
                 }
                 return;
             }
 
+            $mediaFile = new mediaFile($data['filename'], $data['album']);
+            $existingFile = $mediaFile->realPath();
+            echo PHP_EOL."Loaded MediaFile: " . $mediaFile->path();
             if(isset($data['path'])) {
                 if( $existingFile === false ) {
                     if($tempPath = $this->loadPath($data['path'], (isset($data['local']) ? true : false))) {

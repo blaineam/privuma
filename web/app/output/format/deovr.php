@@ -19,15 +19,37 @@ $DEOVR_PASSWORD = privuma::getEnv('DEOVR_PASSWORD');
 $DEOVR_DATA_DIRECTORY = privuma::getEnv('DEOVR_DATA_DIRECTORY');
 
 
+function roundToNearestMinuteInterval(\DateTime $dateTime, $minuteInterval = 10)
+{
+    return $dateTime->setTime(
+        $dateTime->format('H'),
+        round($dateTime->format('i') / $minuteInterval) * $minuteInterval,
+        0
+    );
+}
+if (isset($_SERVER["HTTP_CF_CONNECTING_IP"])) {
+    $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_CF_CONNECTING_IP"];
+  }
+  if (isset($_SERVER["HTTP_PVMA_IP"])) {
+      $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_PVMA_IP"];
+    }
 
+
+
+  //die("-" . $_SERVER['HTTP_USER_AGENT'] . "-" . $_SERVER['REMOTE_ADDR'] );
 function rollingTokens($seed) {
-    $d1 = new \DateTime("yesterday");
-    $d2 = new \DateTime("today");
-    $d3 = new \DateTime("tomorrow");
+    $d1 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
+    $d2 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
+    $d3 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
+    $d1->modify('-12 hours');
+    $d3->modify('+12 hours');
+    $d1 = roundToNearestMinuteInterval($d1, 60*12);
+    $d2 = roundToNearestMinuteInterval($d2, 60*12);
+    $d3 = roundToNearestMinuteInterval($d3, 60*12);
     return [
-        sha1(md5($d1->format('Y-m-d'))."-".$seed),
-        sha1(md5($d2->format('Y-m-d'))."-".$seed),
-        sha1(md5($d3->format('Y-m-d'))."-".$seed),
+        sha1(md5($d1->format('Y-m-d H:i:s'))."-".$seed . "-" . $_SERVER['HTTP_USER_AGENT'] . "-" . $_SERVER['REMOTE_ADDR'] ),
+        sha1(md5($d2->format('Y-m-d H:i:s'))."-".$seed . "-" . $_SERVER['HTTP_USER_AGENT'] . "-" . $_SERVER['REMOTE_ADDR'] ),
+        sha1(md5($d3->format('Y-m-d H:i:s'))."-".$seed . "-" . $_SERVER['HTTP_USER_AGENT'] . "-" . $_SERVER['REMOTE_ADDR'] ),
     ];
 };
 

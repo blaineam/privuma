@@ -10,6 +10,8 @@ class mediaFile {
     public const MEDIA_FOLDER = 'privuma';
     private ?int $id;
     private ?string $hash;
+    private ?string $url;
+    private ?string $thumbnail;
     private string $album;
     private string $filename;
     private string $extension;
@@ -19,10 +21,12 @@ class mediaFile {
     private PDO $pdo;
     public const SANITIZED_PATH = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'sanitizedFiles.json';
 
-    function __construct(string $filename, string $album, ?int $id = null, ?string $hash = null, ?DateTime $date = null, ?bool $dupe = null)
+    function __construct(string $filename, string $album, ?int $id = null, ?string $hash = null, ?DateTime $date = null, ?bool $dupe = null, ?string $url = null, ?string $thumbnail = null)
     {
         $this->id = $id;
         $this->hash = $hash;
+        $this->url = $url;
+        $this->thumbnail = $thumbnail;
         $this->album = $album;
         $this->filename = $filename;
         $this->extension = pathinfo($filename, PATHINFO_EXTENSION);
@@ -92,6 +96,9 @@ class mediaFile {
         if (count($fileParts) > 1 && $fileParts[1] !== "compressed" && !empty($fileParts[1])) {
             return $fileParts[1];
         }
+        if(!is_null($this->url)) {
+            return md5($this->url);
+        }
 
         return $this->cloudFS->md5_file($this->realPath());
     }
@@ -110,6 +117,18 @@ class mediaFile {
         }
 
         return self::MEDIA_FOLDER . DIRECTORY_SEPARATOR .$test['album'] . DIRECTORY_SEPARATOR . $test['filename'];
+    }
+
+    public function source() {
+        $stmt = $this->pdo->prepare('SELECT * FROM media WHERE ((filename = ? AND album = ?) OR hash = ?) limit 1');
+        $stmt->execute([$this->filename, $this->album, $this->hash]);
+        $test = $stmt->fetch();
+
+        if ($test === false) {
+            return false;
+        }
+
+        return $test['url'] ?? false;
     }
 
 
@@ -145,13 +164,15 @@ class mediaFile {
 
         if ($test === false) {
             $date = date('Y-m-d H:i:s');
-            $stmt = $this->pdo->prepare('INSERT INTO media (dupe, album, hash, filename, time)
-            VALUES (?, ?, ?, ?, ?)');
+            $stmt = $this->pdo->prepare('INSERT INTO media (dupe, album, hash, filename, url, thumbnail, time)
+            VALUES (?, ?, ?, ?, ?, ?, ?)');
             return $stmt->execute([
                 $this->dupe() ? 1 : 0,
                 $this->album,
                 $this->hash,
                 $this->filename,
+                $this->url,
+                $this->thumbnail,
                 $date
             ]) !== false;
         }
