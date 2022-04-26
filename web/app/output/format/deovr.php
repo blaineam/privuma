@@ -10,7 +10,8 @@ use privuma\privuma;
 use privuma\helpers\cloudFS;
 use privuma\helpers\mediaFile;
 
-$ops = privuma::getCloudFS();
+$DEOVR_MIRROR = privuma::getEnv('DEOVR_MIRROR') ?? privuma::getEnv('RCLONE_DESTINATION');
+$ops = new cloudFS($DEOVR_MIRROR);
 $FALLBACK_ENDPOINT = privuma::getEnv('FALLBACK_ENDPOINT');
 $ENDPOINT = privuma::getEnv('ENDPOINT');
 $AUTHTOKEN = privuma::getEnv('AUTHTOKEN');
@@ -47,9 +48,15 @@ function rollingTokens($seed) {
     $d2 = roundToNearestMinuteInterval($d2, 60*12);
     $d3 = roundToNearestMinuteInterval($d3, 60*12);
     return [
-        sha1(md5($d1->format('Y-m-d H:i:s'))."-".$seed . "-" . $_SERVER['HTTP_USER_AGENT'] . "-" . $_SERVER['REMOTE_ADDR'] ),
-        sha1(md5($d2->format('Y-m-d H:i:s'))."-".$seed . "-" . $_SERVER['HTTP_USER_AGENT'] . "-" . $_SERVER['REMOTE_ADDR'] ),
-        sha1(md5($d3->format('Y-m-d H:i:s'))."-".$seed . "-" . $_SERVER['HTTP_USER_AGENT'] . "-" . $_SERVER['REMOTE_ADDR'] ),
+        sha1(md5($d1->format('Y-m-d H:i:s'))."-".$seed . "-" .
+//          $_SERVER['HTTP_USER_AGENT'] . "-" .
+          $_SERVER['REMOTE_ADDR'] ),
+        sha1(md5($d2->format('Y-m-d H:i:s'))."-".$seed . "-" .
+//          $_SERVER['HTTP_USER_AGENT'] . "-" .
+          $_SERVER['REMOTE_ADDR'] ),
+        sha1(md5($d3->format('Y-m-d H:i:s'))."-".$seed . "-" .
+//          $_SERVER['HTTP_USER_AGENT'] . "-" .
+ $_SERVER['REMOTE_ADDR'] ),
     ];
 };
 
@@ -59,7 +66,7 @@ function getProtectedUrlForMediaPath($path, $use_fallback = false, $useMediaFile
     global $FALLBACK_ENDPOINT;
     global $AUTHTOKEN;
     $mediaFile = $useMediaFile ? 'media.mp4' : '';
-    $uri = $mediaFile . "?token=" . rollingTokens($AUTHTOKEN)[1]  . "&media=" . urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path)));
+    $uri = $mediaFile . "?token=" . rollingTokens($AUTHTOKEN)[1]  . "&deovr=1&&media=" . urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path)));
     return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
 }
 

@@ -15,7 +15,11 @@ class cloudFS {
     function __construct(string $rCloneDestination = 'privuma:', bool $encoded = true, string $rCloneBinaryPath = '/usr/bin/rclone', ?string $rCloneConfigPath = null) {
         exec($rCloneBinaryPath . ' version 2>&1 > /dev/null', $void, $code);
         if($code !== 0) {
-            $rCloneBinaryPath = __DIR__ . '/../bin/rclone';
+            $rCloneBinaryPath = '/usr/local/bin/rclone';
+            exec($rCloneBinaryPath . ' version 2>&1 > /dev/null', $void, $code);
+            if($code !== 0) {
+                $rCloneBinaryPath = __DIR__ . '/../bin/rclone';
+            }
         }
 
         $this->env = new dotenv();

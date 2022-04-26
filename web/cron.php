@@ -27,16 +27,29 @@ $privuma = new privuma();
 
     exec("find " . sys_get_temp_dir() . DIRECTORY_SEPARATOR . " -maxdepth 1 -type f -mmin +30 -exec rm {} \;");
 
-    foreach(array_diff(scandir(__DIR__ . "/jobs"), ['.', '..']) as $job) {
-        $jobDir = __DIR__ . "/jobs/" . $job . "/";
+    $coreJobsDir = __DIR__ . "/jobs/core";
+    $pluginsJobsDir = __DIR__ . "/jobs/plugins";
+    foreach(array_diff(array_merge(scandir($coreJobsDir), scandir($pluginsJobsDir)), ['.', '..']) as $job) {
+        $jobDir = $pluginsJobsDir . "/" . $job . "/";
+        if (!is_dir($jobDir)) {
+            $jobDir = $coreJobsDir . "/" . $job . "/";
+        }
         $command = $jobDir . "index.php";
         $cron = $jobDir   . "cron.json";
         $lock = $jobDir   . "job.lock";
+        $disabled = $jobDir   . ".disabled";
         $log = $privuma->getOutputDirectory() . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . $job . ".txt";
 
         if(!is_file($command)) {
             if ($DEBUG) {
                 var_dump("COMMAND NOT FOUND: " . $command);
+            }
+            continue;
+        }
+
+        if(is_file($disabled)) {
+            if ($DEBUG) {
+                var_dump("Job is disabled: " . $job);
             }
             continue;
         }
@@ -66,9 +79,10 @@ $privuma = new privuma();
 
         file_put_contents($cron, json_encode($cronConfig, JSON_PRETTY_PRINT));
 
+        $flockPath = PHP_OS_FAMILY == 'Darwin' ? "/usr/local/bin/flock" : "/usr/bin/flock";
 $cmd = implode(' ', [
             // path to flock in container
-            '/usr/bin/flock',
+            $flockPath,
             // flag to exit if lock already exists
             '-n',
             // path to job lock file

@@ -26,6 +26,7 @@ $privuma = privuma::getInstance();
 
 $USE_MIRROR= privuma::getEnv('USE_MIRROR');
 $RCLONE_MIRROR = privuma::getEnv('RCLONE_MIRROR');
+$DEOVR_MIRROR = privuma::getEnv('DEOVR_MIRROR');
 $opsMirror = new cloudFS($RCLONE_MIRROR);
 
 $SYNC_FOLDER = '/data/privuma';
@@ -108,8 +109,9 @@ function redirectToMedia($path) {
 
     if($USE_MIRROR) {
         global $RCLONE_MIRROR;
+        global $DEOVR_MIRROR;
         global $rcloneConfig;
-        $mirror_parts = explode(':', $RCLONE_MIRROR);
+        $mirror_parts = explode(':', isset($_GET['deovr']) ? ($DEOVR_MIRROR ?? $RCLONE_MIRROR) : $RCLONE_MIRROR);
         $rclone_config_key = $mirror_parts[0];
         $bucket = explode(DIRECTORY_SEPARATOR, trim($mirror_parts[1], DIRECTORY_SEPARATOR))[0];
         $rclone_config = $rcloneConfig[$rclone_config_key];
@@ -442,13 +444,14 @@ function run()
         and dupe = 0
         group by filename
          order by
+         " . (strpos(strtolower($albumName), "comic") !== false ? "filename asc" : "
             CASE
                 WHEN filename LIKE '%.gif' THEN 1
                 WHEN filename LIKE '%.mp4' THEN 2
                 WHEN filename LIKE '%.webm' THEN 3
                 ELSE 4
             END,
-            time DESC");
+            time DESC"));
         $stmt->execute([$albumName]);
         $data = $stmt->fetchAll();
 
@@ -580,6 +583,7 @@ function run()
         }
 
         $media = array_values($media);
+                
         $photos = array("gtoken" => urlencode($ENDPOINT."...".$AUTHTOKEN), "gdata" => $media);
         header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
         header("Cache-Control: post-check=0, pre-check=0", false);
