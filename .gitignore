@@ -20,16 +20,7 @@ docker/db/
 **/config.php
 **/.DS_Store
 web/jobs/*
-!web/jobs/queue-worker-1
-!web/jobs/fix-broken-links
-!web/jobs/mirror-copy
-!web/jobs/mirror-db
-!web/jobs/sync-dirs
-!web/jobs/test
-!web/jobs/media-dirs
-!web/jobs/deovr-cacher
-web/jobs/test/testing/
-web/jobs/test/dGVzdGluZw==/
+!web/jobs/core
 web/dGVzdGluZw==
 web/ZGF0YQ==
 web/sync

@@ -1,5 +1,5 @@
 #!/bin/bash
-pkill privuma
+pkill -f privuma
 find . -name job.lock -type f -delete
 rm app/output/logs/*
 rm -f /tmp/PVMA*

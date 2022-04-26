@@ -3,7 +3,7 @@
 use privuma\privuma;
 use privuma\helpers\mediaFile;
 
-require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
+require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
 
 $privuma = privuma::getInstance();
 $ops = $privuma->getCloudFS();
@@ -12,7 +12,7 @@ $configs = json_decode(file_get_contents($privuma->getConfigDirectory() . DIRECT
 foreach($configs as $sync) {
 
     if(substr($sync['path'], 0, 1) !== DIRECTORY_SEPARATOR) {
-        $sync['path'] = $privuma->canonicalizePath(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . $sync['path']);
+        $sync['path'] = $privuma->canonicalizePath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . $sync['path']);
         echo PHP_EOL."Using abolsute path of the web folder relative path: " . $sync['path'];
     }
 

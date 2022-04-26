@@ -3,14 +3,11 @@
 use privuma\helpers\mediaFile;
 use privuma\privuma;
 
-require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
-
+require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
 $privuma = new privuma();
-
 $deovrSites = json_decode(file_get_contents($privuma->getConfigDirectory() . DIRECTORY_SEPARATOR . 'deovr-cacher.json'), true) ?? [];
 
 foreach($deovrSites as $url => $config) {
-
     echo PHP_EOL. "Checking DeoVR site for new media to cache: " . $url;
     if($search = $config['search']) {
         $json = json_decode(getUrlWithAuth($url, $config['login'], $config['password']), true);
@@ -24,9 +21,11 @@ foreach($deovrSites as $url => $config) {
             ];
         }
         foreach($json['scenes'][$LibaryKey]['list'] as $video) {
+            $vjson = json_decode(getUrlWithAuth($video['video_url'], $config['login'], $config['password']), true);
+            $tags = array_column(array_column($vjson["categories"], "tag"), "name");
+
             foreach($search as $s) {
-                if(strpos(strtolower($video['title']), strtolower($s)) !== false) {
-                    $vjson = json_decode(getUrlWithAuth($video['video_url'], $config['login'], $config['password']), true);
+                if(in_array(strtolower($s), $tags)) {
                     $vjson['authorized'] = 1;
                     $encodingKey = array_search('h265', array_column($vjson['encodings'], 'name'));
 
@@ -43,6 +42,7 @@ foreach($deovrSites as $url => $config) {
                             'type' => 'processMedia',
                             'data' => [
                                 'preserve' => $preserve,
+                                'skipThumbnail' => true,
                                 'url' => $videoUrl
                             ],
                         ]));
@@ -56,6 +56,7 @@ foreach($deovrSites as $url => $config) {
                             'type' => 'processMedia',
                             'data' => [
                                 'preserve' => $preserve,
+                                'skipThumbnail' => true,
                                 'url' => $vjson['videoPreview'],
                             ],
                         ]));
@@ -68,6 +69,7 @@ foreach($deovrSites as $url => $config) {
                             'type' => 'processMedia',
                             'data' => [
                                 'preserve' => $preserve,
+                                'skipThumbnail' => true,
                                 'url' => $vjson['thumbnailUrl'],
                             ],
                         ]));
@@ -90,7 +92,6 @@ foreach($deovrSites as $url => $config) {
         }
 
         echo PHP_EOL. "Done with search: " . json_encode($search);
-
         continue;
     }
 }

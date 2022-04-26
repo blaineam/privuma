@@ -12,7 +12,10 @@ class processMedia {
         $qm = new QueueManager();
         if(isset($data['album']) && isset($data['filename'])) {
             if(isset($data['url'])) {
-                $mediaFile = new mediaFile($data['filename'], $data['album'], null, null, null, null, $data['url'], isset($data['thumbnail']) ? $data['thumbnail'] : null );
+                $mediaFile = new mediaFile($data['filename'], $data['album']);
+                if(!isset($data['cache'])) {
+                    $mediaFile = new mediaFile($data['filename'], $data['album'], null, null, null, null, $data['url'], isset($data['thumbnail']) ? $data['thumbnail'] : null );
+                }
                 $existingFile = $mediaFile->source();
                 echo PHP_EOL."Loaded MediaFile: " . $mediaFile->path();
                 if($existingFile === false) {
@@ -50,7 +53,7 @@ class processMedia {
             return;
         }
         if((isset($data['url']) || isset($data['path'])) && isset($data['preserve']) && !privuma::getCloudFS()->is_file($data['preserve'])) {
-            if($this->getDirectorySize(sys_get_temp_dir()) >= 1024 * 1024 * 1024 * 10) {
+            if($this->getDirectorySize(sys_get_temp_dir()) >= 1024 * 1024 * 1024 * 25) {
                 echo PHP_EOL."Temp Directory full, cleaning temp director";
                 foreach (glob(sys_get_temp_dir().DIRECTORY_SEPARATOR."*") as $file) {
                     if(time() - filectime($file) > 60 * 60 * 2){
@@ -64,16 +67,16 @@ class processMedia {
 
             if(isset($data['url'])) {
                 if($tempPath = $this->downloadUrl($data['url'])) {
-                    echo PHP_EOL."Downloaded Media File to: " . $tempPath;
-                    $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['preserve' => $data['preserve'], 'path' => $tempPath]]));
+                    echo PHP_EOL."Downloaded Preservation File to: " . $tempPath;
+                    $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['preserve' => $data['preserve'], 'skipThumbnail' => $data['skipThumbnail'], 'path' => $tempPath]]));
                 } else {
                     echo PHP_EOL."Failed to obtain preserve file from url: " . $data['url'];
                 }
             } else if(isset($data['path'])) {
 
                 if($tempPath = $this->loadPath($data['path'], (isset($data['local']) ? true : false))) {
-                    echo PHP_EOL."Using Media File at: " . $tempPath;
-                    $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['preserve' => $data['preserve'], 'path' => $tempPath]]));
+                    echo PHP_EOL."Using Preservation File at: " . $tempPath;
+                    $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['preserve' => $data['preserve'], 'skipThumbnail' => $data['skipThumbnail'], 'path' => $tempPath]]));
                 } else {
                     echo PHP_EOL."Failed to obtain preserve file from filesystem path: " . $data['path'];
                 }
@@ -201,7 +204,7 @@ class curlDL{
         curl_setopt($curl, CURLOPT_COOKIEJAR,  $this->cookiePath . DIRECTORY_SEPARATOR  . 'curl.txt');
 
         $result = curl_exec($curl);
-        if(empty($result)){
+        if(empty($result) || !in_array(explode('/', mime_content_type($this->result))[0], ['image','video'])){
             echo PHP_EOL . 'Error fetching: '.htmlentities($url) . curl_error($curl);
             $this->result = null;
         }
