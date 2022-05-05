@@ -25,8 +25,9 @@ class preserveMedia {
             $mediaFile = new mediaFile(str_replace('.webm', '.mp4', $data['filename']), $data['album'], null,$hash);
             echo PHP_EOL."New mediaFile: " . $mediaFile->path();
             if($mediaFile->hashConflict()) {
-                echo PHP_EOL."There was a hash conflict, using the new media file to replace old hash";
-                $mediaFile->delete();
+                echo PHP_EOL."There was a hash conflict";
+                unlink($data['path']);
+                return;
             } else {
                 echo PHP_EOL."Hash is new for media file";
             }
