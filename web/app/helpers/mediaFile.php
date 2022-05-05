@@ -179,6 +179,16 @@ class mediaFile {
         return false;
     }
 
+    public function getFieldValuesForAlbum($field): array {
+        $stmt = $this->pdo->prepare("select `{$field}`
+        from media
+        where album = ?
+        group by filename");
+        $stmt->execute([$this->album]);
+        $data = $stmt->fetchAll();
+        return empty($data) ? [] : array_column($data, $field);
+    }
+
     public function delete(?string $hash = null) {
         if(!is_null($hash)){
             $stmt = $this->pdo->prepare('DELETE FROM media WHERE hash = ?');
