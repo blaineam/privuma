@@ -84,7 +84,10 @@ class preserveMedia {
         $allowedPhotos = ["BMP", "GIF", "HEIC", "ICO", "JPG", "JPEG", "PNG", "TIFF", "WEBP"];
         $allowedVideos = ["MPG", "MOD", "MMV", "TOD", "WMV", "ASF", "AVI", "DIVX", "MOV", "M4V", "3GP", "3G2", "MP4", "M2T", "M2TS", "MTS", "MKV", "WEBM"];
 
-        $ext = pathinfo($file, PATHINFO_EXTENSION);
+$mimes = json_decode(file_get_contents(privuma::getOutputDirectory().DIRECTORY_SEPARATOR."cache".DIRECTORY_SEPARATOR."mimes.json"), true);
+$mimeExt = array_search(mime_content_type($file), $mimes);
+
+        $ext = !empty(pathinfo($file, PATHINFO_EXTENSION)) ? pathinfo($file, PATHINFO_EXTENSION): $mimeExt;
 
         if(in_array(strtoupper($ext), $allowedPhotos)) {
             return self::compressPhoto($file, $preserve);
