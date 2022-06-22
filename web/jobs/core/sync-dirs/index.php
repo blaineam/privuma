@@ -39,20 +39,23 @@ function processDir($dir, $sync) {
                 $album = str_replace(DIRECTORY_SEPARATOR, '---', str_replace($sync['path'], 'Syncs', dirname($path)));
                 $filename = mediaFile::sanitize(basename($path, "." . $ext)) . "." . (!in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['jpg','jpeg','gif','png','heif']) ? 'mp4' : strtolower(pathinfo($path, PATHINFO_EXTENSION)));
                 $preserve = privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename;
-                if(!$ops->is_dir(dirname($preserve))) {
-                    $ops->mkdir(dirname($preserve));
-                }
-                if(!$ops->is_file($preserve)) {
-                    echo PHP_EOL."Queue Processing of media file: " . $preserve;
-                    $privuma->getQueueManager()->enqueue(json_encode([
-                        'type' => 'processMedia',
-                        'data' => [
-                            'album' => $album,
-                            'filename' => mediaFile::sanitize(basename($path, "." . $ext)) . "." . $ext,
-                            'path' => $path,
-                            'local' => $sync['removeFromSource']
-                        ],
-                    ]));
+
+                if(!(new mediaFile($filename, $album))->preserved()){
+                    if(!$ops->is_dir(dirname($preserve))) {
+                        $ops->mkdir(dirname($preserve));
+                    }
+                    if(!$ops->is_file($preserve)) {
+                        echo PHP_EOL."Queue Processing of media file: " . $preserve;
+                        $privuma->getQueueManager()->enqueue(json_encode([
+                            'type' => 'processMedia',
+                            'data' => [
+                                'album' => $album,
+                                'filename' => mediaFile::sanitize(basename($path, "." . $ext)) . "." . $ext,
+                                'path' => $path,
+                                'local' => $sync['removeFromSource']
+                            ],
+                        ]));
+                    } 
                 } else if($sync['removeFromSource']) {
                     echo PHP_EOL. "Removing file that already exists in media sync destination: " . $preserve . " for path: " . $path;
                     unlink($path);
