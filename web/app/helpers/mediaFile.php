@@ -56,17 +56,25 @@ class mediaFile {
 
         $dupe = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
 
+        
+        if ($this->cloudFS->is_file($filePath)) {
+            return $filePath;
+        }
+        
+        if ($this->cloudFS->is_file($compressedFile)) {
+            return $compressedFile;
+        }
+
+        if ($this->cloudFS->is_file($dupe)) {
+            return $dupe;
+        }
+
         $files = $this->cloudFS->glob(privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. "*.*");
         if($files === false) {
             $files = [];
         }
-        if ($this->cloudFS->is_file($filePath)) {
-            return $filePath;
-        } else if ($this->cloudFS->is_file($compressedFile)) {
-            return $compressedFile;
-        } else if ($this->cloudFS->is_file($dupe)) {
-            return $dupe;
-        } else if (count($files) > 0) {
+        
+        if (count($files) > 0) {
             if (strtolower($ext) == "mp4" || strtolower($ext) == "webm") {
                 foreach ($files as $file) {
                     $iext = pathinfo($file, PATHINFO_EXTENSION);
@@ -187,6 +195,10 @@ class mediaFile {
         $stmt->execute([$this->album]);
         $data = $stmt->fetchAll();
         return empty($data) ? [] : array_column($data, $field);
+    }
+
+    public function preserved() {
+        return in_array($this->filename, $this->getFieldValuesForAlbum('filename'));
     }
 
     public function delete(?string $hash = null) {

@@ -318,13 +318,12 @@ function streamMedia($file, bool $useOps = false) {
         header('Content-Type: ' . get_mime_by_filename($file));
         header('Content-Length:' . $ops->filesize($file));
         $ops->readfile($file);
-    }else if ($USE_X_Accel_Redirect && filter_var(idn_to_ascii($file), FILTER_VALIDATE_URL)){
+    }else if ($USE_X_Accel_Redirect && (filter_var(idn_to_ascii($file), FILTER_VALIDATE_URL)  || filter_var($file, FILTER_VALIDATE_URL))){
         header('Content-Type: ' . get_mime_by_filename(basename(explode('?', $file)[0])));
         $protocol = parse_url($file,  PHP_URL_SCHEME);
         $hostname = parse_url($file,  PHP_URL_HOST);
         $path = ltrim(parse_url($file,  PHP_URL_PATH) . ((strpos($file, '?') !== false) ? '?' . parse_url($file,  PHP_URL_QUERY) : ''), DIRECTORY_SEPARATOR);
         $internalMediaPath = DIRECTORY_SEPARATOR . 'media' . DIRECTORY_SEPARATOR . $protocol . DIRECTORY_SEPARATOR . $hostname . DIRECTORY_SEPARATOR . $path . DIRECTORY_SEPARATOR;
-        //die($internalMediaPath);
         header('X-Accel-Redirect: ' . $internalMediaPath);
         die();
     }else if(pathinfo($file, PATHINFO_EXTENSION) !== "mp4" || is_file($file)) {
@@ -628,7 +627,7 @@ function run()
             return;
         }
 
-        if (!filter_var(idn_to_ascii($_GET['media']), FILTER_VALIDATE_URL) === false) {
+        if (filter_var(idn_to_ascii($_GET['media']), FILTER_VALIDATE_URL) !== false || filter_var($_GET['media'], FILTER_VALIDATE_URL) !== false) {
             streamMedia($_GET['media'], false);
         }
 

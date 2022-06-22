@@ -117,6 +117,8 @@ RUN touch /var/log/cron.log && chown 1026 /var/log/cron.log
 
 RUN export PATH="$PATH:/usr/local/bin/" && ln -s /usr/local/bin/php /usr/bin/php
 
+RUN echo 'request_terminate_timeout = 10s' >> /usr/local/etc/php-fpm.d/zz-docker.conf
+
 EXPOSE 9000
 
 CMD bash -c "rsyslogd && cron -L 1 && php-fpm"
