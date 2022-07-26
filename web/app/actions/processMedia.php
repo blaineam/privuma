@@ -4,6 +4,7 @@ namespace privuma\actions;
 
 use privuma\helpers\mediaFile;
 use privuma\queue\QueueManager;
+use privuma\helpers\cloudFS;
 
 use privuma\privuma;
 
@@ -13,15 +14,35 @@ class processMedia {
         if(isset($data['album']) && isset($data['filename'])) {
             if(isset($data['url'])) {
                 $mediaFile = new mediaFile($data['filename'], $data['album']);
-                if(!isset($data['cache'])) {
+                if(!isset($data['cache']) || isset($data['download'])) {
                     $mediaFile = new mediaFile($data['filename'], $data['album'], null, null, null, null, $data['url'], isset($data['thumbnail']) ? $data['thumbnail'] : null );
                 }
                 $existingFile = $mediaFile->source();
                 echo PHP_EOL."Loaded MediaFile: " . $mediaFile->path();
-                if($existingFile === false) {
-                    if(!isset($data['cache'])) {
+                if($existingFile === false || isset($data['download'])) {
+                    if(!isset($data['cache']) && !isset($data['download'])) {
                         $mediaFile->save();
                         return;
+                    }else if(
+                        isset($data['download']) 
+                        && $mediaPath = $this->downloadUrl($data['url'])
+                    ) {
+                        $downloadOps = new cloudFS($data['download']);
+                        $mediaPreservationPath = str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', $data['hash'] . "." . pathinfo($mediaFile->path(), PATHINFO_EXTENSION));
+
+                        $result1 = $downloadOps->rename($mediaPath, $mediaPreservationPath, false);
+                        if (
+                            isset($data['thumbnail']) 
+                            && $thumbnailPath = $this->downloadUrl($data['thumbnail'])
+                        ) {
+                            $thumbnailPreservationPath = str_replace('.mp4', '.jpg', $mediaPreservationPath);
+                            $result2 = $downloadOps->rename($thumbnailPath, $thumbnailPreservationPath, false);
+                        }
+                        // if(!$mediaFile->dupe()){
+                        //     //$mediaFile->save();
+                        // }
+                        return;
+
                     }else if($tempPath = $this->downloadUrl($data['url'])) {
                         echo PHP_EOL."Downloaded Media File to: " . $tempPath;
                         $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['path' => $tempPath, 'album' => $data['album'], 'filename' => $data['filename']]]));

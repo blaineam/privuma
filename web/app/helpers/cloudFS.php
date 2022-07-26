@@ -26,7 +26,7 @@ class cloudFS {
 
         $this->rCloneBinaryPath = $rCloneBinaryPath;
         $this->rCloneConfigPath =  $rCloneConfigPath ?? privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'rclone' . DIRECTORY_SEPARATOR . 'rclone.conf';
-        $this->rCloneDestination = $this->env->get('RCLONE_DESTINATION') ?? $rCloneDestination;
+        $this->rCloneDestination = ($rCloneDestination !== 'privuma:') ? $rCloneDestination : ($this->env->get('RCLONE_DESTINATION') ?? $rCloneDestination);
         $this->encoded = $encoded;
     }
 
@@ -469,6 +469,7 @@ class cloudFS {
                 '2>&1',
             ]
             );
+            //echo PHP_EOL.$cmd;
         if($passthru) {
             passthru($cmd, $result_code);
         } else {

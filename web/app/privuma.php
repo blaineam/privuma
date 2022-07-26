@@ -49,7 +49,7 @@ class privuma {
         $dataDirectory = dirname($dataDirectory) . DIRECTORY_SEPARATOR . cloudFS::encode(basename($dataDirectory));
         self::$dataDirectory = self::canonicalizePath($dataDirectory);
         self::$outputDirectory = self::canonicalizePath($outputDirectory);
-        self::$cloudFS = new cloudFS(self::$dataDirectory);
+        self::$cloudFS = new cloudFS();
         self::$queueManager = new QueueManager();
 
         self::$env = new dotenv();

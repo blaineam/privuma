@@ -13,7 +13,8 @@ class preserveMedia {
 
     function __construct(array $data) {
         $qm = new QueueManager();
-        $this->ops = privuma::getCloudFS();
+        $privuma = privuma::getInstance();
+        $this->ops = $privuma->getCloudFS();
         if(isset($data['album']) && isset($data['filename'])) {
             $hash =  md5_file($data['path']);
             echo PHP_EOL."creating media file with: " . json_encode([
@@ -33,9 +34,9 @@ class preserveMedia {
             }
 
             if($mediaFile->dupe()) {
-                privuma::getCloudFS()->file_put_contents(privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path(), privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->original());
+                $this->ops->file_put_contents(privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path(), privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->original());
                 if(!$mediaFile->save()) {
-                    privuma::getCloudFS()->unlink(privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path());
+                    $this->ops->unlink(privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path());
                     echo PHP_EOL."Preservation Failed for: " . privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path();
                 } else{
                     echo PHP_EOL."Preservation succcessful for: " . privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path();
@@ -49,7 +50,7 @@ class preserveMedia {
             echo PHP_EOL."Compressing: " . $data['path'] . " To: ". privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path();
             if($this->compress($data['path'], privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path())) {
                 if(!$mediaFile->save()) {
-                    privuma::getCloudFS()->unlink(privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path());
+                    $this->ops->unlink(privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path());
                     echo PHP_EOL."Preservation Failed for: " . privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path();
                 } else{
                     echo PHP_EOL."Preservation succcessful for: " . privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path();
@@ -103,18 +104,18 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
 
     private static function compressVideo(string $file, string $preserve): bool {
         $ffmpegThreadCount = PHP_OS_FAMILY == 'Darwin' ? 4 : 1;
-        $ffmpegVideoCodec = PHP_OS_FAMILY == 'Darwin' ? "h264_videotoolbox" : "h264";
+        $ffmpegVideoCodec = PHP_OS_FAMILY == 'Darwin' ? "h264" : "h264";
         $ffmpegPath =  PHP_OS_FAMILY == 'Darwin' ? "/usr/local/bin/ffmpeg" : "/usr/bin/ffmpeg";
         $newFileTemp = tempnam(sys_get_temp_dir(), 'PVMA-');
         rename($newFileTemp, $newFileTemp . '.mp4');
         $newFileTemp = $newFileTemp . '.mp4';
         $cmd = "$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $file . "' -c:v " . $ffmpegVideoCodec . " -r 24 -crf 24 -c:a aac -movflags +faststart -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFileTemp . "'";
-        //echo PHP_EOL."Runnning command: " . $cmd;
+        echo PHP_EOL."Runnning command: " . $cmd;
         exec($cmd, $void, $response);
 
         if ($response == 0) {
             echo PHP_EOL."ffmpeg was successful";
-            $result = privuma::getCloudFS()->rename($newFileTemp, $preserve, false);
+            $result = $this->ops->rename($newFileTemp, $preserve, false);
             is_file($newFileTemp) && unlink($newFileTemp);
             return $result;
         }else {
@@ -147,7 +148,7 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
 
             if($response == 0 ) {
                 echo PHP_EOL."gifsicle was successful";
-                $output =  privuma::getCloudFS()->rename($newFileTemp, $filePath, false);
+                $output =  $this->ops->rename($newFileTemp, $filePath, false);
             }else{
                 echo PHP_EOL.implode(PHP_EOL,$void);
                 unset($void);
@@ -163,10 +164,10 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
             $is = getimagesize($tempFile);
             if($response == 0 ) {
                 echo PHP_EOL."mogrify was successful";
-                $output =  privuma::getCloudFS()->rename($tempFile, $filePath, false);
+                $output =  $this->ops->rename($tempFile, $filePath, false);
             }elseif((exif_imagetype($tempFile) || $is !== false) && filesize($tempFile) < 1024*1024*30) {
                 echo PHP_EOL."mogrify failed but this is a reasonably sized image (<30MB), lets save it anyways";
-                $output =  privuma::getCloudFS()->rename($tempFile, $filePath, false);
+                $output =  $this->ops->rename($tempFile, $filePath, false);
             }else{
                 echo PHP_EOL.implode(PHP_EOL,$void);
                 unset($void);
