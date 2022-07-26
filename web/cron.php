@@ -1,6 +1,5 @@
 <?php
     $DEBUG = false;
-
 use privuma\privuma;
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
