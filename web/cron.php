@@ -1,4 +1,6 @@
 <?php
+// NOTE update db.sqlite3 before re-enabling cron
+// die('disabled');
     $DEBUG = false;
 use privuma\privuma;
 
