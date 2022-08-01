@@ -13,8 +13,7 @@ class preserveMedia {
 
     function __construct(array $data) {
         $qm = new QueueManager();
-        $privuma = privuma::getInstance();
-        $this->ops = $privuma->getCloudFS();
+        $this->ops = privuma::getCloudFS();
         if(isset($data['album']) && isset($data['filename'])) {
             $hash =  md5_file($data['path']);
             echo PHP_EOL."creating media file with: " . json_encode([
@@ -81,7 +80,7 @@ class preserveMedia {
         }
     }
 
-    public static function compress(string $file, string $preserve): bool {
+    public function compress(string $file, string $preserve): bool {
         $allowedPhotos = ["BMP", "GIF", "HEIC", "ICO", "JPG", "JPEG", "PNG", "TIFF", "WEBP"];
         $allowedVideos = ["MPG", "MOD", "MMV", "TOD", "WMV", "ASF", "AVI", "DIVX", "MOV", "M4V", "3GP", "3G2", "MP4", "M2T", "M2TS", "MTS", "MKV", "WEBM"];
 
@@ -91,9 +90,9 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
         $ext = !empty(pathinfo($file, PATHINFO_EXTENSION)) ? pathinfo($file, PATHINFO_EXTENSION): $mimeExt;
 
         if(in_array(strtoupper($ext), $allowedPhotos)) {
-            return self::compressPhoto($file, $preserve);
+            return $this->compressPhoto($file, $preserve);
         } else if(in_array(strtoupper($ext), $allowedVideos)) {
-            return self::compressVideo($file, $preserve);
+            return $this->compressVideo($file, $preserve);
         }else{
             echo PHP_EOL."Unsupported File Extension: " . $ext;
         }
@@ -102,7 +101,7 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
 
     }
 
-    private static function compressVideo(string $file, string $preserve): bool {
+    private function compressVideo(string $file, string $preserve): bool {
         $ffmpegThreadCount = PHP_OS_FAMILY == 'Darwin' ? 4 : 1;
         $ffmpegVideoCodec = PHP_OS_FAMILY == 'Darwin' ? "h264" : "h264";
         $ffmpegPath =  PHP_OS_FAMILY == 'Darwin' ? "/usr/local/bin/ffmpeg" : "/usr/bin/ffmpeg";
@@ -128,9 +127,9 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
         return false;
 
     }
+ 
 
-
-    private static function compressPhoto($tempFile, $filePath): bool{
+    private function compressPhoto($tempFile, $filePath): bool{
         $ext = pathinfo($filePath, PATHINFO_EXTENSION);
         echo PHP_EOL."Compressing image: ".$filePath;
 

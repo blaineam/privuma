@@ -39,8 +39,8 @@ function processDir($dir, $sync) {
                 $album = str_replace(DIRECTORY_SEPARATOR, '---', str_replace($sync['path'], 'Syncs', dirname($path)));
                 $filename = mediaFile::sanitize(basename($path, "." . $ext)) . "." . (!in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['jpg','jpeg','gif','png','heif']) ? 'mp4' : strtolower(pathinfo($path, PATHINFO_EXTENSION)));
                 $preserve = privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename;
-
-                if(!(new mediaFile($filename, $album))->preserved()){
+                $mediaFile = (new mediaFile($filename, $album));
+                if(!$mediaFile->preserved()){
                     if(!$ops->is_dir(dirname($preserve))) {
                         $ops->mkdir(dirname($preserve));
                     }
@@ -55,6 +55,11 @@ function processDir($dir, $sync) {
                                 'local' => $sync['removeFromSource']
                             ],
                         ]));
+                    } else if($sync['removeFromSource']) {
+                        $mediaFile->save();
+                        echo PHP_EOL. "Removing file that already exists in media sync destination: " . $preserve . " for path: " . $path;
+                        unlink($path);
+                        exec('rmdir ' . escapeshellarg(dirname($path)) . " 2>&1 > /dev/null");
                     } 
                 } else if($sync['removeFromSource']) {
                     echo PHP_EOL. "Removing file that already exists in media sync destination: " . $preserve . " for path: " . $path;
