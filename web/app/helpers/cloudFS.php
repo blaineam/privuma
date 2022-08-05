@@ -151,7 +151,7 @@ class cloudFS {
         try {
             $data = json_decode($this->execute('size', $file, null, false, true, [
                 '--json'
-            ]), true);
+            ], false, true, 5.0), true);
         } catch(Exception $e) {
             error_log($e->getMessage());
             return false;
@@ -214,7 +214,7 @@ class cloudFS {
         /* if($this->is_file($path)){ */
         	  try{
                   $flags = ['--expire', $expire];
-                  $link = $this->execute('link', $path, null, false, true, $flags, false, true, 0.7);
+                  $link = $this->execute('link', $path, null, false, true, $flags, false, true, 5.0);
                   $lines = explode(PHP_EOL, $link);
             return array_pop($lines);
             } catch(Exception $e) {
@@ -445,24 +445,56 @@ class cloudFS {
         return true;
     }
 
-    private function execute(string $command, string $destination, ?string $source = null, bool $remoteSource = false, bool $remoteDestination = true, array $flags = [], bool $passthru = false, bool $encodeSource = true, ?float $timeout = null) {
-        $source = is_null($source) ? null : (strpos(explode(DIRECTORY_SEPARATOR, $source)[0], ':') === false ? DIRECTORY_SEPARATOR . ltrim($source, DIRECTORY_SEPARATOR) : $source);
-        $destination = strpos(explode(DIRECTORY_SEPARATOR, $destination)[0], ':') === false ? DIRECTORY_SEPARATOR . ltrim($destination, DIRECTORY_SEPARATOR) : $destination;
+    private function execute(
+        string $command, 
+        string $destination, 
+        ?string $source = null, 
+        bool $remoteSource = false, 
+        bool $remoteDestination = true, 
+        array $flags = [], 
+        bool $passthru = false, 
+        bool $encodeSource = true, 
+        ?float $timeout = null
+    ) {
+        $source = is_null($source) 
+            ? null 
+            : (
+                strpos(
+                    explode(
+                        DIRECTORY_SEPARATOR, 
+                        $source
+                    )[0], 
+                    ':'
+                ) === false 
+                ? DIRECTORY_SEPARATOR . ltrim($source, DIRECTORY_SEPARATOR) 
+                : $source
+            );
+        $destination = strpos(
+            explode(
+                DIRECTORY_SEPARATOR, 
+                $destination)[0], 
+                ':'
+            ) === false 
+            ? DIRECTORY_SEPARATOR . ltrim($destination, DIRECTORY_SEPARATOR) 
+            : $destination;
         $cmd = implode(
             ' ',
             [
+                'export GOGC=20;',
                 is_null($timeout) ? '': 'timeout ' . $timeout . ' ',
                 $this->rCloneBinaryPath,
                 '--config',
                 escapeshellarg($this->rCloneConfigPath),
                 '--auto-confirm',
                 '--log-level ERROR',
-                //'--s3-no-check-bucket',
-                //'--s3-no-head',
-                //'--s3-no-head-object',
-                //'--no-check-dest',
+                '--s3-no-check-bucket',
+                '--s3-no-head',
                 '--ignore-checksum',
-                '--retries 1',
+                '--retries 3',
+                '--checkers 1',
+                '--transfers 1',
+                '--use-mmap',
+                '--buffer-size 0M',
                 $command,
                 ...$flags,
                 !is_null($source) ? escapeshellarg(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,($remoteSource ? $this->rCloneDestination . ( $this->encoded && $encodeSource ? $this->encode($source) : $source): $source))) : '',
