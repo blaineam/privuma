@@ -19,6 +19,8 @@ docker/db/
 **/cookies.txt
 **/config.php
 **/.DS_Store
+**/downloaded*.json
+**/*.bak
 web/jobs/*
 !web/jobs/core
 web/dGVzdGluZw==

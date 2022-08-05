@@ -24,18 +24,20 @@ class processMedia {
                         $mediaFile->save();
                         return;
                     }else if(
-                        isset($data['download']) 
+                        isset($data['download'])
                         && $mediaPath = $this->downloadUrl($data['url'])
                     ) {
                         $downloadOps = new cloudFS($data['download']);
                         $mediaPreservationPath = str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', $data['hash'] . "." . pathinfo($mediaFile->path(), PATHINFO_EXTENSION));
 
+                        echo PHP_EOL."Downloading media to: $mediaPreservationPath";
                         $result1 = $downloadOps->rename($mediaPath, $mediaPreservationPath, false);
                         if (
-                            isset($data['thumbnail']) 
+                            isset($data['thumbnail'])
                             && $thumbnailPath = $this->downloadUrl($data['thumbnail'])
                         ) {
                             $thumbnailPreservationPath = str_replace('.mp4', '.jpg', $mediaPreservationPath);
+                            echo PHP_EOL."Downloading media to: $thumbnailPreservationPath";
                             $result2 = $downloadOps->rename($thumbnailPath, $thumbnailPreservationPath, false);
                         }
                         // if(!$mediaFile->dupe()){

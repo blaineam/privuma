@@ -15,7 +15,7 @@ if(!$downloadLocation){
 $conn = $privuma->getPDO();
 
 $ops = new cloudFS($downloadLocation);
-
+echo PHP_EOL."Building list of media to download";
 $stmt = $conn->prepare("select filename, album, time, hash, url, thumbnail
 from media
 where hash in
@@ -27,10 +27,12 @@ group by hash
 $stmt->execute();
 $dlData = $stmt->fetchAll();
 
+echo PHP_EOL."Building web app payload of media to download";
 $stmt = $conn->prepare("SELECT json_group_array( json_object('filename', substr(filename,-10), 'album',album, 'dupe',dupe,'time',time,'hash',hash)    ) AS json_result FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed' ORDER BY id)");
 $stmt->execute();
 $data = $stmt->fetchAll()[0]["json_result"];
 
+echo PHP_EOL."Building CSV database copy of media to download";
 $stmt = $conn->prepare("SELECT filename,album,hash,dupe,time FROM `media` WHERE hash is not null and hash != '' and hash != 'compressed' ");
 $stmt->execute();
 $csv = "filename,album,hash,dupe,time\r\n";
@@ -39,51 +41,52 @@ while ($row = $stmt->fetch()) {
   $csv .= "\r\n";
 }
 
+echo PHP_EOL."All Database Lookup Operations have been completed.";
 
 function encrypt($password, $text) {
-	
+
 	// move text to base64
 	$base64 = base64_encode( $text );
-	
+
 	// text string to array
 	$arr = str_split($base64);
 
 	// arr of password
 	$arrPass = str_split($password);
 	$lastPassLetter = 0;
-	
+
 	// encrypted string
 	$encrypted = '';
-	
+
 	// encrypt
 	for ($i=0; $i < sizeof( $arr ); $i++) {
-		
+
 		$letter = $arr[ $i ];
-		
+
 		$passwordLetter = $arrPass[ $lastPassLetter ];
-		
-		$temp = getLetterFromAlphabetForLetter( 
+
+		$temp = getLetterFromAlphabetForLetter(
 			$passwordLetter, $letter );
-		
+
 		if ($temp != null) {
 			// concat to the final response encrypted string
 			$encrypted .= $temp;
 		} else {
 			// if any error, return null
 			return null;
-		}		
-		
+		}
+
 		/*
-			This is important: if we're out of letters in our 
+			This is important: if we're out of letters in our
 			password, we need to start from the begining.
 		*/
 		if ($lastPassLetter == ( sizeof( $arrPass ) - 1) ) {
 			$lastPassLetter = 0;
 		} else {
 			$lastPassLetter ++;
-		}		
+		}
 	}
-	
+
 	// We finally return the encrypted string
 	return $encrypted;
 }
@@ -91,12 +94,12 @@ function encrypt($password, $text) {
 
 function getLetterFromAlphabetForLetter( $letter, $letterToChange) {
 
-	// this is the alphabet we know, plus numbers and the = sign 
+	// this is the alphabet we know, plus numbers and the = sign
 	$abc = 'abcdefghijklmnopqrstuvwxyz0123456789=+/ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-		
+
 	// get the position of the given letter, according to our abc
 	$posLetter = strpos( $abc, $letter );
-	
+
 	// if we cannot get it, then we can't continue
 	if ($posLetter === false) {
 		echo 'Password letter ' . $letter . ' not allowed.';
@@ -105,30 +108,30 @@ function getLetterFromAlphabetForLetter( $letter, $letterToChange) {
 
 	// according to our abc, get the position of the letter to encrypt
 	$posLetterToChange = strpos( $abc, $letterToChange );
-	
+
 	// again, if any error, we cannot continue...
 	if ($posLetterToChange === false) {
 		echo 'Password letter ' . $letterToChange . ' not allowed.';
 		return null;
 	}
-	
+
 	// let's build the new abc. this is the important part
 	$part1 = substr( $abc, $posLetter, strlen( $abc ) );
 	$part2 = substr( $abc, 0, $posLetter);
 	$newABC = '' . $part1 . '' . $part2;
-	
+
 	// we get the encrypted letter
 	$temp = str_split($newABC);
 	$letterAccordingToAbc = $temp[ $posLetterToChange ];
-	
+
 	// and return to the routine...
-	return $letterAccordingToAbc;	
+	return $letterAccordingToAbc;
 }
 
 function chunker($pass, $text) {
 
   return implode("|",array_map(function($chunk) use($pass){ return encrypt($pass, $chunk); }, str_split($text, 512*2048)));
-  
+
 }
 
 $viewerHTML = <<<'HEREHTML'
@@ -173,14 +176,14 @@ function decrypt(password, text) {
         } else {
             // if any error, return null
             return null;
-        }		
+        }
 
         // if our password is too short, let's start again from the first letter
         if (lastPassLetter == (arrPass.length - 1) ) {
             lastPassLetter = 0;
         } else {
             lastPassLetter ++;
-        }		
+        }
     }
 
     // return the decrypted string and converted from base64 to plain text
@@ -202,7 +205,7 @@ function getInvertedLetterFromAlphabetForLetter(letter, letterToChange) {
     const part1 = abc.substring(posLetter, abc.length);
     const part2 = abc.substring(0, posLetter);
 
-    const newABC = '' + part1 + '' + part2;	
+    const newABC = '' + part1 + '' + part2;
 
     const posLetterToChange = newABC.indexOf( letterToChange );
 
@@ -213,7 +216,7 @@ function getInvertedLetterFromAlphabetForLetter(letter, letterToChange) {
 
     const letterAccordingToAbc = abc.split('')[ posLetterToChange ];
 
-    return letterAccordingToAbc;	
+    return letterAccordingToAbc;
 }
 
 
@@ -252,17 +255,17 @@ function encrypt(password, text) {
         } else {
             // if any error, return null
             return null;
-        }		
+        }
 
         /*
-            This is important: if we're out of letters in our 
+            This is important: if we're out of letters in our
             password, we need to start from the begining.
         */
         if (lastPassLetter == (arrPass.length - 1) ) {
             lastPassLetter = 0;
         } else {
             lastPassLetter ++;
-        }		
+        }
     }
 
     // We finally return the encrypted string
@@ -272,7 +275,7 @@ function encrypt(password, text) {
 
 function getLetterFromAlphabetForLetter(letter, letterToChange) {
 
-    // this is the alphabet we know, plus numbers and the = sign 
+    // this is the alphabet we know, plus numbers and the = sign
     const abc = 'abcdefghijklmnopqrstuvwxyz0123456789=+/ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
     // get the position of the given letter, according to our abc
@@ -302,7 +305,7 @@ function getLetterFromAlphabetForLetter(letter, letterToChange) {
     const letterAccordingToAbc = newABC.split('')[ posLetterToChange ];
 
     // and return to the routine...
-    return letterAccordingToAbc;	
+    return letterAccordingToAbc;
 }
 
 
@@ -314,7 +317,6 @@ return chunks.split("|").map((part) => decrypt(pass, part)).join('');
 </script>
 
 <script>
-// TODO Use gifuct-js to determine gif slideshow duration 
 /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -559,7 +561,7 @@ var subBlocksSchema = {
     var total = 0;
 
     for (var size = (0, _uint.readByte)()(stream); size !== terminator; size = (0, _uint.readByte)()(stream)) {
-      // size becomes undefined for some case when file is corrupted and  terminator is not proper 
+      // size becomes undefined for some case when file is corrupted and  terminator is not proper
       // null check to avoid recursion
       if (!size) break; // catch corrupted files with no terminator
 
@@ -1166,7 +1168,7 @@ exports.lzw = lzw;
 
  </script>
  <script>
- 
+
 /*!
   * Bootstrap v4.1.1 (https://getbootstrap.com/)
   * Copyright 2011-2018 The Bootstrap Authors (https://github.com/twbs/bootstrap/graphs/contributors)
@@ -1200,11 +1202,11 @@ body.compensate-for-scrollbar{overflow:hidden}.fancybox-active{height:auto}.fanc
 tpl:'<div class="fancybox-share"><h1>{{SHARE}}</h1><p><a class="fancybox-share__button fancybox-share__button--fb" href="https://www.facebook.com/sharer/sharer.php?u={{url}}"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="m287 456v-299c0-21 6-35 35-35h38v-63c-7-1-29-3-55-3-54 0-91 33-91 94v306m143-254h-205v72h196" /></svg><span>Facebook</span></a><a class="fancybox-share__button fancybox-share__button--tw" href="https://twitter.com/intent/tweet?url={{url}}&text={{descr}}"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="m456 133c-14 7-31 11-47 13 17-10 30-27 37-46-15 10-34 16-52 20-61-62-157-7-141 75-68-3-129-35-169-85-22 37-11 86 26 109-13 0-26-4-37-9 0 39 28 72 65 80-12 3-25 4-37 2 10 33 41 57 77 57-42 30-77 38-122 34 170 111 378-32 359-208 16-11 30-25 41-42z" /></svg><span>Twitter</span></a><a class="fancybox-share__button fancybox-share__button--pt" href="https://www.pinterest.com/pin/create/button/?url={{url}}&description={{descr}}&media={{media}}"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="m265 56c-109 0-164 78-164 144 0 39 15 74 47 87 5 2 10 0 12-5l4-19c2-6 1-8-3-13-9-11-15-25-15-45 0-58 43-110 113-110 62 0 96 38 96 88 0 67-30 122-73 122-24 0-42-19-36-44 6-29 20-60 20-81 0-19-10-35-31-35-25 0-44 26-44 60 0 21 7 36 7 36l-30 125c-8 37-1 83 0 87 0 3 4 4 5 2 2-3 32-39 42-75l16-64c8 16 31 29 56 29 74 0 124-67 124-157 0-69-58-132-146-132z" fill="#fff"/></svg><span>Pinterest</span></a></p><p><input class="fancybox-share__input" type="text" value="{{url_raw}}" onclick="select()" /></p></div>'}}),e(t).on("click","[data-fancybox-share]",function(){var t,o,i=e.fancybox.getInstance(),a=i.current||null;a&&("function"===e.type(a.opts.share.url)&&(t=a.opts.share.url.apply(a,[i,a])),o=a.opts.share.tpl.replace(/\{\{media\}\}/g,"image"===a.type?encodeURIComponent(a.src):"").replace(/\{\{url\}\}/g,encodeURIComponent(t)).replace(/\{\{url_raw\}\}/g,n(t)).replace(/\{\{descr\}\}/g,i.$caption?encodeURIComponent(i.$caption.text()):""),e.fancybox.open({src:i.translate(i,o),type:"html",opts:{touch:!1,animationEffect:!1,afterLoad:function(t,e){i.$refs.container.one("beforeClose.fb",function(){t.close(null,0)}),e.$content.find(".fancybox-share__button").click(function(){return window.open(this.href,"Share","width=550, height=450"),!1})},mobile:{autoFocus:!1}}}))})}(document,jQuery),function(t,e,n){"use strict";function o(){var e=t.location.hash.substr(1),n=e.split("-"),o=n.length>1&&/^\+?\d+$/.test(n[n.length-1])?parseInt(n.pop(-1),10)||1:1,i=n.join("-");return{hash:e,index:o<1?1:o,gallery:i}}function i(t){""!==t.gallery&&n("[data-fancybox='"+n.escapeSelector(t.gallery)+"']").eq(t.index-1).focus().trigger("click.fb-start")}function a(t){var e,n;return!!t&&(e=t.current?t.current.opts:t.opts,""!==(n=e.hash||(e.$orig?e.$orig.data("fancybox")||e.$orig.data("fancybox-trigger"):""))&&n)}n.escapeSelector||(n.escapeSelector=function(t){return(t+"").replace(/([\0-\x1f\x7f]|^-?\d)|^-$|[^\x80-\uFFFF\w-]/g,function(t,e){return e?"\0"===t?"�":t.slice(0,-1)+"\\"+t.charCodeAt(t.length-1).toString(16)+" ":"\\"+t})}),n(function(){!1!==n.fancybox.defaults.hash&&(n(e).on({"onInit.fb":function(t,e){var n,i;!1!==e.group[e.currIndex].opts.hash&&(n=o(),(i=a(e))&&n.gallery&&i==n.gallery&&(e.currIndex=n.index-1))},"beforeShow.fb":function(n,o,i,s){var r;i&&!1!==i.opts.hash&&(r=a(o))&&(o.currentHash=r+(o.group.length>1?"-"+(i.index+1):""),t.location.hash!=="#"+o.currentHash&&(s&&!o.origHash&&(o.origHash=t.location.hash),o.hashTimer&&clearTimeout(o.hashTimer),o.hashTimer=setTimeout(function(){"replaceState"in t.history?(t.history[s?"pushState":"replaceState"]({},e.title,t.location.pathname+t.location.search+"#"+o.currentHash),s&&(o.hasCreatedHistory=!0)):t.location.hash=o.currentHash,o.hashTimer=null},300)))},"beforeClose.fb":function(n,o,i){i&&!1!==i.opts.hash&&(clearTimeout(o.hashTimer),o.currentHash&&o.hasCreatedHistory?t.history.back():o.currentHash&&("replaceState"in t.history?t.history.replaceState({},e.title,t.location.pathname+t.location.search+(o.origHash||"")):t.location.hash=o.origHash),o.currentHash=null)}}),n(t).on("hashchange.fb",function(){var t=o(),e=null;n.each(n(".fancybox-container").get().reverse(),function(t,o){var i=n(o).data("FancyBox");if(i&&i.currentHash)return e=i,!1}),e?e.currentHash===t.gallery+"-"+t.index||1===t.index&&e.currentHash==t.gallery||(e.currentHash=null,e.close()):""!==t.gallery&&i(t)}),setTimeout(function(){n.fancybox.getInstance()||i(o())},50))})}(window,document,jQuery),function(t,e){"use strict";var n=(new Date).getTime();e(t).on({"onInit.fb":function(t,e,o){e.$refs.stage.on("mousewheel DOMMouseScroll wheel MozMousePixelScroll",function(t){var o=e.current,i=(new Date).getTime();e.group.length<2||!1===o.opts.wheel||"auto"===o.opts.wheel&&"image"!==o.type||(t.preventDefault(),t.stopPropagation(),o.$slide.hasClass("fancybox-animated")||(t=t.originalEvent||t,i-n<250||(n=i,e[(-t.deltaY||-t.deltaX||t.wheelDelta||-t.detail)<0?"next":"previous"]())))})}})}(document,jQuery);
 
 </script>
-    
+
     <script>
         $.fancybox.defaults.hash = false;
     </script>
-    
+
     <style>
     html, body{
         margin: 0;
@@ -1268,7 +1270,7 @@ tpl:'<div class="fancybox-share"><h1>{{SHARE}}</h1><p><a class="fancybox-share__
                     visibility: hidden;
                 }
             }
-    
+
     @media screen and (max-width: 1200px) {
     .gallerypicture {
     width: calc(100%/3)!important;
@@ -1380,7 +1382,7 @@ return false;
 }
 
 
-  
+
   (async () => {
       const delim = '1--57--2';
 
@@ -1389,13 +1391,13 @@ return false;
       const data = JSON.parse(merger(prompt("Enter your download password").replace(/[^a-z0-9]/gi, ''), encrypted_data));
 
       function showAlbum(album, kind) {
-          var res = alasql("select m1.* from ? m1 join ? m2 on m1.hash = m2.hash where m2.album = ? and m2.hash != 'compressed' and m1.dupe = 0 group by m1.filename order by " 
+          var res = alasql("select m1.* from ? m1 join ? m2 on m1.hash = m2.hash where m2.album = ? and m2.hash != 'compressed' and m1.dupe = 0 group by m1.filename order by "
               + (
-                  album.includes("comic") 
-                  ? "m1.filename asc" 
+                  album.includes("comic")
+                  ? "m1.filename asc"
                   : "CASE WHEN m1.filename LIKE '%.gif' THEN 1 WHEN m1.filename LIKE '%.mp4' THEN 2 WHEN m1.filename LIKE '%.webm' THEN 3 ELSE 4 END, m1.time DESC"
               ),[data,data, album]);
-  
+
           if(!res){
               alert('This album contains no content please add content to this album via the privuma web service');
               window.history.back();
@@ -1448,42 +1450,42 @@ return false;
                 });
           });
 
-  
+
           res.forEach((item) => {
               let filename = item['filename'];
               let dbAlbum = item['album'];
               let filenameParts = filename.split('.');
               let extension = filenameParts.pop();
               let isVideo = [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".mp4", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"].includes("."+extension);
-  
+
               if((kind =="video" || kind == "all") && isVideo) {
                   let thumbnailFilename = filenameParts.join('.') + ".jpg";
                   let video = btoa(item['hash']) + ".mp4";
                   let thumbnail = btoa(item['hash']) + ".jpg";
-  
+
                   jQuery("#content").append(`<a class="gallerypicture" title="${filename}" data-type="video" data-fancybox="gallery" href="${video}">
-                           <img src="${thumbnail}" class="lazyload" alt="" onError="imgError(this)">
+                           <img src="${thumbnail}" class="lazyload" alt="">
                            </a>`)
               }
               if((kind =="photo" || kind == "all") && !isVideo) {
                   let photo = btoa(item['hash']) + "." + extension;
-  
+
                   jQuery("#content").append(`<a class="gallerypicture" data-width="1920" href="${photo}" title="${filename}" data-fancybox="gallery">
                            <img data-src="${photo}" class="lazyload" alt="" onError="imgError(this)" onLoad="imgLoad(this)">
                            </a>`)
               }
           });
       }
-  
+
       let currentFolder = "";
       let search = "";
-  
+
       let allAlbums = alasql("select *,filename, album, max(time) as time, hash FROM ? where dupe = 0 GROUP by album order by time DESC"
               ,[data]
           );
       function showAllAlbums() {
           res = allAlbums;
-  
+
           if(!res){
               alert('This album contains no content please add content to this album via the privuma web service');
               window.history.back();
@@ -1502,7 +1504,8 @@ return false;
               }
               let filenameParts = filename.split('.');
               let extension = filenameParts.pop();
-              let photo = btoa(item['hash']) + "." + extension;
+              let isVideo = [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".mp4", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"].includes("."+extension);
+              let photo = btoa(item['hash']) + "." + (isVideo ? 'jpg' : extension);
               let elem = document.querySelector('#content');
               jQuery("#content").append(`<div class="gallerypicture">
                   <img data-src="${photo}" class="openalbum lazyload" alt="" data-hash="${btoa(album)+delim+"all"}">
@@ -1562,12 +1565,12 @@ return false;
                 </div>`);
           });
       }
-  
-  
+
+
       function run() {
           jQuery("#content").empty();
           var hash = window.location.hash;
-  
+
           if(hash.length > 1) {
               var parts = hash.substr(1).split(delim);
               var album = decodeURI(atob(parts[0]));
@@ -1579,12 +1582,12 @@ return false;
                 return;
               }
           }
-  
+
           jQuery("#searchBox").show();
           search = jQuery("#searchInput").val() || "";
           currentFolder = album;
           showAllAlbums();
-  
+
           $(document).ready(function(){
               $('[data-fancybox="gallery"]').fancybox({
                 loop:true,
@@ -1603,7 +1606,7 @@ return false;
               });
           });
       }
-  
+
       $(document).on('click','.openalbum', function(e){
           window.location.hash = $(this).data('hash');
       });
@@ -1637,7 +1640,7 @@ return false;
                 if (slide.$content && jQuery(slide.$content).find('video')) {
                     // After the show-slide-animation has ended - play the vide in the current slide
                     jQuery(slide.$content).find('video').trigger('play');
-            
+
                     // Attach the ended callback to trigger the fancybox.next() once the video has ended.
                     jQuery(slide.$content).find('video').on('ended', function() {
                         $.fancybox.getInstance().next();
@@ -1655,10 +1658,10 @@ return false;
             }
 
             slideshowTimer = setTimeout(function() {
-                $.fancybox.getInstance().next()       
+                $.fancybox.getInstance().next()
             }, targetDuration);
         });
-  
+
       let scrollMemory = {};
 
       let lastHash = window.location.hash;
@@ -1677,7 +1680,7 @@ return false;
         lastHash = newhash;
         run();
       });
-  
+
       run();
   })();
     </script>
@@ -1685,65 +1688,118 @@ return false;
 </html>
 HEREHTML;
 
+echo PHP_EOL."Downloading CSV database export";
 $ops->file_put_contents("data.csv",$csv);
+unset($csv);
 
-
+echo PHP_EOL."Downloading encrypted database offline website payload";
 $data = chunker(preg_replace('/[^a-z\d]/i', '', $privuma->getEnv('DOWNLOAD_PASSWORD')), $data);
 $ops->file_put_contents("encrypted_data.js","const encrypted_data = `" .$data."`;");
+unset($data);
 
+echo PHP_EOL."Downloading Offline Web App Viewer HTML File";
 $ops->file_put_contents("index.html",$viewerHTML);
+unset($viewerHTML);
+ 
+echo PHP_EOL."Database Downloads have been completed";
+echo PHP_EOL."Starting Lookup of already downloaded media";
+$cachePath = __DIR__.DIRECTORY_SEPARATOR."downloaded.json";
+$rawCachePath = __DIR__.DIRECTORY_SEPARATOR."downloaded.raw.json";
 
+$currentTime = time();
 
-$media = [];
+$lastRan = filemtime($cachePath) ?? $currentTime - 14 * 24 * 60 * 60;
+$cacheStillRecent = $currentTime - $lastRan < 14 * 24 * 60 * 60;
+$preservedFilenames = ['.','..','index.html','encrypted_data.js','data.csv'];
+
+if(is_file($rawCachePath)) {
+  $downloadedFiles = array_map(function($file) {
+    $file['Name'] = cloudFS::decode($file['Name']);
+    $file['Path'] = cloudFS::decode($file['Path']);
+    return $file;
+  }, json_decode(file_get_contents($rawCachePath), true));
+  file_put_contents($cachePath, json_encode($downloadedFiles, JSON_INVALID_UTF8_IGNORE+JSON_THROW_ON_ERROR));
+  unset($downloadedFiles);
+  unlink($rawCachePath);
+} 
+if(is_file($cachePath) && $cacheStillRecent) {
+  $preservedFilenames = array_column(json_decode(file_get_contents($cachePath), true), 'Name');
+} else {
+  $downloadedFiles = $ops->scandir("/", true);
+  if($downloadedFiles === false) {
+    echo PHP_EOL."ERROR: ScanDir using RClone failed to read download directory, possibly due to server killing process";
+  } else {
+    file_put_contents($cachePath, json_encode($downloadedFiles, JSON_INVALID_UTF8_IGNORE+JSON_THROW_ON_ERROR));
+    $preservedFilenames = array_column($downloadedFiles, 'Name');
+  }
+  unset($downloadedFiles);
+}
+$countAlreadyDownloaded = count($preservedFilenames) - 5;
+$targetDownloadedCount = count($dlData) + count(array_filter($dlData, function($item) {
+  return strpos(str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', $item['filename']), '.mp4') !== false;
+}));
+$percentage = round(($countAlreadyDownloaded / $targetDownloadedCount) * 100, 2);
+echo PHP_EOL."Found ". $countAlreadyDownloaded ."/" . $targetDownloadedCount . " ($percentage%) files downloaded";
 foreach($dlData as $item) {
-
   $album = $item['album'];
   $filename = str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', $item['filename']);
 
+  $preserve = $item['hash']. "." . pathinfo($filename, PATHINFO_EXTENSION);
+  $thumbnailPreserve = $item['hash']. ".jpg";
+  $path = privuma::getDataFolder() . DIRECTORY_SEPARATOR .(new mediaFile($item['filename'], $item['album']))->path();
+  $thumbnailPath = str_replace('.mp4', '.jpg', $path);
+  if(
+    !in_array($preserve, $preservedFilenames) 
+    && (
+      $cacheStillRecent 
+      || !$ops->is_file($preserve)
+    )
+  ) {
     if (!isset($item["url"])) {
-      $path = privuma::getDataFolder() . DIRECTORY_SEPARATOR .(new mediaFile($item['filename'], $item['album']))->path();
-        $item["url"] = $privuma->getCloudFS()->public_link($path);
+      if ($item["url"] = $privuma->getCloudFS()->public_link($path)) {
         if (strpos($filename, '.mp4') !== false) {
-          $item["thumbnail"] = $privuma->getCloudFS()->public_link(str_replace('.mp4', '.jpg', $path));
+          $item["thumbnail"] = $privuma->getCloudFS()->public_link($thumbnailPath);
         }
+      } else {
+        echo PHP_EOL."Skipping unavailable media: $path";
+        continue;
+      }
     }
-
-    if(!$item['url']) {
-      continue;
-    }
-
-    $preserve = $item['hash']. "." . pathinfo($filename, PATHINFO_EXTENSION);
-    if(!$ops->is_file($preserve)) {
-        echo PHP_EOL."Queue Downloading of media file: " . $preserve;
-        $privuma->getQueueManager()->enqueue(json_encode([
-            'type' => 'processMedia',
-            'data' => [
-                'album' => $album,
-                'filename' => $filename,
-                'url'=> $item['url'],
-                'thumbnail' => $item['thumbnail'],
-                'download' => $downloadLocation,
-                'hash' => $item['hash'],
-            ],
-        ]));
-    } 
-
-    $thumbnailPreserve = $item['hash']. ".jpg";
-    if(!$ops->is_file($thumbnailPreserve)) {
-        echo PHP_EOL."Queue Downloading of media file: " . $thumbnailPreserve;
-        $privuma->getQueueManager()->enqueue(json_encode([
-            'type' => 'processMedia',
-            'data' => [
-                'album' => $album,
-                'filename' => $filename,
-                'url'=> $item['thumbnail'],
-                'download' => $downloadLocation,
-                'hash' => $item['hash'],
-            ],
-        ]));
-    } 
+    echo PHP_EOL."Queue Downloading of media file: " . $preserve . " from album: " . $item['album'] . " with potential thumbnail: " . ($item["thumbnail"] ?? "No thumbnail");
+    $privuma->getQueueManager()->enqueue(json_encode([
+        'type' => 'processMedia',
+        'data' => [
+            'album' => $album,
+            'filename' => $filename,
+            'url'=> $item['url'],
+            'thumbnail' => $item['thumbnail'],
+            'download' => $downloadLocation,
+            'hash' => $item['hash'],
+        ],
+    ]));
+  } else if (
+    strpos($filename, '.mp4') !== false 
+    && is_null($item['thumbnail']) 
+    && (
+      !in_array($thumbnailPreserve, $preservedFilenames)
+      && (
+        $cacheStillRecent 
+        || !$ops->is_file($thumbnailPreserve)
+      )
+    )
+    &&  $item["thumbnail"] = $privuma->getCloudFS()->public_link($thumbnailPath)
+  ) {
+    echo PHP_EOL."Queue Downloading of media file: " . $thumbnailPreserve . " from album: " . $item['album'];
+    $privuma->getQueueManager()->enqueue(json_encode([
+        'type' => 'processMedia',
+        'data' => [
+            'album' => $album,
+            'filename' => str_replace('.mp4','.jpg',$filename),
+            'url'=> $item['thumbnail'],
+            'download' => $downloadLocation,
+            'hash' => $item['hash'],
+        ],
+    ]));
+  }
 }
-
-
-
-echo PHP_EOL."Done";
+echo PHP_EOL."Done queing Media to be downloaded";
