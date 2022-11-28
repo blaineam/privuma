@@ -10,9 +10,16 @@ class cloudFS {
     private string $rCloneConfigPath;
     private string $rCloneDestination;
     private bool $encoded;
+    private bool $segmented;
     private dotenv $env;
 
-    function __construct(string $rCloneDestination = 'privuma:', bool $encoded = true, string $rCloneBinaryPath = '/usr/bin/rclone', ?string $rCloneConfigPath = null) {
+    function __construct(
+        string $rCloneDestination = 'privuma:', 
+        bool $encoded = true, 
+        string $rCloneBinaryPath = '/usr/bin/rclone', 
+        ?string $rCloneConfigPath = null,
+        bool $segmented = false
+    ) {
         exec($rCloneBinaryPath . ' version 2>&1 > /dev/null', $void, $code);
         if($code !== 0) {
             $rCloneBinaryPath = '/usr/local/bin/rclone';
@@ -28,6 +35,7 @@ class cloudFS {
         $this->rCloneConfigPath =  $rCloneConfigPath ?? privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'rclone' . DIRECTORY_SEPARATOR . 'rclone.conf';
         $this->rCloneDestination = ($rCloneDestination !== 'privuma:') ? $rCloneDestination : ($this->env->get('RCLONE_DESTINATION') ?? $rCloneDestination);
         $this->encoded = $encoded;
+        $this->segmented = $segmented;
     }
 
     public function scandir(string $directory, bool $objects = false, bool $recursive = false, ?array $filters = null, $dirsOnly = false, $filesOnly = false) {
@@ -49,8 +57,8 @@ class cloudFS {
                 return strtotime(explode('.', $b['ModTime'])[0]) <=> strtotime(explode('.', $a['ModTime'])[0]);
             });
             $response = array_map(function($object) {
-                $object['Name'] = ($this->encoded ? $this->decode($object['Name']) : $object['Name']);
-                $object['Path'] = ($this->encoded ? $this->decode($object['Path']) : $object['Path']);
+                $object['Name'] = ($this->encoded ? $this->decode($object['Name'], $this->segmented) : $object['Name']);
+                $object['Path'] = ($this->encoded ? $this->decode($object['Path'], $this->segmented) : $object['Path']);
                 return $object;
             }, $files);
 
@@ -326,8 +334,9 @@ class cloudFS {
         }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
     }
 
-    public static function decode(string $path) : string {
+    public static function decode(string $path, bool $segmented = false) : string {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
+        $path = $segmented ? (dirname($path, 2) . DIRECTORY_SEPARATOR . basename($path)) : $path;
         return implode(DIRECTORY_SEPARATOR, array_map(function($part) use ($ext) {
             return implode('*', array_map(function($p) use ($ext) {
                 if(strpos($p, '.') !== 0){
@@ -377,7 +386,8 @@ class cloudFS {
                         implode(
                             ':',
                             $sourceParts
-                        )
+                        ),
+                        $this->segmented
                     )
                     : $source
                 ),
@@ -430,7 +440,8 @@ class cloudFS {
                         implode(
                             ':',
                             $sourceParts
-                        )
+                        ),
+                        $this->segmented
                     )
                     : $source
                 ),
@@ -497,8 +508,70 @@ class cloudFS {
                 '--buffer-size 0M',
                 $command,
                 ...$flags,
-                !is_null($source) ? escapeshellarg(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,($remoteSource ? $this->rCloneDestination . ( $this->encoded && $encodeSource ? $this->encode($source) : $source): $source))) : '',
-                escapeshellarg(str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR, $remoteDestination ? $this->rCloneDestination . ( $this->encoded ? $this->encode($destination) : $destination) : $destination)),
+                !is_null($source) 
+                ? escapeshellarg(
+                    str_replace(
+                        DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,
+                        DIRECTORY_SEPARATOR,
+                        (
+                            $remoteSource 
+                            ? $this->rCloneDestination . ( 
+                                $this->encoded && $encodeSource 
+                                ? (
+                                    $this->segmented 
+                                    ? dirname(
+                                        $this->encode($source)
+                                    )
+                                    . DIRECTORY_SEPARATOR
+                                    .substr(
+                                        basename(
+                                            $this->encode(
+                                                $source
+                                            )
+                                        ),
+                                        0, 2
+                                    ) 
+                                    . DIRECTORY_SEPARATOR 
+                                    . $this->encode($source) 
+                                    : $this->encode($source)
+                                )
+                                : $source
+                            )
+                            : $source
+                        )
+                    )
+                )
+                : '',
+                escapeshellarg(
+                    str_replace(
+                        DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,
+                        DIRECTORY_SEPARATOR, 
+                        $remoteDestination 
+                        ? $this->rCloneDestination . ( 
+                            $this->encoded 
+                            ? (
+                                $this->segmented 
+                                ? dirname(
+                                    $this->encode($destination)
+                                )
+                                . DIRECTORY_SEPARATOR
+                                .substr(
+                                    basename(
+                                        $this->encode(
+                                            $destination
+                                        )
+                                    ),
+                                    0, 2
+                                ) 
+                                . DIRECTORY_SEPARATOR 
+                                . $this->encode($destination) 
+                                : $this->encode($destination)
+                            ) 
+                            : $destination
+                        ) 
+                        : $destination
+                    )
+                ),
                 '2>&1',
             ]
             );
