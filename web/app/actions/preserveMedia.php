@@ -11,9 +11,9 @@ class preserveMedia {
 
     private cloudFS $ops;
 
-    function __construct(array $data) {
+    function __construct(array $data = [], ?cloudFS $operator) {
         $qm = new QueueManager();
-        $this->ops = privuma::getCloudFS();
+        $this->ops = is_null($operator) ? privuma::getCloudFS() : $operator;
         if(isset($data['album']) && isset($data['filename'])) {
             $hash =  md5_file($data['path']);
             echo PHP_EOL."creating media file with: " . json_encode([
@@ -108,7 +108,10 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
         $newFileTemp = tempnam(sys_get_temp_dir(), 'PVMA-');
         rename($newFileTemp, $newFileTemp . '.mp4');
         $newFileTemp = $newFileTemp . '.mp4';
-        $cmd = "$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $file . "' -c:v " . $ffmpegVideoCodec . " -r 24 -crf 24 -c:a aac -movflags +faststart -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFileTemp . "'";
+        // h624
+        //$cmd = "$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $file . "' -c:v " . $ffmpegVideoCodec . " -r 24 -crf 24 -c:a aac -movflags +faststart -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFileTemp . "'";
+        // x265
+        $cmd = "$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $file . "' -c:v libx265 -x265-params log-level=error -r 24 -crf 26 -c:a aac -b:a 96k -tag:v hvc1 -movflags +faststart -preset ultrafast -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFileTemp . "'";
         echo PHP_EOL."Runnning command: " . $cmd;
         exec($cmd, $void, $response);
 
@@ -157,16 +160,16 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
             $path = '/usr/local/bin/mogrify';
             exec($path . ' -help 2>&1', $test, $binNotFound);
             if($binNotFound !== 0){
-                $path = '/usr/bin/mogrify';
+                $path = '/usr/bin/convert';
             }
-            exec($path . " -resize 1920x1920 -quality 60 -fuzz 7% '".$ext.':'.$tempFile."'", $void, $response);
-            $is = getimagesize($tempFile);
+            exec($path . " '".$ext.':'.$tempFile."' -resize 1920x1920 -quality 60 -fuzz 7% '".$newFileTemp."'", $void, $response);
+            $is = getimagesize($newFileTemp);
             if($response == 0 ) {
-                echo PHP_EOL."mogrify was successful";
-                $output =  $this->ops->rename($tempFile, $filePath, false);
-            }elseif((exif_imagetype($tempFile) || $is !== false) && filesize($tempFile) < 1024*1024*30) {
-                echo PHP_EOL."mogrify failed but this is a reasonably sized image (<30MB), lets save it anyways";
-                $output =  $this->ops->rename($tempFile, $filePath, false);
+                echo PHP_EOL."cenvert was successful";
+                $output =  $this->ops->rename($newFileTemp, $filePath, false);
+            }elseif((exif_imagetype($newFileTemp) || $is !== false) && filesize($newFileTemp) < 1024*1024*30) {
+                echo PHP_EOL."convert failed but this is a reasonably sized image (<30MB), lets save it anyways";
+                $output =  $this->ops->rename($newFileTemp, $filePath, false);
             }else{
                 echo PHP_EOL.implode(PHP_EOL,$void);
                 unset($void);
@@ -177,6 +180,4 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
         is_file($newFileTemp) && unlink($newFileTemp);
         return $output;
     }
-
-
 }

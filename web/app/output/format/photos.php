@@ -27,6 +27,8 @@ $privuma = privuma::getInstance();
 $USE_MIRROR= privuma::getEnv('USE_MIRROR');
 $RCLONE_MIRROR = privuma::getEnv('RCLONE_MIRROR');
 $DEOVR_MIRROR = privuma::getEnv('DEOVR_MIRROR');
+$DEOVR_USE_CLOUDFS_HTTP_ENDPOINT = privuma::getEnv('DEOVR_USE_CLOUDFS_HTTP_ENDPOINT');
+$CLOUDFS_HTTP_ENDPOINT = privuma::getEnv('CLOUDFS_HTTP_ENDPOINT');
 $opsMirror = new cloudFS($RCLONE_MIRROR);
 
 $SYNC_FOLDER = '/data/privuma';
@@ -111,6 +113,8 @@ function redirectToMedia($path) {
         global $RCLONE_MIRROR;
         global $DEOVR_MIRROR;
         global $rcloneConfig;
+        global $DEOVR_USE_CLOUDFS_HTTP_ENDPOINT;
+        global $CLOUDFS_HTTP_ENDPOINT;
         $mirror_parts = explode(':', isset($_GET['deovr']) ? ($DEOVR_MIRROR ?? $RCLONE_MIRROR) : $RCLONE_MIRROR);
         $rclone_config_key = $mirror_parts[0];
         $bucket = explode(DIRECTORY_SEPARATOR, trim($mirror_parts[1], DIRECTORY_SEPARATOR))[0];
@@ -135,6 +139,11 @@ function redirectToMedia($path) {
                     die('Mirror not operational for ' . $compressedPath);
                 }
             }
+        } else if($DEOVR_USE_CLOUDFS_HTTP_ENDPOINT) {
+            header('Content-Type: ' . get_mime_by_filename(basename(explode('?', $path)[0])));
+            $internalMediaPath = DIRECTORY_SEPARATOR . 'media' . DIRECTORY_SEPARATOR . 'http' . DIRECTORY_SEPARATOR . $CLOUDFS_HTTP_ENDPOINT . DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+            header('X-Accel-Redirect: ' . $internalMediaPath);
+            die();
         } else {
             $url = $ops->public_link($path);
             if($url == false) {
@@ -375,14 +384,14 @@ function streamMedia($file, bool $useOps = false) {
 
         header("Content-Transfer-Encoding: binary");
         if (isset($_SERVER['HTTP_RANGE'])) {
-            
+
             header('x-meta: ' . $begin . ' + ' . $end);
             header('HTTP/1.1 206 Partial Content');
             header("Content-Range: bytes $begin-$end/$size");
         } else {
             header('HTTP/1.1 200 OK');
         }
-        
+
         $ch = curl_init();
         if (isset($_SERVER['HTTP_RANGE'])) {
             $headers = array(
@@ -582,7 +591,7 @@ function run()
         }
 
         $media = array_values($media);
-                
+
         $photos = array("gtoken" => urlencode($ENDPOINT."...".$AUTHTOKEN), "gdata" => $media);
         header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
         header("Cache-Control: post-check=0, pre-check=0", false);

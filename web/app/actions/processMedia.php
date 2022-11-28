@@ -20,6 +20,15 @@ class processMedia {
                 $existingFile = $mediaFile->source();
                 echo PHP_EOL."Loaded MediaFile: " . $mediaFile->path();
                 if($existingFile === false || isset($data['download'])) {
+                    if (isset($data['download'])) {
+                        $downloadOps = new cloudFS($data['download'], true, '/usr/bin/rclone', null, true);
+                        $mediaPreservationPath = str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', $data['hash'] . "." . pathinfo($mediaFile->path(), PATHINFO_EXTENSION));
+                        if($downloadOps->is_file($mediaPreservationPath)) {
+                            echo PHP_EOL."Skip Existing Media already downloaded to: $mediaPreservationPath";
+                            return;
+                        }
+                    }
+
                     if(!isset($data['cache']) && !isset($data['download'])) {
                         $mediaFile->save();
                         return;
@@ -27,18 +36,44 @@ class processMedia {
                         isset($data['download'])
                         && $mediaPath = $this->downloadUrl($data['url'])
                     ) {
-                        $downloadOps = new cloudFS($data['download']);
-                        $mediaPreservationPath = str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', $data['hash'] . "." . pathinfo($mediaFile->path(), PATHINFO_EXTENSION));
+                        if (in_array(md5_file($mediaPath), [
+                            // Image Not Found
+                            'a6433af4191d95f6191c2b90fc9117af',
+                            // Empty File
+                            'd41d8cd98f00b204e9800998ecf8427e',
+                        ]) || !in_array(explode('/', strtolower(mime_content_type($mediaPath)))[0], ['image', 'video'])) {
+                            echo PHP_EOL."Removing broken url from database";
+                            $mediaFile->delete($data['hash']);
+                            return;
+                        }
 
-                        echo PHP_EOL."Downloading media to: $mediaPreservationPath";
-                        $result1 = $downloadOps->rename($mediaPath, $mediaPreservationPath, false);
+                        echo PHP_EOL."Attempting to Compress Media: $mediaPath";
+                        if(
+                            (new preserveMedia([], $downloadOps))->compress($mediaPath, $mediaPreservationPath) 
+                        ) {
+                            is_file($mediaPath) && unlink($mediaPath);
+                            echo PHP_EOL."Downloaded media to: $mediaPreservationPath";
+                        } else {
+                            echo PHP_EOL."Compression failed";
+                            echo PHP_EOL."Downloading media to: $mediaPreservationPath";
+                            $result1 = $downloadOps->rename($mediaPath, $mediaPreservationPath, false);
+                        }
+                       
                         if (
                             isset($data['thumbnail'])
                             && $thumbnailPath = $this->downloadUrl($data['thumbnail'])
                         ) {
                             $thumbnailPreservationPath = str_replace('.mp4', '.jpg', $mediaPreservationPath);
-                            echo PHP_EOL."Downloading media to: $thumbnailPreservationPath";
-                            $result2 = $downloadOps->rename($thumbnailPath, $thumbnailPreservationPath, false);
+                            if(
+                                (new preserveMedia([], $downloadOps))->compress($thumbnailPath, $thumbnailPreservationPath) 
+                            ) {
+                                is_file($thumbnailPath) && unlink($thumbnailPath);
+                                echo PHP_EOL."Downloaded media to: $thumbnailPreservationPath";
+                            } else {
+                                echo PHP_EOL."Compression failed";
+                                echo PHP_EOL."Downloading media to: $thumbnailPreservationPath";
+                                $result2 = $downloadOps->rename($thumbnailPath, $thumbnailPreservationPath, false);
+                            }
                         }
                         // if(!$mediaFile->dupe()){
                         //     //$mediaFile->save();
@@ -50,6 +85,9 @@ class processMedia {
                         $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['path' => $tempPath, 'album' => $data['album'], 'filename' => $data['filename']]]));
                     } else {
                         echo PHP_EOL."Failed to obtain media file from url: " . $data['url'];
+
+                        echo PHP_EOL."Removing broken url from database";
+                        $mediaFile->delete($data['hash']);
                     }
                 } else {
                     echo PHP_EOL."Existing MediaFile located at: " . $existingFile . " For: " . $data['url'];

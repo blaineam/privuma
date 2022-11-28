@@ -104,6 +104,16 @@ services:
         restart: always
         cpu_shares: 256
         mem_limit: 256M
+    cloudfs-http:
+        image: rclone/rclone:latest
+        container_name: privuma_cloudfs_http
+        restart: always
+        volumes:
+            - ./web/config/rclone:/config/rclone
+        user: "${UID}:${GID}"
+        ports:
+            - "8993:80"
+        command: serve http --read-only --no-checksum --no-modtime --addr :80 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm}
     adminer:
         image: adminer
         restart: always
