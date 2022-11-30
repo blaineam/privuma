@@ -11,7 +11,7 @@ class preserveMedia {
 
     private cloudFS $ops;
 
-    function __construct(array $data = [], ?cloudFS $operator) {
+    function __construct(array $data = [], ?cloudFS $operator = null) {
         $qm = new QueueManager();
         $this->ops = is_null($operator) ? privuma::getCloudFS() : $operator;
         if(isset($data['album']) && isset($data['filename'])) {
