@@ -73,9 +73,21 @@ function getProtectedUrlForMediaPath($path, $use_fallback = false, $useMediaFile
 function findMedia($path) {
     global $ops;
     global $ENDPOINT;
-    $scan = $ops->scandir($path, true);
-    if($scan === false) {
-        return [];
+    $cachePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."cache".DIRECTORY_SEPARATOR."deovr-fs.json";
+    $currentTime = time();
+    $lastRan = filemtime($cachePath) ?? $currentTime - 90 * 24 * 60 * 60;
+    $cacheStillRecent = $currentTime - $lastRan < 90 * 24 * 60 * 60;
+    $scan = ['.','..'];
+
+    if(is_file($cachePath) && $cacheStillRecent) {
+        $scan = json_decode(file_get_contents($cachePath), true);
+    } else {
+        $scan = $ops->scandir($path, true);
+        if($scan === false) {
+            $scan = [];
+        } else {
+            file_put_contents($cachePath, json_encode($scan, JSON_INVALID_UTF8_IGNORE+JSON_THROW_ON_ERROR));
+        }
     }
 
     $output = [];
@@ -87,13 +99,13 @@ function findMedia($path) {
             if(in_array(strtolower($ext),  ["mp4"])){
                 $filename = basename($obj['Name'], '.' . $ext);
                 $thumbnailPath = $path .'/' . $filename . '.jpg';
-                if($ops->is_file($thumbnailPath)) {
+                //if($ops->is_file($thumbnailPath)) {
                     $output[] = [
                         "video_url" => $ENDPOINT . 'deovr/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path .'/'.$filename.'.'.$ext)),
                         "thumbnailUrl" => getProtectedUrlForMediaPath($path .'/' . $filename . '.jpg'),
                         "title" => $filename,
                     ];
-                }
+                //}
             }
         }
     }

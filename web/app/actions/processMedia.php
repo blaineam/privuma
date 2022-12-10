@@ -127,6 +127,17 @@ class processMedia {
             }
 
             if(isset($data['url'])) {
+		if(isset($data['download'])) {
+			$downloadOps = new cloudFS($data['download'], true, '/usr/bin/rclone', null, true);
+			if($downloadOps->is_file($data['preserve'])) {
+			    echo PHP_EOL."Skip Existing Media already downloaded to: " . $data['preserve'];
+			    return;
+			} else if($tempPath = $this->downloadUrl($data['url'])) {
+			    echo PHP_EOL."Uploading Media to: " . $data['preserve'];
+                                $downloadOps->rename($tempPath, $data['preserve'], false);
+				return;
+			}
+		}
                 if($tempPath = $this->downloadUrl($data['url'])) {
                     echo PHP_EOL."Downloaded Preservation File to: " . $tempPath;
                     $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['preserve' => $data['preserve'], 'skipThumbnail' => $data['skipThumbnail'], 'path' => $tempPath]]));

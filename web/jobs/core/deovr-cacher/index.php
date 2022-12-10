@@ -41,6 +41,7 @@ foreach($deovrSites as $url => $config) {
                         $privuma->getQueueManager()->enqueue(json_encode([
                             'type' => 'processMedia',
                             'data' => [
+				'download' => $privuma->getEnv("DEOVR_MIRROR"),
                                 'preserve' => $preserve,
                                 'skipThumbnail' => true,
                                 'url' => $videoUrl
@@ -55,6 +56,7 @@ foreach($deovrSites as $url => $config) {
                         $privuma->getQueueManager()->enqueue(json_encode([
                             'type' => 'processMedia',
                             'data' => [
+				'download' => $privuma->getEnv("DEOVR_MIRROR"),
                                 'preserve' => $preserve,
                                 'skipThumbnail' => true,
                                 'url' => $vjson['videoPreview'],
@@ -68,6 +70,7 @@ foreach($deovrSites as $url => $config) {
                         $privuma->getQueueManager()->enqueue(json_encode([
                             'type' => 'processMedia',
                             'data' => [
+				'download' => $privuma->getEnv("DEOVR_MIRROR"),
                                 'preserve' => $preserve,
                                 'skipThumbnail' => true,
                                 'url' => $vjson['thumbnailUrl'],
