@@ -87,7 +87,7 @@ class processMedia {
                         echo PHP_EOL."Failed to obtain media file from url: " . $data['url'];
 
                         echo PHP_EOL."Removing broken url from database";
-                        $mediaFile->delete($data['hash']);
+                        $mediaFile->delete($data['hash'] ?? null);
                     }
                 } else {
                     echo PHP_EOL."Existing MediaFile located at: " . $existingFile . " For: " . $data['url'];

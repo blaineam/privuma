@@ -4,7 +4,6 @@ namespace privuma\output\format;
 
 session_start();
 
-
 use privuma\helpers\dotenv;
 use privuma\privuma;
 use privuma\helpers\cloudFS;
@@ -19,7 +18,6 @@ $DEOVR_LOGIN = privuma::getEnv('DEOVR_LOGIN');
 $DEOVR_PASSWORD = privuma::getEnv('DEOVR_PASSWORD');
 $DEOVR_DATA_DIRECTORY = privuma::getEnv('DEOVR_DATA_DIRECTORY');
 
-
 function roundToNearestMinuteInterval(\DateTime $dateTime, $minuteInterval = 10)
 {
     return $dateTime->setTime(
@@ -28,16 +26,15 @@ function roundToNearestMinuteInterval(\DateTime $dateTime, $minuteInterval = 10)
         0
     );
 }
+
 if (isset($_SERVER["HTTP_CF_CONNECTING_IP"])) {
     $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_CF_CONNECTING_IP"];
-  }
-  if (isset($_SERVER["HTTP_PVMA_IP"])) {
-      $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_PVMA_IP"];
-    }
+}
 
+if (isset($_SERVER["HTTP_PVMA_IP"])) {
+    $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_PVMA_IP"];
+}
 
-
-  //die("-" . $_SERVER['HTTP_USER_AGENT'] . "-" . $_SERVER['REMOTE_ADDR'] );
 function rollingTokens($seed) {
     $d1 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
     $d2 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
@@ -49,17 +46,13 @@ function rollingTokens($seed) {
     $d3 = roundToNearestMinuteInterval($d3, 60*12);
     return [
         sha1(md5($d1->format('Y-m-d H:i:s'))."-".$seed . "-" .
-//          $_SERVER['HTTP_USER_AGENT'] . "-" .
           $_SERVER['REMOTE_ADDR'] ),
         sha1(md5($d2->format('Y-m-d H:i:s'))."-".$seed . "-" .
-//          $_SERVER['HTTP_USER_AGENT'] . "-" .
           $_SERVER['REMOTE_ADDR'] ),
         sha1(md5($d3->format('Y-m-d H:i:s'))."-".$seed . "-" .
-//          $_SERVER['HTTP_USER_AGENT'] . "-" .
- $_SERVER['REMOTE_ADDR'] ),
+          $_SERVER['REMOTE_ADDR'] ),
     ];
 };
-
 
 function getProtectedUrlForMediaPath($path, $use_fallback = false, $useMediaFile = false) {
     global $ENDPOINT;
@@ -109,8 +102,8 @@ function findMedia($path) {
             }
         }
     }
-    return $output;
 
+    return $output;
 }
 
 $unauthorizedJson = [
@@ -140,7 +133,6 @@ if(!isset($_SESSION['deoAuthozied'])){
     }
 }
 
-
 function get3dAttrs($filename) {
     $output = [];
     if(strpos(strtoupper($filename), "MONO_360") !== false ) {
@@ -155,24 +147,23 @@ function get3dAttrs($filename) {
         $output['screenType'] = "dome";
         $output['stereoMode'] = "sbs";
     } else {
-        $output['is3d'] = false;
+        $output['is3d'] = true;
         $output['screenType'] = "flat";
+        $output['stereoMode'] = "sbs";
     }
-
 
     if (strpos(strtoupper($filename), "SBS") !== false || strpos(strtoupper($filename), "LR_180") !== false ) {
         $output["stereoMode"] = "sbs";
     } else if (strpos(strtoupper($filename), "TB") !== false) {
         $output["stereoMode"] = "tb";
-    } else {
+    } else if(!isset($output['stereoMode'])) {
         $output["stereoMode"] = "off";
     }
-
-
 
     if (strpos(strtoupper($filename), "FLAT") !== false) {
         $output['is3d'] = false;
         $output['screenType'] = "flat";
+        $output['stereoMode'] = "off";
     } else if (strpos(strtoupper($filename), "DOME") !== false) {
         $output['is3d'] = true;
         $output['screenType'] = "dome";
@@ -248,49 +239,39 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                 }
             }
         }
-
     }
-
 
     $mediaPath = str_replace('/../', '/', str_replace('-----', DIRECTORY_SEPARATOR, base64_decode($_GET['media'])));
-
     $ext = pathinfo($mediaPath, PATHINFO_EXTENSION);
     $filename = basename($mediaPath, '.' . $ext);
+    $attrs = []; //get3dAttrs($filename);
 
-    if($ops->is_file($mediaPath)) {
-        $attrs = get3dAttrs($filename);
-
-        header('Content-Type: application/json');
-        echo json_encode(array_merge([
-            "encodings" =>
-              [
-                  [
-                "name" => "h265",
-                "videoSources" => [
-                  [
-                    "resolution" => getResolution($filename),
-                    "url" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false)
-                  ]
+    header('Content-Type: application/json');
+    echo json_encode(array_merge([
+        "encodings" =>
+            [
+                [
+            "name" => "h265",
+            "videoSources" => [
+                [
+                "resolution" => getResolution($filename),
+                "url" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false)
                 ]
-              ]
-            ],
-            "title" => $filename,
-            "id" => $_GET['id'],
-            "skipIntro" => 0,
-            "thumbnailUrl" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg'),
+            ]
+            ]
+        ],
+        "title" => $filename,
+        "id" => $_GET['id'],
+        "skipIntro" => 0,
+        "is3d" => true,
+        "thumbnailUrl" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg'),
 
-        ], $attrs));
+    ], $attrs));
 
-        die();
-    } else {
-        http_response_code(404);
-        die();
-    }
-
+    die();
 }
 
 $media = findMedia($DEOVR_DATA_DIRECTORY);
-
 
 $cached = [];
 foreach($json as $site => $search){
