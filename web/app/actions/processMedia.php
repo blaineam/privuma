@@ -46,10 +46,11 @@ class processMedia {
                             $mediaFile->delete($data['hash']);
                             return;
                         }
+                        $passphrase = (new dotenv())->get('DOWNLOAD_PASSWORD') ?? "";
 
                         echo PHP_EOL."Attempting to Compress Media: $mediaPath";
                         if(
-                            (new preserveMedia([], $downloadOps))->compress($mediaPath, $mediaPreservationPath) 
+                            (new preserveMedia([], $downloadOps))->compress($mediaPath, $mediaPreservationPath, $passphrase) 
                         ) {
                             is_file($mediaPath) && unlink($mediaPath);
                             echo PHP_EOL."Downloaded media to: $mediaPreservationPath";
@@ -65,7 +66,7 @@ class processMedia {
                         ) {
                             $thumbnailPreservationPath = str_replace('.mp4', '.jpg', $mediaPreservationPath);
                             if(
-                                (new preserveMedia([], $downloadOps))->compress($thumbnailPath, $thumbnailPreservationPath) 
+                                (new preserveMedia([], $downloadOps))->compress($thumbnailPath, $thumbnailPreservationPath, $passphrase) 
                             ) {
                                 is_file($thumbnailPath) && unlink($thumbnailPath);
                                 echo PHP_EOL."Downloaded media to: $thumbnailPreservationPath";
