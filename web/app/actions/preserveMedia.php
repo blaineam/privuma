@@ -2,7 +2,6 @@
 
 namespace privuma\actions;
 
-include __DIR__.DIRECTORY_SEPARATOR.'..' . DIRECTORY_SEPARATOR . 'helpers' . DIRECTORY_SEPARATOR . 'MediaCrypto.php';
 use privuma\privuma;
 use privuma\helpers\cloudFS;
 use privuma\helpers\mediaFile;
@@ -92,9 +91,9 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
         $ext = !empty(pathinfo($file, PATHINFO_EXTENSION)) ? pathinfo($file, PATHINFO_EXTENSION): $mimeExt;
 
         if(in_array(strtoupper($ext), $allowedPhotos)) {
-            return $this->compressPhoto($file, $preserve);
+            return $this->compressPhoto($file, $preserve, $passphrase);
         } else if(in_array(strtoupper($ext), $allowedVideos)) {
-            return $this->compressVideo($file, $preserve);
+            return $this->compressVideo($file, $preserve, $passphrase);
         }else{
             echo PHP_EOL."Unsupported File Extension: " . $ext;
         }
@@ -121,7 +120,7 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
             echo PHP_EOL."ffmpeg was successful";
 
             if(!empty($passphrase)) {
-                MediaCrypto::encrypt($passphrase, $$newFileTemp, true);
+                MediaCrypto::encrypt($passphrase, $newFileTemp, true);
             }
 
             $result = $this->ops->rename($newFileTemp, $preserve, false);
@@ -137,7 +136,7 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
         return false;
 
     }
- 
+
 
     private function compressPhoto($tempFile, $filePath, string|null $passphrase = ""): bool{
         $ext = pathinfo($filePath, PATHINFO_EXTENSION);
@@ -158,7 +157,7 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
             if($response == 0 ) {
                 echo PHP_EOL."gifsicle was successful";
                 if(!empty($passphrase)) {
-                    MediaCrypto::encrypt($passphrase, $$newFileTemp, true);
+                    MediaCrypto::encrypt($passphrase, $newFileTemp, true);
                 }
                 $output =  $this->ops->rename($newFileTemp, $filePath, false);
             }else{
@@ -175,15 +174,15 @@ $mimeExt = array_search(mime_content_type($file), $mimes);
             exec($path . " '".$ext.':'.$tempFile."' -resize 1920x1920 -quality 60 -fuzz 7% '".$newFileTemp."'", $void, $response);
             $is = getimagesize($newFileTemp);
             if($response == 0 ) {
-                echo PHP_EOL."cenvert was successful";
+                echo PHP_EOL."convert was successful";
                 if(!empty($passphrase)) {
-                    MediaCrypto::encrypt($passphrase, $$newFileTemp, true);
+                    MediaCrypto::encrypt($passphrase, $newFileTemp, true);
                 }
                 $output =  $this->ops->rename($newFileTemp, $filePath, false);
             }elseif((exif_imagetype($newFileTemp) || $is !== false) && filesize($newFileTemp) < 1024*1024*30) {
                 echo PHP_EOL."convert failed but this is a reasonably sized image (<30MB), lets save it anyways";
                 if(!empty($passphrase)) {
-                    MediaCrypto::encrypt($passphrase, $$newFileTemp, true);
+                    MediaCrypto::encrypt($passphrase, $newFileTemp, true);
                 }
                 $output =  $this->ops->rename($newFileTemp, $filePath, false);
             }else{

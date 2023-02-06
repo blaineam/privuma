@@ -26,7 +26,7 @@ $privuma = new privuma();
         var_dump($currentTime);
     }
 
-    exec("find " . sys_get_temp_dir() . DIRECTORY_SEPARATOR . " -maxdepth 1 -type f -mmin +30 -exec rm {} \;");
+    exec("find " . sys_get_temp_dir() . DIRECTORY_SEPARATOR . " -maxdepth 1 -type f -mmin +30 -exec rm -f {} \;");
 
     $coreJobsDir = __DIR__ . "/jobs/core";
     $pluginsJobsDir = __DIR__ . "/jobs/plugins";
@@ -104,7 +104,7 @@ $cmd = implode(' ', [
             '&',
             '"'
           ]);
-            
+
           if ($DEBUG) {
               var_dump($cmd);
           }
