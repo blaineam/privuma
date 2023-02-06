@@ -3,8 +3,10 @@
 namespace privuma\actions;
 
 use privuma\helpers\mediaFile;
-use privuma\queue\QueueManager;
+use privuma\helpers\MediaCrypto;
 use privuma\helpers\cloudFS;
+use privuma\helpers\dotenv;
+use privuma\queue\QueueManager;
 
 use privuma\privuma;
 
@@ -50,29 +52,35 @@ class processMedia {
 
                         echo PHP_EOL."Attempting to Compress Media: $mediaPath";
                         if(
-                            (new preserveMedia([], $downloadOps))->compress($mediaPath, $mediaPreservationPath, $passphrase) 
+                            (new preserveMedia([], $downloadOps))->compress($mediaPath, $mediaPreservationPath, $passphrase)
                         ) {
                             is_file($mediaPath) && unlink($mediaPath);
                             echo PHP_EOL."Downloaded media to: $mediaPreservationPath";
                         } else {
                             echo PHP_EOL."Compression failed";
                             echo PHP_EOL."Downloading media to: $mediaPreservationPath";
+                            if(!empty($passphrase)) {
+                                MediaCrypto::encrypt($passphrase, $mediaPath, true);
+                            }
                             $result1 = $downloadOps->rename($mediaPath, $mediaPreservationPath, false);
                         }
-                       
+
                         if (
                             isset($data['thumbnail'])
                             && $thumbnailPath = $this->downloadUrl($data['thumbnail'])
                         ) {
                             $thumbnailPreservationPath = str_replace('.mp4', '.jpg', $mediaPreservationPath);
                             if(
-                                (new preserveMedia([], $downloadOps))->compress($thumbnailPath, $thumbnailPreservationPath, $passphrase) 
+                                (new preserveMedia([], $downloadOps))->compress($thumbnailPath, $thumbnailPreservationPath, $passphrase)
                             ) {
                                 is_file($thumbnailPath) && unlink($thumbnailPath);
                                 echo PHP_EOL."Downloaded media to: $thumbnailPreservationPath";
                             } else {
                                 echo PHP_EOL."Compression failed";
                                 echo PHP_EOL."Downloading media to: $thumbnailPreservationPath";
+                                if(!empty($passphrase)) {
+                                    MediaCrypto::encrypt($passphrase, $thumbnailPath, true);
+                                }
                                 $result2 = $downloadOps->rename($thumbnailPath, $thumbnailPreservationPath, false);
                             }
                         }
