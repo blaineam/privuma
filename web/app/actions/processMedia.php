@@ -3,10 +3,10 @@
 namespace privuma\actions;
 
 use privuma\helpers\mediaFile;
-use privuma\helpers\MediaCrypto;
 use privuma\helpers\cloudFS;
 use privuma\helpers\dotenv;
 use privuma\queue\QueueManager;
+use MediaCrypto\MediaCrypto;
 
 use privuma\privuma;
 
@@ -58,11 +58,15 @@ class processMedia {
                             echo PHP_EOL."Downloaded media to: $mediaPreservationPath";
                         } else {
                             echo PHP_EOL."Compression failed";
-                            echo PHP_EOL."Downloading media to: $mediaPreservationPath";
-                            if(!empty($passphrase)) {
-                                MediaCrypto::encrypt($passphrase, $mediaPath, true);
+                            if (is_file($mediaPath)) {
+                                echo PHP_EOL."Downloading media to: $mediaPreservationPath";
+                                if(!empty($passphrase)) {
+                                    MediaCrypto::encrypt($passphrase, $mediaPath, true);
+                                }
+                                $result1 = $downloadOps->rename($mediaPath, $mediaPreservationPath, false);
+                            } else {
+                                echo PHP_EOL."Download failed";
                             }
-                            $result1 = $downloadOps->rename($mediaPath, $mediaPreservationPath, false);
                         }
 
                         if (
@@ -77,11 +81,16 @@ class processMedia {
                                 echo PHP_EOL."Downloaded media to: $thumbnailPreservationPath";
                             } else {
                                 echo PHP_EOL."Compression failed";
-                                echo PHP_EOL."Downloading media to: $thumbnailPreservationPath";
-                                if(!empty($passphrase)) {
-                                    MediaCrypto::encrypt($passphrase, $thumbnailPath, true);
+                                if (is_file($thumbnailPath)) {
+                                    echo PHP_EOL."Downloading media to: $thumbnailPreservationPath";
+                                    if(!empty($passphrase)) {
+                                        MediaCrypto::encrypt($passphrase, $thumbnailPath, true);
+                                    }
+                                    $result2 = $downloadOps->rename($thumbnailPath, $thumbnailPreservationPath, false);
+                                } else {
+                                    echo PHP_EOL."Download failed";
                                 }
-                                $result2 = $downloadOps->rename($thumbnailPath, $thumbnailPreservationPath, false);
+
                             }
                         }
                         // if(!$mediaFile->dupe()){
