@@ -7,7 +7,6 @@ use privuma\helpers\cloudFS;
 use privuma\helpers\dotenv;
 use privuma\queue\QueueManager;
 use MediaCrypto\MediaCrypto;
-
 use privuma\privuma;
 
 class processMedia {
@@ -63,7 +62,7 @@ class processMedia {
                                 if(!empty($passphrase)) {
                                     MediaCrypto::encrypt($passphrase, $mediaPath, true);
                                 }
-                                $result1 = $downloadOps->rename($mediaPath, $mediaPreservationPath, false);
+                                $downloadOps->rename($mediaPath, $mediaPreservationPath, false);
                             } else {
                                 echo PHP_EOL."Download failed";
                             }
@@ -86,24 +85,19 @@ class processMedia {
                                     if(!empty($passphrase)) {
                                         MediaCrypto::encrypt($passphrase, $thumbnailPath, true);
                                     }
-                                    $result2 = $downloadOps->rename($thumbnailPath, $thumbnailPreservationPath, false);
+                                    $downloadOps->rename($thumbnailPath, $thumbnailPreservationPath, false);
                                 } else {
                                     echo PHP_EOL."Download failed";
                                 }
 
                             }
                         }
-                        // if(!$mediaFile->dupe()){
-                        //     //$mediaFile->save();
-                        // }
                         return;
-
                     }else if($tempPath = $this->downloadUrl($data['url'])) {
                         echo PHP_EOL."Downloaded Media File to: " . $tempPath;
                         $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['path' => $tempPath, 'album' => $data['album'], 'filename' => $data['filename']]]));
                     } else {
                         echo PHP_EOL."Failed to obtain media file from url: " . $data['url'];
-
                         echo PHP_EOL."Removing broken url from database";
                         $mediaFile->delete($data['hash'] ?? null);
                     }
@@ -145,17 +139,17 @@ class processMedia {
             }
 
             if(isset($data['url'])) {
-		if(isset($data['download'])) {
-			$downloadOps = new cloudFS($data['download'], true, '/usr/bin/rclone', null, true);
-			if($downloadOps->is_file($data['preserve'])) {
-			    echo PHP_EOL."Skip Existing Media already downloaded to: " . $data['preserve'];
-			    return;
-			} else if($tempPath = $this->downloadUrl($data['url'])) {
-			    echo PHP_EOL."Uploading Media to: " . $data['preserve'];
-                                $downloadOps->rename($tempPath, $data['preserve'], false);
-				return;
-			}
-		}
+                if(isset($data['download'])) {
+                    $downloadOps = new cloudFS($data['download'], true, '/usr/bin/rclone', null, true);
+                    if($downloadOps->is_file($data['preserve'])) {
+                        echo PHP_EOL."Skip Existing Media already downloaded to: " . $data['preserve'];
+                        return;
+                    } else if($tempPath = $this->downloadUrl($data['url'])) {
+                        echo PHP_EOL."Uploading Media to: " . $data['preserve'];
+                                        $downloadOps->rename($tempPath, $data['preserve'], false);
+                        return;
+                    }
+                }
                 if($tempPath = $this->downloadUrl($data['url'])) {
                     echo PHP_EOL."Downloaded Preservation File to: " . $tempPath;
                     $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['preserve' => $data['preserve'], 'skipThumbnail' => $data['skipThumbnail'], 'path' => $tempPath]]));
@@ -235,27 +229,6 @@ class curlDL{
 
     function getResult() {
         return $this->result;
-    }
-
-    private function get_cookies() {
-        $return = null;
-
-        foreach(glob($this->cookiePath . DIRECTORY_SEPARATOR . "*.txt") as $file) {
-            $return .= file_get_contents($file).';';
-        }
-        return $return;
-    }
-
-    private function save_cookies($http_response_header) {
-        foreach($http_response_header as $header) {
-            if(substr($header, 0, 10) == 'Set-Cookie'){
-                if(preg_match('@Set-Cookie: (([^=]+)=[^;]+)@i', $header, $matches)) {
-                    $fp = fopen($this->cookiePath . DIRECTORY_SEPARATOR .$matches[2].'.txt', 'w');
-                    fwrite($fp, $matches[1]);
-                    fclose($fp);
-                }
-            }
-        }
     }
 
     private function curl_rev_fgc($url){
