@@ -539,7 +539,7 @@ let medcrypt = {
           e = a.filename.split(".")
           .pop(),
           f = d.time,
-          g = a.time; return c.includes("comic") ? d.filename.localeCompare(a.filename, void 0, { numeric: !0, sensitivity: "base" }) : "gif" == b && "gif" != e ? -1 : "gif" == e && "gif" != b ? 1 : "mp4" == b && "mp4" != e ? -1 : "mp4" == e && "mp4" != b ? 1 : "webm" == b && "webm" != e ? -1 : "webm" == e && "webm" != b ? 1 : a.time.localeCompare(d.time, void 0, { numeric: !0, sensitivity: "base" }) }), Promise.all(f.map(function(a) {
+          g = a.time; return c.includes("comic") ? d.filename.localeCompare(a.filename, void 0, { numeric: !0, sensitivity: "base" }) : "gif" == b && "gif" != e ? -1 : "gif" == e && "gif" != b ? 1 : "mp4" == b && "mp4" != e ? -1 : "mp4" == e && "mp4" != b ? 1 : "webm" == b && "webm" != e ? -1 : "webm" == e && "webm" != b ? 1 : a.time.localeCompare(d.time, void 0, { numeric: !0, sensitivity: "base" }) }), Promise.allSettled(f.map(function(a) {
 
           let b = a.filename,
           c = a.album,
@@ -553,29 +553,31 @@ let medcrypt = {
             resource = `../${f.substring(0,2)}/${f}`;
           console.log(resource);
           return medcrypt.getSrc(resource)
-            .then(uri => new Promise(() => {
-              jQuery("#content")
-                .append(`<a class="gallerypicture" title="${b}" data-type="video" data-fancybox="gallery" href="../${d.substring(0,2)}/${d}">
-                  <img src="${uri}" loading="lazy" alt="">
-                  </a>`)
-              }));
+              .then(uri => Promise.resolve([uri, true, b, d])).catch(err => Promise.resolve(["", true, b, d]));
           }
           if (("photo" == d || "all" == d) && !g) {
             let c = btoa(a.hash) + "." + f,
               resource = `../${c.substring(0,2)}/${c}`;
             return medcrypt.getSrc(resource)
-              .then(uri => { jQuery("#content")
-                  .append(`<a class="gallerypicture" data-width="1920" href="${uri}" title="${b}" data-fancybox="gallery">
-                    <img src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)">
-                    </a>`);
-              });
+              .then(uri => Promise.resolve([uri, false, b, d])).catch(err => Promise.resolve(["", false, b, d]));
           }
-        })).finally(() => {
+        })).then(results => {
+          results.filter(result => typeof result.value !== 'undefined').map(result => result.value).forEach(([uri, isVideo, b, d]) => isVideo 
+            ? jQuery("#content")
+              .append(`<a class="gallerypicture" title="${b}" data-type="video" data-fancybox="gallery" href="../${d.substring(0,2)}/${d}">
+                <img src="${uri}" loading="lazy" alt="">
+                </a>`) 
+            : jQuery("#content")
+              .append(`<a class="gallerypicture" data-width="1920" href="${uri}" title="${b}" data-fancybox="gallery">
+                <img src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)">
+                </a>`)
+          );
+        }).finally(() => {
           console.log("rendered");
         });
     }
 
-    function b() { res = h, res || (alert("This album contains no content please add content to this album via the privuma web service"), window.history.back()), Promise.all(getFolderContent(res, f, g).map(function(a) {
+    function b() { res = h, res || (alert("This album contains no content please add content to this album via the privuma web service"), window.history.back()), Promise.allSettled(getFolderContent(res, f, g).map(function(a) {
       let b = a.filename,
             c = a.displayName,
             e = c;
@@ -586,67 +588,67 @@ let medcrypt = {
             k = btoa(a.hash) + "." + (j ? "jpg" : i),
             l = document.querySelector("#content"),
             resource = `../${k.substring(0,2)}/${k}`;
-          return medcrypt.getSrc(resource)
-            .then(uri => new Promise(() => { jQuery("#content")
-                .append(`<div class="gallerypicture">
-                      <img src="${uri}" class="openalbum" loading="lazy" alt="" data-hash="${btoa(e)+d+"all"}">
-                  <p>
-                    <button class="btn mr-3 btn-sm btn-primary openalbum" data-hash="${btoa(e)+d+"photo"}">
-                      <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-                        width="20px" height="20px" viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">
-                          <g>
-                              <path fill="#ffffff" d="M93.194,18c0-2.47-2.002-4.472-4.472-4.472c-0.228,0-0.447,0.034-0.667,0.067V13.5H11.25v0.028
-                                  c-2.47,0-4.472,2.002-4.472,4.472l0,0.001v63.998l0,0.001l0,0.001V82.5h0.05c0.252,2.231,2.123,3.972,4.421,3.972V86.5h76.805
-                                  v-0.095c0.219,0.033,0.438,0.067,0.667,0.067c2.299,0,4.17-1.74,4.422-3.972h0.078V18H93.194z M83.265,76.543H72.404
-                                  c-0.038-0.155-0.092-0.304-0.166-0.442l0.018-0.01l-22.719-39.35l-0.009,0.005c-0.5-1.027-1.544-1.74-2.764-1.74
-                                  c-1.251,0-2.324,0.749-2.807,1.821L28.838,63.013l-3.702-6.411l-0.005,0.003c-0.264-0.542-0.814-0.918-1.457-0.918
-                                  c-0.659,0-1.224,0.395-1.479,0.958l-5.46,9.457V23.485h66.53V76.543z"/>
-                              <circle fill="#ffffff" cx="68.122" cy="38.584" r="10.1"/>
-                          </g>
-                      </svg>
-                    </button>
-                    <button class="btn mr-3 btn-sm btn-success openalbum" data-hash="${btoa(e)+d+"video"}">
-                      <svg width="20px" height="20px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="0" fill="none" width="24" height="24"/>
-                        <g>
-                          <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
-                        </g>
-                      </svg>
-                    </button>
-                    <button class="btn mr-3 btn-sm btn-danger openalbum" data-hash="${btoa(e)+d+"all"}">
-                      <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-                        width="20px" height="20px" viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">
-                          <g>
-                              <path fill="#ffffff" d="M93.194,18c0-2.47-2.002-4.472-4.472-4.472c-0.228,0-0.447,0.034-0.667,0.067V13.5H11.25v0.028
-                                  c-2.47,0-4.472,2.002-4.472,4.472l0,0.001v63.998l0,0.001l0,0.001V82.5h0.05c0.252,2.231,2.123,3.972,4.421,3.972V86.5h76.805
-                                  v-0.095c0.219,0.033,0.438,0.067,0.667,0.067c2.299,0,4.17-1.74,4.422-3.972h0.078V18H93.194z M83.265,76.543H72.404
-                                  c-0.038-0.155-0.092-0.304-0.166-0.442l0.018-0.01l-22.719-39.35l-0.009,0.005c-0.5-1.027-1.544-1.74-2.764-1.74
-                                  c-1.251,0-2.324,0.749-2.807,1.821L28.838,63.013l-3.702-6.411l-0.005,0.003c-0.264-0.542-0.814-0.918-1.457-0.918
-                                  c-0.659,0-1.224,0.395-1.479,0.958l-5.46,9.457V23.485h66.53V76.543z"/>
-                              <circle fill="#ffffff" cx="68.122" cy="38.584" r="10.1"/>
-                          </g>
-                      </svg>
-                      <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-                        viewBox="0 0 60.364 60.364" style="enable-background:new 0 0 60.364 60.364;" xml:space="preserve" width="20px" height="20px">
-                          <g>
-                              <path fill="#ffffff" d="M54.454,23.18l-18.609-0.002L35.844,5.91C35.845,2.646,33.198,0,29.934,0c-3.263,0-5.909,2.646-5.909,5.91v17.269
-                                  L5.91,23.178C2.646,23.179,0,25.825,0,29.088c0.002,3.264,2.646,5.909,5.91,5.909h18.115v19.457c0,3.267,2.646,5.91,5.91,5.91
-                                  c3.264,0,5.909-2.646,5.91-5.908V34.997h18.611c3.262,0,5.908-2.645,5.908-5.907C60.367,25.824,57.718,23.178,54.454,23.18z"/>
-                          </g>
-                      </svg>
-                      <svg width="20px" height="20px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="0" fill="none" width="24" height="24"/>
-                        <g>
-                          <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
-                        </g>
-                      </svg>
-                    </button>
-                    ${c}
-                  </p>
-                </div>`
-              )
-          })).catch(() => new Promise(() => { console.log("couldn't load image for resource")}));
-    })).finally(() => {
+          return medcrypt.getSrc(resource).then(uri => Promise.resolve([uri, c, e, d])).catch(err => Promise.resolve(["", c, e, d]));
+    })).then(results => {
+      results.filter(result => typeof result.value !== 'undefined').map(result => result.value).forEach(([uri, c, e, d]) => jQuery("#content")
+        .append(`<div class="gallerypicture">
+              <img src="${uri}" class="openalbum" loading="lazy" alt="" data-hash="${btoa(e)+d+"all"}">
+          <p>
+            <button class="btn mr-3 btn-sm btn-primary openalbum" data-hash="${btoa(e)+d+"photo"}">
+              <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                width="20px" height="20px" viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">
+                  <g>
+                      <path fill="#ffffff" d="M93.194,18c0-2.47-2.002-4.472-4.472-4.472c-0.228,0-0.447,0.034-0.667,0.067V13.5H11.25v0.028
+                          c-2.47,0-4.472,2.002-4.472,4.472l0,0.001v63.998l0,0.001l0,0.001V82.5h0.05c0.252,2.231,2.123,3.972,4.421,3.972V86.5h76.805
+                          v-0.095c0.219,0.033,0.438,0.067,0.667,0.067c2.299,0,4.17-1.74,4.422-3.972h0.078V18H93.194z M83.265,76.543H72.404
+                          c-0.038-0.155-0.092-0.304-0.166-0.442l0.018-0.01l-22.719-39.35l-0.009,0.005c-0.5-1.027-1.544-1.74-2.764-1.74
+                          c-1.251,0-2.324,0.749-2.807,1.821L28.838,63.013l-3.702-6.411l-0.005,0.003c-0.264-0.542-0.814-0.918-1.457-0.918
+                          c-0.659,0-1.224,0.395-1.479,0.958l-5.46,9.457V23.485h66.53V76.543z"/>
+                      <circle fill="#ffffff" cx="68.122" cy="38.584" r="10.1"/>
+                  </g>
+              </svg>
+            </button>
+            <button class="btn mr-3 btn-sm btn-success openalbum" data-hash="${btoa(e)+d+"video"}">
+              <svg width="20px" height="20px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0" fill="none" width="24" height="24"/>
+                <g>
+                  <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
+                </g>
+              </svg>
+            </button>
+            <button class="btn mr-3 btn-sm btn-danger openalbum" data-hash="${btoa(e)+d+"all"}">
+              <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                width="20px" height="20px" viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">
+                  <g>
+                      <path fill="#ffffff" d="M93.194,18c0-2.47-2.002-4.472-4.472-4.472c-0.228,0-0.447,0.034-0.667,0.067V13.5H11.25v0.028
+                          c-2.47,0-4.472,2.002-4.472,4.472l0,0.001v63.998l0,0.001l0,0.001V82.5h0.05c0.252,2.231,2.123,3.972,4.421,3.972V86.5h76.805
+                          v-0.095c0.219,0.033,0.438,0.067,0.667,0.067c2.299,0,4.17-1.74,4.422-3.972h0.078V18H93.194z M83.265,76.543H72.404
+                          c-0.038-0.155-0.092-0.304-0.166-0.442l0.018-0.01l-22.719-39.35l-0.009,0.005c-0.5-1.027-1.544-1.74-2.764-1.74
+                          c-1.251,0-2.324,0.749-2.807,1.821L28.838,63.013l-3.702-6.411l-0.005,0.003c-0.264-0.542-0.814-0.918-1.457-0.918
+                          c-0.659,0-1.224,0.395-1.479,0.958l-5.46,9.457V23.485h66.53V76.543z"/>
+                      <circle fill="#ffffff" cx="68.122" cy="38.584" r="10.1"/>
+                  </g>
+              </svg>
+              <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                viewBox="0 0 60.364 60.364" style="enable-background:new 0 0 60.364 60.364;" xml:space="preserve" width="20px" height="20px">
+                  <g>
+                      <path fill="#ffffff" d="M54.454,23.18l-18.609-0.002L35.844,5.91C35.845,2.646,33.198,0,29.934,0c-3.263,0-5.909,2.646-5.909,5.91v17.269
+                          L5.91,23.178C2.646,23.179,0,25.825,0,29.088c0.002,3.264,2.646,5.909,5.91,5.909h18.115v19.457c0,3.267,2.646,5.91,5.91,5.91
+                          c3.264,0,5.909-2.646,5.91-5.908V34.997h18.611c3.262,0,5.908-2.645,5.908-5.907C60.367,25.824,57.718,23.178,54.454,23.18z"/>
+                  </g>
+              </svg>
+              <svg width="20px" height="20px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0" fill="none" width="24" height="24"/>
+                <g>
+                  <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
+                </g>
+              </svg>
+            </button>
+            ${c}
+          </p>
+        </div>`
+      ));
+    }).finally(() => {
       console.log("rendered");
     });
   }
@@ -680,7 +682,8 @@ let medcrypt = {
               .attr("src", uri)
               .parent()
               .trigger("load")
-              .trigger("play") });
+              .trigger("play") })
+              .catch(() => {});
         $("video")
           .removeAttr("controls");
         $("video")
