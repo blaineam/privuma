@@ -140,7 +140,7 @@ $viewerHTML = <<<'HEREHTML'
 <head>
     <title>Privuma(Offline Web App)</title>
     <meta name="referrer" content="no-referrer" />
-    <meta name="viewport" content="width=device-width, initial-scale=0.5, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
 <style>
 /*!
  * Bootstrap v4.1.1 (https://getbootstrap.com/)
@@ -562,11 +562,11 @@ let medcrypt = {
               .then(uri => Promise.resolve([uri, false, b, d])).catch(err => Promise.resolve(["", false, b, d]));
           }
         })).then(results => {
-          results.filter(result => typeof result.value !== 'undefined').map(result => result.value).forEach(([uri, isVideo, b, d]) => isVideo 
+          results.filter(result => typeof result.value !== 'undefined').map(result => result.value).forEach(([uri, isVideo, b, d]) => isVideo
             ? jQuery("#content")
               .append(`<a class="gallerypicture" title="${b}" data-type="video" data-fancybox="gallery" href="../${d.substring(0,2)}/${d}">
                 <img src="${uri}" loading="lazy" alt="">
-                </a>`) 
+                </a>`)
             : jQuery("#content")
               .append(`<a class="gallerypicture" data-width="1920" href="${uri}" title="${b}" data-fancybox="gallery">
                 <img src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)">
@@ -751,8 +751,19 @@ if(is_file($rawCachePath)) {
   unset($downloadedFiles);
   unlink($rawCachePath);
 }
-if(is_file($cachePath) && $cacheStillRecent) {
-  $preservedFilenames = array_map(function($name) { return basename($name); }, array_column(json_decode(file_get_contents($cachePath), true), 'Name'));
+if(is_file($cachePath)) {
+  $preservedFilenames = array_map(
+    function($name) {
+        return basename($name);
+    },
+    array_column(
+        json_decode(
+            file_get_contents($cachePath),
+            true
+        ),
+        'Name'
+    )
+  );
 }
 $countAlreadyDownloaded = count($preservedFilenames) - 5;
 $targetDownloadedCount = count($dlData) + count(array_filter($dlData, function($item) {

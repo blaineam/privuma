@@ -11,6 +11,10 @@ foreach($deovrSites as $url => $config) {
     echo PHP_EOL. "Checking DeoVR site for new media to cache: " . $url;
     if($search = $config['search']) {
         $json = json_decode(getUrlWithAuth($url, $config['login'], $config['password']), true);
+        if(!array_key_exists('scenes', $json) || !is_array($json['scenes'])) {
+            echo PHP_EOL. "Unsupported DeoVR url that cannot be cached: " . $url;
+            continue;
+        }
         $LibaryKey = array_search("Library", array_column($json['scenes'], 'name'));
         $output = [];
         $changed = false;
