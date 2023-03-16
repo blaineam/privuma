@@ -26,6 +26,9 @@ foreach(array_chunk($results, 2000) as $key => $chunk) {
         if(!is_null($row['url'])) {
             //echo PHP_EOL."Checking URL: " . $row['url'];
             $headers = get_headers($row['url'], TRUE);
+            if(!is_array($headers)) {
+                continue;
+            }
             $head = array_change_key_case($headers);
             $protocol = parse_url($row['url'],  PHP_URL_SCHEME);
             $hostname = parse_url($row['url'],  PHP_URL_HOST);

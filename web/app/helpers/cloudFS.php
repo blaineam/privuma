@@ -14,9 +14,9 @@ class cloudFS {
     private dotenv $env;
 
     function __construct(
-        string $rCloneDestination = 'privuma:', 
-        bool $encoded = true, 
-        string $rCloneBinaryPath = '/usr/bin/rclone', 
+        string $rCloneDestination = 'privuma:',
+        bool $encoded = true,
+        string $rCloneBinaryPath = '/usr/bin/rclone',
         ?string $rCloneConfigPath = null,
         bool $segmented = false
     ) {
@@ -457,36 +457,36 @@ class cloudFS {
     }
 
     private function execute(
-        string $command, 
-        string $destination, 
-        ?string $source = null, 
-        bool $remoteSource = false, 
-        bool $remoteDestination = true, 
-        array $flags = [], 
-        bool $passthru = false, 
-        bool $encodeSource = true, 
+        string $command,
+        string $destination,
+        ?string $source = null,
+        bool $remoteSource = false,
+        bool $remoteDestination = true,
+        array $flags = [],
+        bool $passthru = false,
+        bool $encodeSource = true,
         ?float $timeout = null
     ) {
-        $source = is_null($source) 
-            ? null 
+        $source = is_null($source)
+            ? null
             : (
                 strpos(
                     explode(
-                        DIRECTORY_SEPARATOR, 
+                        DIRECTORY_SEPARATOR,
                         $source
-                    )[0], 
+                    )[0],
                     ':'
-                ) === false 
-                ? DIRECTORY_SEPARATOR . ltrim($source, DIRECTORY_SEPARATOR) 
+                ) === false
+                ? DIRECTORY_SEPARATOR . ltrim($source, DIRECTORY_SEPARATOR)
                 : $source
             );
         $destination = strpos(
             explode(
-                DIRECTORY_SEPARATOR, 
-                $destination)[0], 
+                DIRECTORY_SEPARATOR,
+                $destination)[0],
                 ':'
-            ) === false 
-            ? DIRECTORY_SEPARATOR . ltrim($destination, DIRECTORY_SEPARATOR) 
+            ) === false
+            ? DIRECTORY_SEPARATOR . ltrim($destination, DIRECTORY_SEPARATOR)
             : $destination;
         $cmd = implode(
             ' ',
@@ -508,17 +508,17 @@ class cloudFS {
                 '--buffer-size 0M',
                 $command,
                 ...$flags,
-                !is_null($source) 
+                !is_null($source)
                 ? escapeshellarg(
                     str_replace(
                         DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,
                         DIRECTORY_SEPARATOR,
                         (
-                            $remoteSource 
-                            ? $this->rCloneDestination . ( 
-                                $this->encoded && $encodeSource 
+                            $remoteSource
+                            ? $this->rCloneDestination . (
+                                $this->encoded && $encodeSource
                                 ? (
-                                    $this->segmented 
+                                    $this->segmented
                                     ? dirname(
                                         $this->encode($source)
                                     )
@@ -530,9 +530,9 @@ class cloudFS {
                                             )
                                         ),
                                         0, 2
-                                    ) 
-                                    . DIRECTORY_SEPARATOR 
-                                    . $this->encode($source) 
+                                    )
+                                    . DIRECTORY_SEPARATOR
+                                    . $this->encode($source)
                                     : $this->encode($source)
                                 )
                                 : $source
@@ -545,12 +545,12 @@ class cloudFS {
                 escapeshellarg(
                     str_replace(
                         DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,
-                        DIRECTORY_SEPARATOR, 
-                        $remoteDestination 
-                        ? $this->rCloneDestination . ( 
-                            $this->encoded 
+                        DIRECTORY_SEPARATOR,
+                        $remoteDestination
+                        ? $this->rCloneDestination . (
+                            $this->encoded
                             ? (
-                                $this->segmented 
+                                $this->segmented
                                 ? dirname(
                                     $this->encode($destination)
                                 )
@@ -562,13 +562,13 @@ class cloudFS {
                                         )
                                     ),
                                     0, 2
-                                ) 
-                                . DIRECTORY_SEPARATOR 
-                                . $this->encode($destination) 
+                                )
+                                . DIRECTORY_SEPARATOR
+                                . $this->encode($destination)
                                 : $this->encode($destination)
-                            ) 
+                            )
                             : $destination
-                        ) 
+                        )
                         : $destination
                     )
                 ),

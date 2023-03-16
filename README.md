@@ -1,6 +1,6 @@
 # Privuma
 
-Privuma is a multimedia deduplication, compression and access endpoint that works with gphotos.ofether.com and the ios app Lux Shield. It is a simple setup with docker compose that is extendable with jobs that can download content from around the internet. It consists of a customer php-fpm image that includes multimedia processing dependencies available to php via an exec call. 
+Privuma is a multimedia deduplication, compression and access endpoint that works with gphotos.millers.cloud and the ios app Lux Shield. It is a simple setup with docker compose that is extendable with jobs that can download content from around the internet. It consists of a customer php-fpm image that includes multimedia processing dependencies available to php via an exec call. 
 
 
 # Structure
@@ -25,13 +25,13 @@ Privuma is a multimedia deduplication, compression and access endpoint that work
 	- .../privuma/dogs/happy.gif
 
 
-## Use gphotos.ofether.com
+## Use gphotos.millers.cloud
 
-If you navigate to the web app you can pass it your public endpoint and the AUTH_TOKEN you set in your `.env` file it will start loading the media from your Privuma instance. The gphotos.ofether.com does not store your AUTH_TOKEN and it is only ever used for the initial handshake. All other communication is then handled with time based expired tokens.
+If you navigate to the web app you can pass it your public endpoint and the AUTH_TOKEN you set in your `.env` file it will start loading the media from your Privuma instance. The gphotos.millers.cloud does not store your AUTH_TOKEN and it is only ever used for the initial handshake. All other communication is then handled with time based expired tokens.
 
 ## Lux Shield on iOS
 
-Lux shield is a paid ios app that can also access a privuma endpoints media much the same way as the gphotos.ofether.com site does.
+Lux shield is a paid ios app that can also access a privuma endpoints media much the same way as the gphotos.millers.cloud site does.
 
 ## Contribute
 
