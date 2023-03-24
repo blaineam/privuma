@@ -395,7 +395,8 @@ let medcrypt = {
         var ext = re.exec(resource)[1];
         return ['mp4','webm'].includes(ext);
       },
-      getSrc: function(resource) {
+      maxTries: 3,
+      getSrc: function(resource, tries = 0) {
         return new Promise((resolve, reject) => {
           fetch(resource, {
               headers: {
@@ -470,6 +471,12 @@ let medcrypt = {
             resolve(resource);
           }
         }).catch(reject);
+      }).then((success) => {
+    	return Promise.resolve(success);
+      }).catch((reject) => {
+    	return (tries + 1 < medcrypt.maxTries)
+    		? medcrypt.getSrc(resource, tries + 1)
+    		: Promise.reject(reject);
       });
     }
   };
@@ -551,28 +558,26 @@ let medcrypt = {
             d = btoa(a.hash) + ".mp4",
             f = btoa(a.hash) + ".jpg",
             resource = `../${f.substring(0,2)}/${f}`;
-          console.log(resource);
-          return medcrypt.getSrc(resource)
-              .then(uri => Promise.resolve([uri, true, b, d])).catch(err => Promise.resolve(["", true, b, d]));
+          return Promise.resolve([resource, true, b, d]);
           }
           if (("photo" == d || "all" == d) && !g) {
             let c = btoa(a.hash) + "." + f,
               resource = `../${c.substring(0,2)}/${c}`;
-            return medcrypt.getSrc(resource)
-              .then(uri => Promise.resolve([uri, false, b, d])).catch(err => Promise.resolve(["", false, b, d]));
+							return Promise.resolve([resource, false, b, d]);
           }
         })).then(results => {
           results.filter(result => typeof result.value !== 'undefined').map(result => result.value).forEach(([uri, isVideo, b, d]) => isVideo
             ? jQuery("#content")
               .append(`<a class="gallerypicture" title="${b}" data-type="video" data-fancybox="gallery" href="../${d.substring(0,2)}/${d}">
-                <img src="${uri}" loading="lazy" alt="">
+                <img src="" class="lazy" data-src="${uri}" loading="lazy" alt="">
                 </a>`)
             : jQuery("#content")
               .append(`<a class="gallerypicture" data-width="1920" href="${uri}" title="${b}" data-fancybox="gallery">
-                <img src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)">
+                <img src="" class="lazy" data-src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)">
                 </a>`)
           );
         }).finally(() => {
+        	processLazyLoad();
           console.log("rendered");
         });
     }
@@ -588,11 +593,11 @@ let medcrypt = {
             k = btoa(a.hash) + "." + (j ? "jpg" : i),
             l = document.querySelector("#content"),
             resource = `../${k.substring(0,2)}/${k}`;
-          return medcrypt.getSrc(resource).then(uri => Promise.resolve([uri, c, e, d])).catch(err => Promise.resolve(["", c, e, d]));
+          return Promise.resolve([resource, c, e, d]);
     })).then(results => {
       results.filter(result => typeof result.value !== 'undefined').map(result => result.value).forEach(([uri, c, e, d]) => jQuery("#content")
         .append(`<div class="gallerypicture">
-              <img src="${uri}" class="openalbum" loading="lazy" alt="" data-hash="${btoa(e)+d+"all"}">
+              <img src="" data-src="${uri}" class="lazy openalbum" loading="lazy" alt="" data-hash="${btoa(e)+d+"all"}">
           <p>
             <button class="btn mr-3 btn-sm btn-primary openalbum" data-hash="${btoa(e)+d+"photo"}">
               <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
@@ -649,6 +654,7 @@ let medcrypt = {
         </div>`
       ));
     }).finally(() => {
+    	processLazyLoad();
       console.log("rendered");
     });
   }
@@ -671,8 +677,46 @@ let medcrypt = {
           .data("hash") }), $(document)
       .on("keyup", "#searchInput", function () { c() }); let i, j = !1;
     $(document)
-      .on("afterClose.fb", function () { j = !1 }), $(document)
-      .on("afterShow.fb", function (a, b, c) { $("video")
+      .on("afterClose.fb", function () { j = !1 }),
+      $(document)
+      .on("beforeShow.fb", function (a, b, c) {
+
+      }),
+      $(document)
+      .on("afterShow.fb", function (a, b, c) {
+        if ($('video').length == 0) {
+        	let el = $('.gallerypicture[href="' + c.src + '"]');
+        	let tsrc = c.src.length > 0 ? c.src : el.data('src');
+      	medcrypt.getSrc(tsrc)
+          .then(uri => {
+              el.attr("href", uri);
+              el.find('img').attr("src", uri);
+              el.find('img').data("src", uri);
+              c.src = uri;
+              c.thumb = uri;
+              c.$thumb = el.find('img');
+              $.fancybox.getInstance().current.$slide.trigger("onReset");
+              $(".fancybox-content").removeClass('fancybox-error').html('<img style="max-width:100%; max-height:100%;" src="'+uri+'" alt="" />');
+		        if ($.fancybox.getInstance()
+          .SlideShow.isActive && ($.fancybox.getInstance()
+            .SlideShow.stop(), j = !0), !j) return;
+		        i && clearTimeout(i);
+		        let d = jQuery(c.$thumb)
+		          .data("duration");
+		        if(!d || d < 1000) {
+		        	d = 5000;
+		        }
+		        let e = d;
+		        if (5000 > d) {
+		        	let a = Math.ceil(5000 / d);
+		        	e = d * a
+		        } i = setTimeout(function () { $.fancybox.getInstance()
+		            .next() }, e)
+          }).catch();
+          return;
+        }
+
+      	$("video")
           .trigger("pause");
         medcrypt.getSrc(c.src)
           .then(uri => { $('.gallerypicture[href="' + c.src + '"]')
@@ -687,18 +731,32 @@ let medcrypt = {
         $("video")
           .removeAttr("controls");
         $("video")
-          .click(function toggleControls() { if (this.hasAttribute("controls")) { this.removeAttribute("controls") } else { this.setAttribute("controls", "controls") } }); if ($.fancybox.getInstance()
+          .click(function toggleControls() {
+          	if (this.hasAttribute("controls")) {
+          		this.removeAttribute("controls")
+          	} else {
+          		this.setAttribute("controls", "controls")
+          	}
+          });
+        if ($.fancybox.getInstance()
           .SlideShow.isActive && ($.fancybox.getInstance()
             .SlideShow.stop(), j = !0), !j) return;
-        i && clearTimeout(i); let d = jQuery(c.$thumb)
-          .data("duration"); if (d = d && "undefined" != typeof d && 0 != d ? d : 5e3, c.$content && 0 < jQuery(c.$content)
+        i && clearTimeout(i);
+        let d = jQuery(c.$thumb)
+          .data("duration");
+        if (d = d && "undefined" != typeof d && 0 != d ? d : 5e3, c.$content && 0 < jQuery(c.$content)
           .find("video")
           .length) return void jQuery(c.$content)
           .find("video")
           .on("ended", function () { $.fancybox.getInstance()
-              .next() }); let e = d; if (5e3 > d) { let a = Math.ceil(5e3 / d);
-          e = d * a } i = setTimeout(function () { $.fancybox.getInstance()
-            .next() }, e) });
+              .next() });
+        let e = d;
+        if (5e3 > d) {
+        	let a = Math.ceil(5e3 / d);
+        	e = d * a
+        } i = setTimeout(function () { $.fancybox.getInstance()
+            .next() }, e)
+      });
     $("#backBtn")
       .click(function () { let hash = window.location.hash.slice(1); if (hash) { let hashParts = hash.split(d); let path = atob(hashParts[0]); if (path.split("---")
             .length > 1) { pathParts = path.split("---");
@@ -709,6 +767,32 @@ let medcrypt = {
       .on("hashchange", function () { let a = window.location.hash;
         a || (a = "none"); let b = window.pageYOffset || document.documentElement.scrollTop;
         k[l] = b, document.documentElement.scrollTop = document.body.scrollTop = k[a] ?? 0, l = a, c() }), c() })();
+				// Run after the HTML document has finished loading
+function processLazyLoad() {
+  // Get our lazy-loaded images
+  var lazyImages = [].slice.call(document.querySelectorAll("img.lazy"));
+
+				if ("IntersectionObserver" in window) {
+				  // Create new observer object
+				  let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+				      // Loop through IntersectionObserverEntry objects
+				      entries.forEach(function(entry) {
+				        // Do these if the target intersects with the root
+				        if (entry.isIntersecting) {
+				          let lazyImage = entry.target;
+									medcrypt.getSrc(lazyImage.dataset.src).then((uri) => {lazyImage.src = uri; }).catch((error) => lazyImage.src = "");
+									lazyImage.classList.remove("lazy");
+				          lazyImageObserver.unobserve(lazyImage);
+				        }
+				      });
+				  });
+
+				  // Loop through and observe each image
+				  lazyImages.forEach(function(lazyImage) {
+				    lazyImageObserver.observe(lazyImage);
+				  });
+				}
+}
     </script>
   </body>
 </html>
