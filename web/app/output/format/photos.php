@@ -37,6 +37,7 @@ $ENDPOINT = privuma::getEnv('ENDPOINT');
 $AUTHTOKEN = privuma::getEnv('AUTHTOKEN');
 $RCLONE_DESTINATION = privuma::getEnv('RCLONE_DESTINATION');
 $USE_X_Accel_Redirect = privuma::getEnv('USE_X_Accel_Redirect');
+$STREAM_MEDIA_FROM_FALLBACK_ENDPOINT = privuma::getEnv('STREAM_MEDIA_FROM_FALLBACK_ENDPOINT');
 
 $rcloneConfig = parse_ini_file(privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'rclone' . DIRECTORY_SEPARATOR . 'rclone.conf', true);
 
@@ -99,7 +100,14 @@ function RClone_S3_PresignedURL($AWSAccessKeyId, $AWSSecretAccessKey, $BucketNam
 function redirectToMedia($path) {
     global $ops;
     global $USE_X_Accel_Redirect;
+    global $STREAM_MEDIA_FROM_FALLBACK_ENDPOINT;
     $path = $ops->encode($path);
+
+    if($STREAM_MEDIA_FROM_FALLBACK_ENDPOINT) {
+        $url = getProtectedUrlForMediaPath($path, true, true);
+        header("Location: {$url}");
+        die();
+    }
 
     if ($USE_X_Accel_Redirect){
         header('Content-Type: ' . get_mime_by_filename(privuma::canonicalizePath(ltrim( $path, DIRECTORY_SEPARATOR))));
@@ -182,7 +190,7 @@ if (isset($_SERVER["HTTP_CF_CONNECTING_IP"])) {
 
 
   //die("-" . $_SERVER['HTTP_USER_AGENT'] . "-" . $_SERVER['REMOTE_ADDR'] );
-function rollingTokens($seed) {
+function rollingTokens($seed, $noIp = false) {
     $d1 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
     $d2 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
     $d3 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
@@ -194,13 +202,13 @@ function rollingTokens($seed) {
     return [
         sha1(md5($d1->format('Y-m-d H:i:s'))."-".$seed . "-" .
 //          $_SERVER['HTTP_USER_AGENT'] . "-" .
-          $_SERVER['REMOTE_ADDR'] ),
+          ($noIp ? "" : $_SERVER['REMOTE_ADDR'] ) ),
         sha1(md5($d2->format('Y-m-d H:i:s'))."-".$seed . "-" .
 //          $_SERVER['HTTP_USER_AGENT'] . "-" .
-          $_SERVER['REMOTE_ADDR'] ),
+          ($noIp ? "" : $_SERVER['REMOTE_ADDR'] ) ),
         sha1(md5($d3->format('Y-m-d H:i:s'))."-".$seed . "-" .
 //          $_SERVER['HTTP_USER_AGENT'] . "-" .
- $_SERVER['REMOTE_ADDR'] ),
+ ($noIp ? "" : $_SERVER['REMOTE_ADDR'] ) ),
     ];
 };
 
@@ -293,11 +301,11 @@ function realFilePath($filePath, $dirnamed_sync_folder = false)
     return false;
 }
 
-function getProtectedUrlForMediaPath($path, $use_fallback = false) {
+function getProtectedUrlForMediaPath($path, $use_fallback = false, $noIp = false) {
     global $ENDPOINT;
     global $FALLBACK_ENDPOINT;
     global $AUTHTOKEN;
-    $uri = "?token=" . rollingTokens($AUTHTOKEN)[1]  . "&media=" . urlencode(base64_encode($path));
+    $uri = "?token=" . rollingTokens($AUTHTOKEN, $noIp)[1]  . "&media=" . urlencode(base64_encode($path));
     return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
 }
 
