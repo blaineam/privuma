@@ -3,6 +3,7 @@
 use privuma\privuma;
 use privuma\helpers\mediaFile;
 use privuma\helpers\cloudFS;
+use MediaCrypto\MediaCrypto;
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
 
@@ -43,97 +44,6 @@ while ($row = $stmt->fetch()) {
 
 echo PHP_EOL."All Database Lookup Operations have been completed.";
 
-function encrypt($password, $text) {
-
-	// move text to base64
-	$base64 = base64_encode( $text );
-
-	// text string to array
-	$arr = str_split($base64);
-
-	// arr of password
-	$arrPass = str_split($password);
-	$lastPassLetter = 0;
-
-	// encrypted string
-	$encrypted = '';
-
-	// encrypt
-	for ($i=0; $i < sizeof( $arr ); $i++) {
-
-		$letter = $arr[ $i ];
-
-		$passwordLetter = $arrPass[ $lastPassLetter ];
-
-		$temp = getLetterFromAlphabetForLetter(
-			$passwordLetter, $letter );
-
-		if ($temp != null) {
-			// concat to the final response encrypted string
-			$encrypted .= $temp;
-		} else {
-			// if any error, return null
-			return null;
-		}
-
-		/*
-			This is important: if we're out of letters in our
-			password, we need to start from the begining.
-		*/
-		if ($lastPassLetter == ( sizeof( $arrPass ) - 1) ) {
-			$lastPassLetter = 0;
-		} else {
-			$lastPassLetter ++;
-		}
-	}
-
-	// We finally return the encrypted string
-	return $encrypted;
-}
-
-
-function getLetterFromAlphabetForLetter( $letter, $letterToChange) {
-
-	// this is the alphabet we know, plus numbers and the = sign
-	$abc = 'abcdefghijklmnopqrstuvwxyz0123456789=+/ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-	// get the position of the given letter, according to our abc
-	$posLetter = strpos( $abc, $letter );
-
-	// if we cannot get it, then we can't continue
-	if ($posLetter === false) {
-		echo 'Password letter ' . $letter . ' not allowed.';
-		return null;
-	}
-
-	// according to our abc, get the position of the letter to encrypt
-	$posLetterToChange = strpos( $abc, $letterToChange );
-
-	// again, if any error, we cannot continue...
-	if ($posLetterToChange === false) {
-		echo 'Password letter ' . $letterToChange . ' not allowed.';
-		return null;
-	}
-
-	// let's build the new abc. this is the important part
-	$part1 = substr( $abc, $posLetter, strlen( $abc ) );
-	$part2 = substr( $abc, 0, $posLetter);
-	$newABC = '' . $part1 . '' . $part2;
-
-	// we get the encrypted letter
-	$temp = str_split($newABC);
-	$letterAccordingToAbc = $temp[ $posLetterToChange ];
-
-	// and return to the routine...
-	return $letterAccordingToAbc;
-}
-
-function chunker($pass, $text) {
-
-  return implode("|",array_map(function($chunk) use($pass){ return encrypt($pass, $chunk); }, str_split($text, 512*2048)));
-
-}
-
 $viewerHTML = <<<'HEREHTML'
 <meta charset="utf8" />
 <html>
@@ -159,9 +69,6 @@ html, body{margin: 0;padding: 0;height: 100%;width: 100%;}.gallerypicture {width
 
 </style>
 <script>
-// String Decryption Utility
-function decrypt(t,e){var r=e.split(""),n=t.split("");let l=0,o="";for(let t=0;t<r.length;t++){var s=r[t],s=getInvertedLetterFromAlphabetForLetter(n[l],s);if(!s)return null;o+=s,l==n.length-1?l=0:l++}return atob(o)}function getInvertedLetterFromAlphabetForLetter(t,e){var r="abcdefghijklmnopqrstuvwxyz0123456789=+/ABCDEFGHIJKLMNOPQRSTUVWXYZ",n=r.indexOf(t);if(-1==n)return console.log("Password letter "+t+" not allowed."),null;const l=""+r.substring(n,r.length)+r.substring(0,n);e=l.indexOf(e);return-1==e?(console.log("Password letter "+t+" not allowed."),null):r.split("")[e]}function encrypt(t,e){const r=btoa(e);var n=r.split(""),l=t.split("");let o=0,s="";for(let t=0;t<n.length;t++){var i=n[t],i=getLetterFromAlphabetForLetter(l[o],i);if(!i)return null;s+=i,o==l.length-1?o=0:o++}return s}function getLetterFromAlphabetForLetter(t,e){var r="abcdefghijklmnopqrstuvwxyz0123456789=+/ABCDEFGHIJKLMNOPQRSTUVWXYZ",n=r.indexOf(t);if(-1==n)return console.log("Password letter "+t+" not allowed."),null;e=r.indexOf(e);if(-1==e)return console.log("Password letter "+t+" not allowed."),null;const l=""+r.substring(n,r.length)+r.substring(0,n);return l.split("")[e]}const merger=function(e,t){return t.split("|").map(t=>decrypt(e,t)).join("")};
-
 // GIF Duration Utility
 !function(t){var n={};function i(e){if(n[e])return n[e].exports;var r=n[e]={i:e,l:!1,exports:{}};return t[e].call(r.exports,r,r.exports,i),r.l=!0,r.exports}i.m=t,i.c=n,i.d=function(e,r,t){i.o(e,r)||Object.defineProperty(e,r,{enumerable:!0,get:t})},i.r=function(e){"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(e,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(e,"__esModule",{value:!0})},i.t=function(r,e){if(1&e&&(r=i(r)),8&e)return r;if(4&e&&"object"==typeof r&&r&&r.__esModule)return r;var t=Object.create(null);if(i.r(t),Object.defineProperty(t,"default",{enumerable:!0,value:r}),2&e&&"string"!=typeof r)for(var n in r)i.d(t,n,function(e){return r[e]}.bind(null,n));return t},i.n=function(e){var r=e&&e.__esModule?function(){return e.default}:function(){return e};return i.d(r,"a",r),r},i.o=function(e,r){return Object.prototype.hasOwnProperty.call(e,r)},i.p="",i(i.s=0)}([function(e,r,t){"use strict";t.r(r);var n=t(1);window.getGifDuration=async function(e){e=await(await fetch(e)).arrayBuffer(),e=Object(n.parseGIF)(e);return Object(n.decompressFrames)(e,!0).map(e=>e.delay).reduce((e,r)=>e+r,0)}},function(e,r,t){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.decompressFrames=r.decompressFrame=r.parseGIF=void 0;var n,i=(n=t(2))&&n.__esModule?n:{default:n},o=t(3),a=t(4),d=t(5),u=t(6);r.parseGIF=function(e){e=new Uint8Array(e);return(0,o.parse)((0,a.buildStream)(e),i.default)};function c(e,r,t){if(e.image){var n=e.image,i=n.descriptor.width*n.descriptor.height,i=(0,u.lzw)(n.data.minCodeSize,n.data.blocks,i);n.descriptor.lct.interlaced&&(i=(0,d.deinterlace)(i,n.descriptor.width));i={pixels:i,dims:{top:e.image.descriptor.top,left:e.image.descriptor.left,width:e.image.descriptor.width,height:e.image.descriptor.height}};return n.descriptor.lct&&n.descriptor.lct.exists?i.colorTable=n.lct:i.colorTable=r,e.gce&&(i.delay=10*(e.gce.delay||10),i.disposalType=e.gce.extras.disposal,e.gce.extras.transparentColorGiven&&(i.transparentIndex=e.gce.transparentColorIndex)),t&&(i.patch=function(e){for(var r=e.pixels.length,t=new Uint8ClampedArray(4*r),n=0;n<r;n++){var i=4*n,o=e.pixels[n],a=e.colorTable[o]||[0,0,0];t[i]=a[0],t[1+i]=a[1],t[2+i]=a[2],t[3+i]=o!==e.transparentIndex?255:0}return t}(i)),i}console.warn("gif frame does not have associated image.")}r.decompressFrame=c;r.decompressFrames=function(r,t){return r.frames.filter(function(e){return e.image}).map(function(e){return c(e,r.gct,t)})}},function(e,r,t){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.default=void 0;var n=t(3),c=t(4),i={blocks:function(e){for(var r=[],t=e.data.length,n=0,i=(0,c.readByte)()(e);0!==i&&i;i=(0,c.readByte)()(e)){if(e.pos+i>=t){var o=t-e.pos;r.push((0,c.readBytes)(o)(e)),n+=o;break}r.push((0,c.readBytes)(i)(e)),n+=i}for(var a=new Uint8Array(n),d=0,u=0;u<r.length;u++)a.set(r[u],d),d+=r[u].length;return a}},o=(0,n.conditional)({gce:[{codes:(0,c.readBytes)(2)},{byteSize:(0,c.readByte)()},{extras:(0,c.readBits)({future:{index:0,length:3},disposal:{index:3,length:3},userInput:{index:6},transparentColorGiven:{index:7}})},{delay:(0,c.readUnsigned)(!0)},{transparentColorIndex:(0,c.readByte)()},{terminator:(0,c.readByte)()}]},function(e){e=(0,c.peekBytes)(2)(e);return 33===e[0]&&249===e[1]}),a=(0,n.conditional)({image:[{code:(0,c.readByte)()},{descriptor:[{left:(0,c.readUnsigned)(!0)},{top:(0,c.readUnsigned)(!0)},{width:(0,c.readUnsigned)(!0)},{height:(0,c.readUnsigned)(!0)},{lct:(0,c.readBits)({exists:{index:0},interlaced:{index:1},sort:{index:2},future:{index:3,length:2},size:{index:5,length:3}})}]},(0,n.conditional)({lct:(0,c.readArray)(3,function(e,r,t){return Math.pow(2,t.descriptor.lct.size+1)})},function(e,r,t){return t.descriptor.lct.exists}),{data:[{minCodeSize:(0,c.readByte)()},i]}]},function(e){return 44===(0,c.peekByte)()(e)}),d=(0,n.conditional)({text:[{codes:(0,c.readBytes)(2)},{blockSize:(0,c.readByte)()},{preData:function(e,r,t){return(0,c.readBytes)(t.text.blockSize)(e)}},i]},function(e){e=(0,c.peekBytes)(2)(e);return 33===e[0]&&1===e[1]}),t=(0,n.conditional)({application:[{codes:(0,c.readBytes)(2)},{blockSize:(0,c.readByte)()},{id:function(e,r,t){return(0,c.readString)(t.blockSize)(e)}},i]},function(e){e=(0,c.peekBytes)(2)(e);return 33===e[0]&&255===e[1]}),i=(0,n.conditional)({comment:[{codes:(0,c.readBytes)(2)},i]},function(e){e=(0,c.peekBytes)(2)(e);return 33===e[0]&&254===e[1]}),d=[{header:[{signature:(0,c.readString)(3)},{version:(0,c.readString)(3)}]},{lsd:[{width:(0,c.readUnsigned)(!0)},{height:(0,c.readUnsigned)(!0)},{gct:(0,c.readBits)({exists:{index:0},resolution:{index:1,length:3},sort:{index:4},size:{index:5,length:3}})},{backgroundColorIndex:(0,c.readByte)()},{pixelAspectRatio:(0,c.readByte)()}]},(0,n.conditional)({gct:(0,c.readArray)(3,function(e,r){return Math.pow(2,r.lsd.gct.size+1)})},function(e,r){return r.lsd.gct.exists}),{frames:(0,n.loop)([o,t,i,a,d],function(e){e=(0,c.peekByte)()(e);return 33===e||44===e})}];r.default=d},function(e,r,t){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.loop=r.conditional=r.parse=void 0;function o(r,e){var t,n=2<arguments.length&&void 0!==arguments[2]?arguments[2]:{},i=3<arguments.length&&void 0!==arguments[3]?arguments[3]:n;return Array.isArray(e)?e.forEach(function(e){return o(r,e,n,i)}):"function"==typeof e?e(r,n,i,o):(t=Object.keys(e)[0],Array.isArray(e[t])?(i[t]={},o(r,e[t],n,i[t])):i[t]=e[t](r,n,i,o)),n}r.parse=o;r.conditional=function(i,o){return function(e,r,t,n){o(e,r,t)&&n(e,i,r,t)}};r.loop=function(d,u){return function(e,r,t,n){for(var i=[],o=e.pos;u(e,r,t);){var a={};if(n(e,d,r,a),e.pos===o)break;o=e.pos,i.push(a)}return i}}},function(e,r,t){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.readBits=r.readArray=r.readUnsigned=r.readString=r.peekBytes=r.readBytes=r.peekByte=r.readByte=r.buildStream=void 0;r.buildStream=function(e){return{data:e,pos:0}};function o(){return function(e){return e.data[e.pos++]}}r.readByte=o;r.peekByte=function(){var r=0<arguments.length&&void 0!==arguments[0]?arguments[0]:0;return function(e){return e.data[e.pos+r]}};function c(r){return function(e){return e.data.subarray(e.pos,e.pos+=r)}}r.readBytes=c;r.peekBytes=function(r){return function(e){return e.data.subarray(e.pos,e.pos+r)}};r.readString=function(r){return function(e){return Array.from(c(r)(e)).map(function(e){return String.fromCharCode(e)}).join("")}};r.readUnsigned=function(r){return function(e){e=c(2)(e);return r?(e[1]<<8)+e[0]:(e[0]<<8)+e[1]}};r.readArray=function(d,u){return function(e,r,t){for(var n="function"==typeof u?u(e,r,t):u,i=c(d),o=new Array(n),a=0;a<n;a++)o[a]=i(e);return o}};r.readBits=function(i){return function(e){for(var r=o()(e),n=new Array(8),t=0;t<8;t++)n[7-t]=!!(r&1<<t);return Object.keys(i).reduce(function(e,r){var t=i[r];return t.length?e[r]=function(e,r,t){for(var n=0,i=0;i<t;i++)n+=e[r+i]&&Math.pow(2,t-i-1);return n}(n,t.index,t.length):e[r]=n[t.index],e},{})}}},function(e,r,t){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.deinterlace=void 0;r.deinterlace=function(e,r){for(var t,n,i=new Array(e.length),o=e.length/r,a=[0,4,2,1],d=[8,8,4,2],u=0,c=0;c<4;c++)for(var s=a[c];s<o;s+=d[c])t=s,n=u,n=e.slice(n*r,(n+1)*r),i.splice.apply(i,[t*r,r].concat(n)),u++;return i}},function(e,r,t){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.lzw=void 0;r.lzw=function(e,r,t){for(var n,i,o,a,d,u,c,s,f=4096,l=t,p=new Array(t),y=new Array(f),g=new Array(f),v=new Array(4097),h=e,m=1<<h,b=1+m,x=2+m,B=-1,w=h+1,k=(1<<w)-1,S=0;S<m;S++)y[S]=0,g[S]=S;for(i=o=a=d=u=c=s=0;i<l;){if(0===u){if(a<w){o+=r[s]<<a,a+=8,s++;continue}if(S=o&k,o>>=w,a-=w,x<S||S==b)break;if(S==m){k=(1<<(w=h+1))-1,x=2+m,B=-1;continue}if(-1==B){v[u++]=g[S],d=B=S;continue}for((n=S)==x&&(v[u++]=d,S=B);m<S;)v[u++]=g[S],S=y[S];d=255&g[S],v[u++]=d,x<f&&(y[x]=B,g[x]=d,0==(++x&k)&&x<f&&(w++,k+=x)),B=n}u--,p[c++]=v[u],i++}for(i=c;i<l;i++)p[i]=0;return p}}]);
 
@@ -491,308 +398,336 @@ let medcrypt = {
       <button class="btn btn-secondary" id="backBtn">Back</button><input type="search" class="form-control" id="searchInput" placeholder="Search">
     </div>
 
-    <script src="../ZW/ZW5jcnlwdGVkX2RhdGE=.js"></script>
-  <script>var passphrase = prompt("Enter your download password")
-    .replace(/[^a-z0-9]/gi, "");
-  jQuery.fancybox.defaults = { ...jQuery.fancybox.defaults, hash: false, loop: !0, buttons: ["zoom", "slideShow", "fullScreen", "download", "thumbs", "close"], video: { ...jQuery.fancybox.defaults.video, format: "video/mp4", autoStart: false } };
+    <script src=""></script>
+  <script>var passphrase = prompt("Enter your download password");
 
-  function imgError(a) {}
+    function loadScript(url, callback)
+    {
+        // Adding the script tag to the head as suggested before
+        var head = document.head;
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = url;
 
-  function imgLoad(a) { window.getGifDuration(jQuery(a)
-        .attr("src"))
-      .then(b => { jQuery(a)
-          .data("duration", b), console.log(b) }) }
+        // Then bind the event to the callback function.
+        // There are several events for cross browser compatibility.
+        script.onreadystatechange = callback;
+        script.onload = callback;
 
-  function getFolderContent(a, b, c = "") { return c ? a.filter(a => a.album.split("---")
-        .pop()
-        .includes(c))
-      .filter((a, b, c) => c.map(({ album: a }) => a)
-        .indexOf(a.album) === b)
-      .map(a => ({ ...a, displayName: getItemDisplayName(a.album, b, c) })) : b ? a.filter((a, c, d) => !!a.album.includes(b) && d.map(({ album: a }) => a.replace(b, "")
-          .split("---")
-          .filter(a => a)[0])
-        .indexOf(a.album.replace(b, "")
-          .split("---")
-          .filter(a => a)[0]) === c)
-      .map(a => ({ ...a, displayName: getItemDisplayName(a.album, b, c) })) : a.filter((a, b, c) => c.map(({ album: a }) => a.split("---")[0])
-        .indexOf(a.album.split("---")[0]) === b)
-      .map(a => ({ ...a, displayName: getItemDisplayName(a.album, b, c) })) }
-
-  function getPathIndex(a) { return a ? a.split("---")
-      .length : 0 }
-
-  function getItemDisplayName(a, b, c = "") { if (c) return a.split("---")
-      .pop(); let d = a.split("---")[getPathIndex(b)]; return d || (d = b.split("---")
-      .filter(a => a)
-      .pop()), d }
-
-  function shouldOpenAlbum(a, b) {
-    let c = getFolderContent(a, b)
-      .map(a => getItemDisplayName(a.album, b));
-    if (0 == c.length) {
-      let a = b.split("---")
-        .filter(a => a);
-      return a.pop(), a.join("---")
-    }
-    if (1 == c.length) return b.split("---")
-      .pop() !== c[0] ? console.log([b.split("---")
-        .pop(), c[0]
-      ]) && !1 : b;
-    return !1
-  }(async () => {
-    function a(c, d) { var f = alasql("select m1.* from ? m1 join ? m2 on m1.hash = m2.hash where m2.album = ? and m2.hash != 'compressed' and m1.dupe = 0 group by m1.filename order by " + (c.includes("comic") ? "m1.filename asc" : "CASE WHEN m1.filename LIKE '%.gif' THEN 1 WHEN m1.filename LIKE '%.mp4' THEN 2 WHEN m1.filename LIKE '%.webm' THEN 3 ELSE 4 END, m1.time DESC"), [e, e, c]);
-      f || (alert("This album contains no content please add content to this album via the privuma web service"), window.history.back()), f.sort((d, a) => { let b = d.filename.split(".")
-          .pop(),
-          e = a.filename.split(".")
-          .pop(),
-          f = d.time,
-          g = a.time; return c.includes("comic") ? d.filename.localeCompare(a.filename, void 0, { numeric: !0, sensitivity: "base" }) : "gif" == b && "gif" != e ? -1 : "gif" == e && "gif" != b ? 1 : "mp4" == b && "mp4" != e ? -1 : "mp4" == e && "mp4" != b ? 1 : "webm" == b && "webm" != e ? -1 : "webm" == e && "webm" != b ? 1 : a.time.localeCompare(d.time, void 0, { numeric: !0, sensitivity: "base" }) }), Promise.allSettled(f.map(function(a) {
-
-          let b = a.filename,
-          c = a.album,
-          e = b.split("."),
-          f = e.pop(),
-          g = [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".mp4", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"].includes("." + f);
-          if (("video" == d || "all" == d) && g) {
-          let c = e.join(".") + ".jpg",
-            d = btoa(a.hash) + ".mp4",
-            f = btoa(a.hash) + ".jpg",
-            resource = `../${f.substring(0,2)}/${f}`;
-          return Promise.resolve([resource, true, b, d]);
-          }
-          if (("photo" == d || "all" == d) && !g) {
-            let c = btoa(a.hash) + "." + f,
-              resource = `../${c.substring(0,2)}/${c}`;
-							return Promise.resolve([resource, false, b, d]);
-          }
-        })).then(results => {
-          results.filter(result => typeof result.value !== 'undefined').map(result => result.value).forEach(([uri, isVideo, b, d]) => isVideo
-            ? jQuery("#content")
-              .append(`<a class="gallerypicture" title="${b}" data-type="video" data-fancybox="gallery" href="../${d.substring(0,2)}/${d}">
-                <img src="" class="lazy" data-src="${uri}" loading="lazy" alt="">
-                </a>`)
-            : jQuery("#content")
-              .append(`<a class="gallerypicture" data-width="1920" href="${uri}" title="${b}" data-fancybox="gallery">
-                <img src="" class="lazy" data-src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)">
-                </a>`)
-          );
-        }).finally(() => {
-        	processLazyLoad();
-          console.log("rendered");
-        });
+        // Fire the loading
+        head.appendChild(script);
     }
 
-    function b() { res = h, res || (alert("This album contains no content please add content to this album via the privuma web service"), window.history.back()), Promise.allSettled(getFolderContent(res, f, g).map(function(a) {
-      let b = a.filename,
-            c = a.displayName,
-            e = c;
-          f && (e = f + "---" + e), g && (e = a.album + "---" + a.album.split("---")
-            .pop()); let h = b.split("."),
-            i = h.pop(),
-            j = [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".mp4", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"].includes("." + i),
-            k = btoa(a.hash) + "." + (j ? "jpg" : i),
-            l = document.querySelector("#content"),
-            resource = `../${k.substring(0,2)}/${k}`;
-          return Promise.resolve([resource, c, e, d]);
-    })).then(results => {
-      results.filter(result => typeof result.value !== 'undefined').map(result => result.value).forEach(([uri, c, e, d]) => jQuery("#content")
-        .append(`<div class="gallerypicture">
-              <img src="" data-src="${uri}" class="lazy openalbum" loading="lazy" alt="" data-hash="${btoa(e)+d+"all"}">
-          <p>
-            <button class="btn mr-3 btn-sm btn-primary openalbum" data-hash="${btoa(e)+d+"photo"}">
-              <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-                width="20px" height="20px" viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">
-                  <g>
-                      <path fill="#ffffff" d="M93.194,18c0-2.47-2.002-4.472-4.472-4.472c-0.228,0-0.447,0.034-0.667,0.067V13.5H11.25v0.028
-                          c-2.47,0-4.472,2.002-4.472,4.472l0,0.001v63.998l0,0.001l0,0.001V82.5h0.05c0.252,2.231,2.123,3.972,4.421,3.972V86.5h76.805
-                          v-0.095c0.219,0.033,0.438,0.067,0.667,0.067c2.299,0,4.17-1.74,4.422-3.972h0.078V18H93.194z M83.265,76.543H72.404
-                          c-0.038-0.155-0.092-0.304-0.166-0.442l0.018-0.01l-22.719-39.35l-0.009,0.005c-0.5-1.027-1.544-1.74-2.764-1.74
-                          c-1.251,0-2.324,0.749-2.807,1.821L28.838,63.013l-3.702-6.411l-0.005,0.003c-0.264-0.542-0.814-0.918-1.457-0.918
-                          c-0.659,0-1.224,0.395-1.479,0.958l-5.46,9.457V23.485h66.53V76.543z"/>
-                      <circle fill="#ffffff" cx="68.122" cy="38.584" r="10.1"/>
-                  </g>
-              </svg>
-            </button>
-            <button class="btn mr-3 btn-sm btn-success openalbum" data-hash="${btoa(e)+d+"video"}">
-              <svg width="20px" height="20px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <rect x="0" fill="none" width="24" height="24"/>
-                <g>
-                  <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
-                </g>
-              </svg>
-            </button>
-            <button class="btn mr-3 btn-sm btn-danger openalbum" data-hash="${btoa(e)+d+"all"}">
-              <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-                width="20px" height="20px" viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">
-                  <g>
-                      <path fill="#ffffff" d="M93.194,18c0-2.47-2.002-4.472-4.472-4.472c-0.228,0-0.447,0.034-0.667,0.067V13.5H11.25v0.028
-                          c-2.47,0-4.472,2.002-4.472,4.472l0,0.001v63.998l0,0.001l0,0.001V82.5h0.05c0.252,2.231,2.123,3.972,4.421,3.972V86.5h76.805
-                          v-0.095c0.219,0.033,0.438,0.067,0.667,0.067c2.299,0,4.17-1.74,4.422-3.972h0.078V18H93.194z M83.265,76.543H72.404
-                          c-0.038-0.155-0.092-0.304-0.166-0.442l0.018-0.01l-22.719-39.35l-0.009,0.005c-0.5-1.027-1.544-1.74-2.764-1.74
-                          c-1.251,0-2.324,0.749-2.807,1.821L28.838,63.013l-3.702-6.411l-0.005,0.003c-0.264-0.542-0.814-0.918-1.457-0.918
-                          c-0.659,0-1.224,0.395-1.479,0.958l-5.46,9.457V23.485h66.53V76.543z"/>
-                      <circle fill="#ffffff" cx="68.122" cy="38.584" r="10.1"/>
-                  </g>
-              </svg>
-              <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-                viewBox="0 0 60.364 60.364" style="enable-background:new 0 0 60.364 60.364;" xml:space="preserve" width="20px" height="20px">
-                  <g>
-                      <path fill="#ffffff" d="M54.454,23.18l-18.609-0.002L35.844,5.91C35.845,2.646,33.198,0,29.934,0c-3.263,0-5.909,2.646-5.909,5.91v17.269
-                          L5.91,23.178C2.646,23.179,0,25.825,0,29.088c0.002,3.264,2.646,5.909,5.91,5.909h18.115v19.457c0,3.267,2.646,5.91,5.91,5.91
-                          c3.264,0,5.909-2.646,5.91-5.908V34.997h18.611c3.262,0,5.908-2.645,5.908-5.907C60.367,25.824,57.718,23.178,54.454,23.18z"/>
-                  </g>
-              </svg>
-              <svg width="20px" height="20px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <rect x="0" fill="none" width="24" height="24"/>
-                <g>
-                  <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
-                </g>
-              </svg>
-            </button>
-            ${c}
-          </p>
-        </div>`
-      ));
-    }).finally(() => {
-    	processLazyLoad();
-      console.log("rendered");
+    medcrypt.getSrc('../ZW/ZW5jcnlwdGVkX2RhdGE=.js').then((encrypted_data_file) => {
+      loadScript(encrypted_data_file, runApp);
     });
-  }
 
-    function c() { jQuery("#content")
-        .empty(); var c = window.location.hash; if (1 < c.length) { var e = c.substr(1)
-          .split(d),
-          i = decodeURI(atob(e[0])),
-          j = e[1]; let b = shouldOpenAlbum(h, i); if (b) return jQuery("#searchInput")
-          .hide(), void a(b, j) } jQuery("#searchInput")
-        .show(), g = jQuery("#searchInput")
-        .val() || "", f = i, b(), $(document)
-        .ready(function () { $('[data-fancybox="gallery"]')
-            .fancybox() }) } var d = "1--57--2",
-      e = JSON.parse(merger(passphrase, encrypted_data)); let f = "",
-      g = "",
-      h = alasql("select *,filename, album, max(time) as time, hash FROM ? where dupe = 0 GROUP by album order by time DESC", [e]);
-    $(document)
-      .on("click", ".openalbum", function () { window.location.hash = $(this)
-          .data("hash") }), $(document)
-      .on("keyup", "#searchInput", function () { c() }); let i, j = !1;
-    $(document)
-      .on("afterClose.fb", function () { j = !1 }),
-      $(document)
-      .on("beforeShow.fb", function (a, b, c) {
 
-      }),
-      $(document)
-      .on("afterShow.fb", function (a, b, c) {
-        if ($('video').length == 0) {
-        	let el = $('.gallerypicture[href="' + c.src + '"]');
-        	let tsrc = c.src.length > 0 ? c.src : el.data('src');
-      	medcrypt.getSrc(tsrc)
-          .then(uri => {
-              el.attr("href", uri);
-              el.find('img').attr("src", uri);
-              el.find('img').data("src", uri);
-              c.src = uri;
-              c.thumb = uri;
-              c.$thumb = el.find('img');
-              $.fancybox.getInstance().current.$slide.trigger("onReset");
-              $(".fancybox-content").removeClass('fancybox-error').html('<img style="max-width:100%; max-height:100%;" src="'+uri+'" alt="" />');
-		        if ($.fancybox.getInstance()
-          .SlideShow.isActive && ($.fancybox.getInstance()
-            .SlideShow.stop(), j = !0), !j) return;
-		        i && clearTimeout(i);
-		        let d = jQuery(c.$thumb)
-		          .data("duration");
-		        if(!d || d < 1000) {
-		        	d = 5000;
-		        }
-		        let e = d;
-		        if (5000 > d) {
-		        	let a = Math.ceil(5000 / d);
-		        	e = d * a
-		        } i = setTimeout(function () { $.fancybox.getInstance()
-		            .next() }, e)
-          }).catch();
-          return;
+    function runApp() {
+
+
+      jQuery.fancybox.defaults = { ...jQuery.fancybox.defaults, hash: false, loop: !0, buttons: ["zoom", "slideShow", "fullScreen", "download", "thumbs", "close"], video: { ...jQuery.fancybox.defaults.video, format: "video/mp4", autoStart: false } };
+
+      function imgError(a) {}
+
+      function imgLoad(a) { window.getGifDuration(jQuery(a)
+            .attr("src"))
+          .then(b => { jQuery(a)
+              .data("duration", b), console.log(b) }) }
+
+      function getFolderContent(a, b, c = "") { return c ? a.filter(a => a.album.split("---")
+            .pop()
+            .includes(c))
+          .filter((a, b, c) => c.map(({ album: a }) => a)
+            .indexOf(a.album) === b)
+          .map(a => ({ ...a, displayName: getItemDisplayName(a.album, b, c) })) : b ? a.filter((a, c, d) => !!a.album.includes(b) && d.map(({ album: a }) => a.replace(b, "")
+              .split("---")
+              .filter(a => a)[0])
+            .indexOf(a.album.replace(b, "")
+              .split("---")
+              .filter(a => a)[0]) === c)
+          .map(a => ({ ...a, displayName: getItemDisplayName(a.album, b, c) })) : a.filter((a, b, c) => c.map(({ album: a }) => a.split("---")[0])
+            .indexOf(a.album.split("---")[0]) === b)
+          .map(a => ({ ...a, displayName: getItemDisplayName(a.album, b, c) })) }
+
+      function getPathIndex(a) { return a ? a.split("---")
+          .length : 0 }
+
+      function getItemDisplayName(a, b, c = "") { if (c) return a.split("---")
+          .pop(); let d = a.split("---")[getPathIndex(b)]; return d || (d = b.split("---")
+          .filter(a => a)
+          .pop()), d }
+
+      function shouldOpenAlbum(a, b) {
+        let c = getFolderContent(a, b)
+          .map(a => getItemDisplayName(a.album, b));
+        if (0 == c.length) {
+          let a = b.split("---")
+            .filter(a => a);
+          return a.pop(), a.join("---")
+        }
+        if (1 == c.length) return b.split("---")
+          .pop() !== c[0] ? console.log([b.split("---")
+            .pop(), c[0]
+          ]) && !1 : b;
+        return !1
+      }(async () => {
+        function a(c, d) { var f = alasql("select m1.* from ? m1 join ? m2 on m1.hash = m2.hash where m2.album = ? and m2.hash != 'compressed' and m1.dupe = 0 group by m1.filename order by " + (c.includes("comic") ? "m1.filename asc" : "CASE WHEN m1.filename LIKE '%.gif' THEN 1 WHEN m1.filename LIKE '%.mp4' THEN 2 WHEN m1.filename LIKE '%.webm' THEN 3 ELSE 4 END, m1.time DESC"), [e, e, c]);
+          f || (alert("This album contains no content please add content to this album via the privuma web service"), window.history.back()), f.sort((d, a) => { let b = d.filename.split(".")
+              .pop(),
+              e = a.filename.split(".")
+              .pop(),
+              f = d.time,
+              g = a.time; return c.includes("comic") ? d.filename.localeCompare(a.filename, void 0, { numeric: !0, sensitivity: "base" }) : "gif" == b && "gif" != e ? -1 : "gif" == e && "gif" != b ? 1 : "mp4" == b && "mp4" != e ? -1 : "mp4" == e && "mp4" != b ? 1 : "webm" == b && "webm" != e ? -1 : "webm" == e && "webm" != b ? 1 : a.time.localeCompare(d.time, void 0, { numeric: !0, sensitivity: "base" }) }), Promise.allSettled(f.map(function(a) {
+
+              let b = a.filename,
+              c = a.album,
+              e = b.split("."),
+              f = e.pop(),
+              g = [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".mp4", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"].includes("." + f);
+              if (("video" == d || "all" == d) && g) {
+              let c = e.join(".") + ".jpg",
+                d = btoa(a.hash) + ".mp4",
+                f = btoa(a.hash) + ".jpg",
+                resource = `../${f.substring(0,2)}/${f}`;
+              return Promise.resolve([resource, true, b, d]);
+              }
+              if (("photo" == d || "all" == d) && !g) {
+                let c = btoa(a.hash) + "." + f,
+                  resource = `../${c.substring(0,2)}/${c}`;
+                  return Promise.resolve([resource, false, b, d]);
+              }
+            })).then(results => {
+              results.filter(result => typeof result.value !== 'undefined').map(result => result.value).forEach(([uri, isVideo, b, d]) => isVideo
+                ? jQuery("#content")
+                  .append(`<a class="gallerypicture" title="${b}" data-type="video" data-fancybox="gallery" href="../${d.substring(0,2)}/${d}">
+                    <img src="" class="lazy" data-src="${uri}" loading="lazy" alt="">
+                    </a>`)
+                : jQuery("#content")
+                  .append(`<a class="gallerypicture" data-width="1920" href="${uri}" title="${b}" data-fancybox="gallery">
+                    <img src="" class="lazy" data-src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)">
+                    </a>`)
+              );
+            }).finally(() => {
+              processLazyLoad();
+              console.log("rendered");
+            });
         }
 
-      	$("video")
-          .trigger("pause");
-        medcrypt.getSrc(c.src)
-          .then(uri => { $('.gallerypicture[href="' + c.src + '"]')
-              .attr("href", uri);
+        function b() { res = h, res || (alert("This album contains no content please add content to this album via the privuma web service"), window.history.back()), Promise.allSettled(getFolderContent(res, f, g).map(function(a) {
+          let b = a.filename,
+                c = a.displayName,
+                e = c;
+              f && (e = f + "---" + e), g && (e = a.album + "---" + a.album.split("---")
+                .pop()); let h = b.split("."),
+                i = h.pop(),
+                j = [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".mp4", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"].includes("." + i),
+                k = btoa(a.hash) + "." + (j ? "jpg" : i),
+                l = document.querySelector("#content"),
+                resource = `../${k.substring(0,2)}/${k}`;
+              return Promise.resolve([resource, c, e, d]);
+        })).then(results => {
+          results.filter(result => typeof result.value !== 'undefined').map(result => result.value).forEach(([uri, c, e, d]) => jQuery("#content")
+            .append(`<div class="gallerypicture">
+                  <img src="" data-src="${uri}" class="lazy openalbum" loading="lazy" alt="" data-hash="${btoa(e)+d+"all"}">
+              <p>
+                <button class="btn mr-3 btn-sm btn-primary openalbum" data-hash="${btoa(e)+d+"photo"}">
+                  <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                    width="20px" height="20px" viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">
+                      <g>
+                          <path fill="#ffffff" d="M93.194,18c0-2.47-2.002-4.472-4.472-4.472c-0.228,0-0.447,0.034-0.667,0.067V13.5H11.25v0.028
+                              c-2.47,0-4.472,2.002-4.472,4.472l0,0.001v63.998l0,0.001l0,0.001V82.5h0.05c0.252,2.231,2.123,3.972,4.421,3.972V86.5h76.805
+                              v-0.095c0.219,0.033,0.438,0.067,0.667,0.067c2.299,0,4.17-1.74,4.422-3.972h0.078V18H93.194z M83.265,76.543H72.404
+                              c-0.038-0.155-0.092-0.304-0.166-0.442l0.018-0.01l-22.719-39.35l-0.009,0.005c-0.5-1.027-1.544-1.74-2.764-1.74
+                              c-1.251,0-2.324,0.749-2.807,1.821L28.838,63.013l-3.702-6.411l-0.005,0.003c-0.264-0.542-0.814-0.918-1.457-0.918
+                              c-0.659,0-1.224,0.395-1.479,0.958l-5.46,9.457V23.485h66.53V76.543z"/>
+                          <circle fill="#ffffff" cx="68.122" cy="38.584" r="10.1"/>
+                      </g>
+                  </svg>
+                </button>
+                <button class="btn mr-3 btn-sm btn-success openalbum" data-hash="${btoa(e)+d+"video"}">
+                  <svg width="20px" height="20px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="0" fill="none" width="24" height="24"/>
+                    <g>
+                      <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
+                    </g>
+                  </svg>
+                </button>
+                <button class="btn mr-3 btn-sm btn-danger openalbum" data-hash="${btoa(e)+d+"all"}">
+                  <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                    width="20px" height="20px" viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">
+                      <g>
+                          <path fill="#ffffff" d="M93.194,18c0-2.47-2.002-4.472-4.472-4.472c-0.228,0-0.447,0.034-0.667,0.067V13.5H11.25v0.028
+                              c-2.47,0-4.472,2.002-4.472,4.472l0,0.001v63.998l0,0.001l0,0.001V82.5h0.05c0.252,2.231,2.123,3.972,4.421,3.972V86.5h76.805
+                              v-0.095c0.219,0.033,0.438,0.067,0.667,0.067c2.299,0,4.17-1.74,4.422-3.972h0.078V18H93.194z M83.265,76.543H72.404
+                              c-0.038-0.155-0.092-0.304-0.166-0.442l0.018-0.01l-22.719-39.35l-0.009,0.005c-0.5-1.027-1.544-1.74-2.764-1.74
+                              c-1.251,0-2.324,0.749-2.807,1.821L28.838,63.013l-3.702-6.411l-0.005,0.003c-0.264-0.542-0.814-0.918-1.457-0.918
+                              c-0.659,0-1.224,0.395-1.479,0.958l-5.46,9.457V23.485h66.53V76.543z"/>
+                          <circle fill="#ffffff" cx="68.122" cy="38.584" r="10.1"/>
+                      </g>
+                  </svg>
+                  <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                    viewBox="0 0 60.364 60.364" style="enable-background:new 0 0 60.364 60.364;" xml:space="preserve" width="20px" height="20px">
+                      <g>
+                          <path fill="#ffffff" d="M54.454,23.18l-18.609-0.002L35.844,5.91C35.845,2.646,33.198,0,29.934,0c-3.263,0-5.909,2.646-5.909,5.91v17.269
+                              L5.91,23.178C2.646,23.179,0,25.825,0,29.088c0.002,3.264,2.646,5.909,5.91,5.909h18.115v19.457c0,3.267,2.646,5.91,5.91,5.91
+                              c3.264,0,5.909-2.646,5.91-5.908V34.997h18.611c3.262,0,5.908-2.645,5.908-5.907C60.367,25.824,57.718,23.178,54.454,23.18z"/>
+                      </g>
+                  </svg>
+                  <svg width="20px" height="20px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="0" fill="none" width="24" height="24"/>
+                    <g>
+                      <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
+                    </g>
+                  </svg>
+                </button>
+                ${c}
+              </p>
+            </div>`
+          ));
+        }).finally(() => {
+          processLazyLoad();
+          console.log("rendered");
+        });
+      }
+
+        function c() { jQuery("#content")
+            .empty(); var c = window.location.hash; if (1 < c.length) { var e = c.substr(1)
+              .split(d),
+              i = decodeURI(atob(e[0])),
+              j = e[1]; let b = shouldOpenAlbum(h, i); if (b) return jQuery("#searchInput")
+              .hide(), void a(b, j) } jQuery("#searchInput")
+            .show(), g = jQuery("#searchInput")
+            .val() || "", f = i, b(), $(document)
+            .ready(function () { $('[data-fancybox="gallery"]')
+                .fancybox() }) } var d = "1--57--2",
+          e = JSON.parse(encrypted_data); let f = "",
+          g = "",
+          h = alasql("select *,filename, album, max(time) as time, hash FROM ? where dupe = 0 GROUP by album order by time DESC", [e]);
+        $(document)
+          .on("click", ".openalbum", function () { window.location.hash = $(this)
+              .data("hash") }), $(document)
+          .on("keyup", "#searchInput", function () { c() }); let i, j = !1;
+        $(document)
+          .on("afterClose.fb", function () { j = !1 }),
+          $(document)
+          .on("beforeShow.fb", function (a, b, c) {
+
+          }),
+          $(document)
+          .on("afterShow.fb", function (a, b, c) {
+            if ($('video').length == 0) {
+              let el = $('.gallerypicture[href="' + c.src + '"]');
+              let tsrc = c.src.length > 0 ? c.src : el.data('src');
+            medcrypt.getSrc(tsrc)
+              .then(uri => {
+                  el.attr("href", uri);
+                  el.find('img').attr("src", uri);
+                  el.find('img').data("src", uri);
+                  c.src = uri;
+                  c.thumb = uri;
+                  c.$thumb = el.find('img');
+                  $.fancybox.getInstance().current.$slide.trigger("onReset");
+                  $(".fancybox-content").removeClass('fancybox-error').html('<img style="max-width:100%; max-height:100%;" src="'+uri+'" alt="" />');
+                if ($.fancybox.getInstance()
+              .SlideShow.isActive && ($.fancybox.getInstance()
+                .SlideShow.stop(), j = !0), !j) return;
+                i && clearTimeout(i);
+                let d = jQuery(c.$thumb)
+                  .data("duration");
+                if(!d || d < 1000) {
+                  d = 5000;
+                }
+                let e = d;
+                if (5000 > d) {
+                  let a = Math.ceil(5000 / d);
+                  e = d * a
+                } i = setTimeout(function () { $.fancybox.getInstance()
+                    .next() }, e)
+              }).catch();
+              return;
+            }
+
             $("video")
-              .find("Source:first")
-              .attr("src", uri)
-              .parent()
-              .trigger("load")
-              .trigger("play") })
-              .catch(() => {});
-        $("video")
-          .removeAttr("controls");
-        $("video")
-          .click(function toggleControls() {
-          	if (this.hasAttribute("controls")) {
-          		this.removeAttribute("controls")
-          	} else {
-          		this.setAttribute("controls", "controls")
-          	}
+              .trigger("pause");
+            medcrypt.getSrc(c.src)
+              .then(uri => { $('.gallerypicture[href="' + c.src + '"]')
+                  .attr("href", uri);
+                $("video")
+                  .find("Source:first")
+                  .attr("src", uri)
+                  .parent()
+                  .trigger("load")
+                  .trigger("play") })
+                  .catch(() => {});
+            $("video")
+              .removeAttr("controls");
+            $("video")
+              .click(function toggleControls() {
+                if (this.hasAttribute("controls")) {
+                  this.removeAttribute("controls")
+                } else {
+                  this.setAttribute("controls", "controls")
+                }
+              });
+            if ($.fancybox.getInstance()
+              .SlideShow.isActive && ($.fancybox.getInstance()
+                .SlideShow.stop(), j = !0), !j) return;
+            i && clearTimeout(i);
+            let d = jQuery(c.$thumb)
+              .data("duration");
+            if (d = d && "undefined" != typeof d && 0 != d ? d : 5e3, c.$content && 0 < jQuery(c.$content)
+              .find("video")
+              .length) return void jQuery(c.$content)
+              .find("video")
+              .on("ended", function () { $.fancybox.getInstance()
+                  .next() });
+            let e = d;
+            if (5e3 > d) {
+              let a = Math.ceil(5e3 / d);
+              e = d * a
+            } i = setTimeout(function () { $.fancybox.getInstance()
+                .next() }, e)
           });
-        if ($.fancybox.getInstance()
-          .SlideShow.isActive && ($.fancybox.getInstance()
-            .SlideShow.stop(), j = !0), !j) return;
-        i && clearTimeout(i);
-        let d = jQuery(c.$thumb)
-          .data("duration");
-        if (d = d && "undefined" != typeof d && 0 != d ? d : 5e3, c.$content && 0 < jQuery(c.$content)
-          .find("video")
-          .length) return void jQuery(c.$content)
-          .find("video")
-          .on("ended", function () { $.fancybox.getInstance()
-              .next() });
-        let e = d;
-        if (5e3 > d) {
-        	let a = Math.ceil(5e3 / d);
-        	e = d * a
-        } i = setTimeout(function () { $.fancybox.getInstance()
-            .next() }, e)
-      });
-    $("#backBtn")
-      .click(function () { let hash = window.location.hash.slice(1); if (hash) { let hashParts = hash.split(d); let path = atob(hashParts[0]); if (path.split("---")
-            .length > 1) { pathParts = path.split("---");
-            window.location.hash = [btoa(pathParts.slice(0, pathParts.length - 1)
-              .join("---")), ...hashParts.slice(1)].join(d) } else { window.location.hash = "" } } }); let k = {},
-      l = window.location.hash;
-    l || (l = "none"), $(window)
-      .on("hashchange", function () { let a = window.location.hash;
-        a || (a = "none"); let b = window.pageYOffset || document.documentElement.scrollTop;
-        k[l] = b, document.documentElement.scrollTop = document.body.scrollTop = k[a] ?? 0, l = a, c() }), c() })();
-				// Run after the HTML document has finished loading
-function processLazyLoad() {
-  // Get our lazy-loaded images
-  var lazyImages = [].slice.call(document.querySelectorAll("img.lazy"));
+        $("#backBtn")
+          .click(function () { let hash = window.location.hash.slice(1); if (hash) { let hashParts = hash.split(d); let path = atob(hashParts[0]); if (path.split("---")
+                .length > 1) { pathParts = path.split("---");
+                window.location.hash = [btoa(pathParts.slice(0, pathParts.length - 1)
+                  .join("---")), ...hashParts.slice(1)].join(d) } else { window.location.hash = "" } } }); let k = {},
+          l = window.location.hash;
+        l || (l = "none"), $(window)
+          .on("hashchange", function () { let a = window.location.hash;
+            a || (a = "none"); let b = window.pageYOffset || document.documentElement.scrollTop;
+            k[l] = b, document.documentElement.scrollTop = document.body.scrollTop = k[a] ?? 0, l = a, c() }), c() })();
+            // Run after the HTML document has finished loading
+    function processLazyLoad() {
+      // Get our lazy-loaded images
+      var lazyImages = [].slice.call(document.querySelectorAll("img.lazy"));
 
-				if ("IntersectionObserver" in window) {
-				  // Create new observer object
-				  let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
-				      // Loop through IntersectionObserverEntry objects
-				      entries.forEach(function(entry) {
-				        // Do these if the target intersects with the root
-				        if (entry.isIntersecting) {
-				          let lazyImage = entry.target;
-									medcrypt.getSrc(lazyImage.dataset.src).then((uri) => {lazyImage.src = uri; }).catch((error) => lazyImage.src = "");
-									lazyImage.classList.remove("lazy");
-				          lazyImageObserver.unobserve(lazyImage);
-				        }
-				      });
-				  });
+            if ("IntersectionObserver" in window) {
+              // Create new observer object
+              let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
+                  // Loop through IntersectionObserverEntry objects
+                  entries.forEach(function(entry) {
+                    // Do these if the target intersects with the root
+                    if (entry.isIntersecting) {
+                      let lazyImage = entry.target;
+                      medcrypt.getSrc(lazyImage.dataset.src).then((uri) => {lazyImage.src = uri; }).catch((error) => lazyImage.src = "");
+                      lazyImage.classList.remove("lazy");
+                      lazyImageObserver.unobserve(lazyImage);
+                    }
+                  });
+              });
 
-				  // Loop through and observe each image
-				  lazyImages.forEach(function(lazyImage) {
-				    lazyImageObserver.observe(lazyImage);
-				  });
-				}
-}
+              // Loop through and observe each image
+              lazyImages.forEach(function(lazyImage) {
+                lazyImageObserver.observe(lazyImage);
+              });
+            }
+    }
+
+
+  }
     </script>
   </body>
 </html>
@@ -803,8 +738,8 @@ $ops->file_put_contents("data.csv",$csv);
 unset($csv);
 
 echo PHP_EOL."Downloading encrypted database offline website payload";
-$data = chunker(preg_replace('/[^a-z\d]/i', '', $privuma->getEnv('DOWNLOAD_PASSWORD')), $data);
-$ops->file_put_contents("encrypted_data.js","const encrypted_data = `" .$data."`;");
+$data = MediaCrypto::encryptString($privuma->getEnv('DOWNLOAD_PASSWORD'), "const encrypted_data = `" .$data."`;");
+$ops->file_put_contents("encrypted_data.js",$data);
 unset($data);
 
 echo PHP_EOL."Downloading Offline Web App Viewer HTML File";

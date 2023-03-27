@@ -12,6 +12,26 @@ class MediaCrypto
         return $finfo->file($filePath);
     }
 
+    public static function encryptString(
+        string $passphrase,
+        string $data,
+    ) {
+        $tmpfile = tempnam(sys_get_temp_dir(), 'PVMA');
+        file_put_contents($tmpfile, $data);
+        self::encrypt($passphrase, $tmpfile);
+        return file_get_contents($tmpfile);
+    }
+
+    public static function decryptString(
+        string $passphrase,
+        string $data,
+    ) {
+        $tmpfile = tempnam(sys_get_temp_dir(), 'PVMA');
+        file_put_contents($tmpfile, $data);
+        self::decrypt($passphrase, $tmpfile);
+        return file_get_contents($tmpfile);
+    }
+
     public static function encrypt(
         string $passphrase,
         string $path,
@@ -156,7 +176,7 @@ class MediaCrypto
     {
         // Use this line to decrypt base64 encrypted files if you have them.
         //return openssl_decrypt($data, 'aes-256-cbc', hex2bin($key), 0, hex2bin($iv));
-    
+
         return openssl_decrypt(base64_encode(self::z85_decode($data)), 'aes-256-cbc', hex2bin($key), 0, hex2bin($iv));
     }
 
