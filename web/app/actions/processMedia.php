@@ -15,6 +15,11 @@ class processMedia {
         if(isset($data['album']) && isset($data['filename'])) {
             if(isset($data['url'])) {
                 $mediaFile = new mediaFile($data['filename'], $data['album']);
+
+                if (isset($data['metadata'])) {
+                    $mediaFile->setMetadata($data['metadata']);
+                }
+
                 if(!isset($data['cache']) || isset($data['download'])) {
                     $mediaFile = new mediaFile($data['filename'], $data['album'], null, null, null, null, $data['url'], isset($data['thumbnail']) ? $data['thumbnail'] : null );
                 }
@@ -32,6 +37,9 @@ class processMedia {
 
                     if(!isset($data['cache']) && !isset($data['download'])) {
                         $mediaFile->save();
+                        if (isset($data['metadata'])) {
+                            $mediaFile->setMetadata($data['metadata']);
+                        }
                         return;
                     }else if(
                         isset($data['download'])

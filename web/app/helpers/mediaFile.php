@@ -12,6 +12,7 @@ class mediaFile {
     private ?string $hash;
     private ?string $url;
     private ?string $thumbnail;
+    private ?string $metadata;
     private string $album;
     private string $filename;
     private string $extension;
@@ -21,7 +22,7 @@ class mediaFile {
     private PDO $pdo;
     public const SANITIZED_PATH = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'sanitizedFiles.json';
 
-    function __construct(string $filename, string $album, ?int $id = null, ?string $hash = null, ?DateTime $date = null, ?bool $dupe = null, ?string $url = null, ?string $thumbnail = null)
+    function __construct(string $filename, string $album, ?int $id = null, ?string $hash = null, ?DateTime $date = null, ?bool $dupe = null, ?string $url = null, ?string $thumbnail = null, ?string $metadata = null)
     {
         $this->id = $id;
         $this->hash = $hash;
@@ -32,6 +33,7 @@ class mediaFile {
         $this->extension = pathinfo($filename, PATHINFO_EXTENSION);
         $this->date = $date ?? new DateTime();
         $this->dupe = $dupe ?? strpos($filename, '---dupe') !== false ? 1 : 0;;
+        $this->metadata = $metadata ?? '';
         $this->cloudFS = privuma::getCloudFS();
         $this->sanitizedFilesPath = privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'sanitizedFiles.json';
         $privuma = privuma::getInstance();
@@ -56,11 +58,11 @@ class mediaFile {
 
         $dupe = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
 
-        
+
         if ($this->cloudFS->is_file($filePath)) {
             return $filePath;
         }
-        
+
         if ($this->cloudFS->is_file($compressedFile)) {
             return $compressedFile;
         }
@@ -73,7 +75,7 @@ class mediaFile {
         if($files === false) {
             $files = [];
         }
-        
+
         if (count($files) > 0) {
             if (strtolower($ext) == "mp4" || strtolower($ext) == "webm") {
                 foreach ($files as $file) {
@@ -139,6 +141,19 @@ class mediaFile {
         return $test['url'] ?? false;
     }
 
+    public function setMetadata($metadata) {
+        $this->metadata = json_encode($metadata, JSON_PRETTY_PRINT);
+        $stmt = $this->pdo->prepare('UPDATE media SET metadata = ? WHERE ((filename = ? AND album = ?) OR hash = ?)');
+        $stmt->execute([$this->metadata, $this->filename, $this->album, $this->hash]);
+        $test = $stmt->rowCount();
+
+        if ($test === 0) {
+            return false;
+        }
+
+        return $test ?? false;
+    }
+
 
     public function hashConflict() {
         if(is_null($this->hash) && $hash = $this->hash()) {
@@ -172,8 +187,8 @@ class mediaFile {
 
         if ($test === false) {
             $date = date('Y-m-d H:i:s');
-            $stmt = $this->pdo->prepare('INSERT INTO media (dupe, album, hash, filename, url, thumbnail, time)
-            VALUES (?, ?, ?, ?, ?, ?, ?)');
+            $stmt = $this->pdo->prepare('INSERT INTO media (dupe, album, hash, filename, url, thumbnail, time, metadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
             return $stmt->execute([
                 $this->dupe() ? 1 : 0,
                 $this->album,
@@ -181,7 +196,8 @@ class mediaFile {
                 $this->filename,
                 $this->url,
                 $this->thumbnail,
-                $date
+                $date,
+                $this->metadata,
             ]) !== false;
         }
         return false;
