@@ -79,6 +79,7 @@ class privuma {
                 `url` varchar(9512) DEFAULT NULL,
                 `thumbnail` varchar(9512) DEFAULT NULL,
                 `time` datetime DEFAULT NULL,
+                `metadata` varchar(9512) DEFAULT NULL,
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `media_id_IDX` (`id`) USING BTREE,
                 KEY `media_hash_IDX` (`hash`) USING BTREE,
@@ -105,10 +106,11 @@ class privuma {
                     `filename` TEXT DEFAULT NULL,
                     `url` TEXT DEFAULT NULL,
                     `thumbnail` TEXT DEFAULT NULL,
-                    `time` datetime DEFAULT CURRENT_TIMESTAMP
+                    `time` datetime DEFAULT CURRENT_TIMESTAMP,
+                    `metadata` TEXT DEFAULT NULL
                     );");
 
-                
+
                 $this->pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS `media_media_id_IDX` ON `media` (`id`);");
                 $this->pdo->exec("CREATE INDEX IF NOT EXISTS `media_media_hash_IDX` ON `media` (`hash`);");
                 $this->pdo->exec("CREATE INDEX IF NOT EXISTS `media_media_album_IDX` ON `media` (`album`);");
