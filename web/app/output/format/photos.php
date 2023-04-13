@@ -453,7 +453,7 @@ function run()
         $conn = $privuma->getPDO();
 
 
-        $stmt = $conn->prepare("select filename, album, time, hash, url, thumbnail
+        $stmt = $conn->prepare("select filename, album, time, hash, url, thumbnail, metadata
         from media
         where hash in
         (select hash from media where album = ? and hash != 'compressed')
@@ -522,7 +522,7 @@ function run()
 
             $mime = (isset($videoPath)) ? "video/mp4": ((strtolower($ext) === "gif") ? "image/gif" :  ((strtolower($ext) === "png") ? "image/png" : "image/jpg")) ;
             if (!array_key_exists($hash, $media)) {
-                $media[$hash] = array("img" => $photoPath ?? "", "updated" => strtotime($item["time"]), "video" => $videoPath ?? "", "id" => (string)$hash, "filename" => (string)$fileParts[0], "mime" => (string)$mime, "epoch" => strtotime($item["time"]));
+                $media[$hash] = array("img" => $photoPath ?? "", "updated" => strtotime($item["time"]), "video" => $videoPath ?? "", "id" => (string)$hash, "filename" => (string)$fileParts[0], "mime" => (string)$mime, "epoch" => strtotime($item["time"]), "metadata" => (string)$item['metadata']);
             } elseif (isset($videoPath)) {
                 $media[$hash]["video"] = $videoPath;
             } elseif (isset($photoPath)) {
@@ -817,11 +817,13 @@ function get_mime_by_filename($filename) {
            }
        }
 
-       file_put_contents(privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR .'mimes.json', json_encode($mime_types, JSON_PRETTY_PRINT));
+       file_put_contents(
+            privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR .'mimes.json', 
+            json_encode($mime_types, JSON_PRETTY_PRINT)
+        );
     }
-
     $mime_types = json_decode(file_get_contents(privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR .'mimes.json'), true);
-            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
     if (array_key_exists($ext, $mime_types)) {
         return $mime_types[$ext];
     }
