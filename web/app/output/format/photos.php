@@ -478,6 +478,35 @@ function run()
             }
 
 
+            $metadata = json_decode($item['metadata'], true);
+
+            if ($metadata['author'] || $metadata['artist']) {
+                $tags = implode(', ', ($metadata['tags'] ?? $metadata['keywords'] ?? []));
+                $output = '';
+                $output .= "Title: " . ($metadata['title'] ?? $metadata['name']) . PHP_EOL;
+                $output .= "Author: " . ($metadata['author'] ?? $metadata['artist']) .PHP_EOL;
+                $output .= "Date: " . ($metadata['date'] ?? $metadata['updatedAt'] ?? $metadata['createdAt']) .PHP_EOL;
+                $output .= "Description: " . ($metadata['description'] ?? '') .PHP_EOL.PHP_EOL;
+
+                $output .= "Tags: {$tags}" .PHP_EOL.PHP_EOL;
+                $nestedCommentPath = [];
+                foreach($metadata['comments'] as $comment) {
+                    if(!is_null($comment['parent_cid'])) {
+                        if(!in_array($comment['parent_cid'], $nestedCommentPath)) {
+                        $nestedCommentPath[] = $comment['parent_cid'];
+                        }
+                        if($comment['parent_cid'] !== end($nestedCommentPath))     {
+                        array_pop($nestedCommentPath);
+                        }
+                        $output .= str_repeat('  ', count($nestedCommentPath));
+                    }
+                    $commentMessage = preg_replace("/\W|_/", ' ', $comment['content']);
+                    $output .= "{$comment['username']} - {$comment['date']} : {$commentMessage}".PHP_EOL.PHP_EOL;
+                }
+
+                $item['metadata'] = $output;
+            }
+
             $ext = pathinfo($item["filename"], PATHINFO_EXTENSION);
             $filename = basename($item["filename"], "." . $ext);
             $filePath = $SYNC_FOLDER . DIRECTORY_SEPARATOR . normalizeString($item['album']) . DIRECTORY_SEPARATOR . $item["filename"];
@@ -818,7 +847,7 @@ function get_mime_by_filename($filename) {
        }
 
        file_put_contents(
-            privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR .'mimes.json', 
+            privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR .'mimes.json',
             json_encode($mime_types, JSON_PRETTY_PRINT)
         );
     }
