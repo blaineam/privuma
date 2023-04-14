@@ -35,26 +35,6 @@ $mobiledata = $stmt->fetchAll()[0]["json_result"];
 $stmt = $conn->prepare("SELECT json_group_array( json_object('filename', substr(filename,-10), 'album',album, 'dupe',dupe,'time',time,'hash',hash, 'metadata', metadata)    ) AS json_result FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed' ORDER BY id)");
 $stmt->execute();
 $data = str_replace('`', '', $stmt->fetchAll()[0]["json_result"]);
-$data = json_decode($data, true);
-foreach($data as $index => $media) {
-    if ($media["metadata"]) {
-        $media["metadata"] = json_decode($media["metadata"], true);
-        $media["metadata"] = [
-            "author" => $media["metadata"]["author"] ??  $media["metadata"]["artist"] ?? '',
-            "date" => $media["metadata"]["date"] ?? $media["metadata"]["updated"] ?? $media["metadata"]["created"] ?? '',
-            "title" => $media["metadata"]["title"] ?? $media["metadata"]["name"] ?? '',
-            "description" => $media["metadata"]["description"] ?? '',
-            "tags" => $media["metadata"]["tags"] ?? $media["metadata"]["keywords"] ?? [],
-            "userRating" => $media["metadata"]["userRating"] ?? (round(($media["metadata"]["favorites"] / $media["metadata"]["views"]) * 100, 4)) ?? 100,
-            "comments" => array_map(function($comment) {
-                $comment["content"] = preg_replace('/\W/',' ', $comment["content"]);
-                return $comment;
-            }, ($media["metadata"]["comments"] ?? [])),
-        ];
-        $data[$index]["metadata"] = json_encode($media["metadata"]);
-    }
-}
-$data = json_encode($data);
 
 echo PHP_EOL."Building CSV database copy of media to download";
 $stmt = $conn->prepare("SELECT filename,album,hash,dupe,time,metadata FROM `media` WHERE hash is not null and hash != '' and hash != 'compressed' ");
@@ -412,63 +392,6 @@ let medcrypt = {
     }
   };
 
-function normalizeComments(comments) {
-	return comments.map((comment) => {
-    if(comment.comments.length > 0) {
-      comment.comments = normalizeComments(comment.comments);
-    }
-    return {
-    	author: comment.username || 'Unknown',
-      date: new Date(comment.date),
-      message: comment.content.replace(/\W/g, ' '),
-      comments: comment.comments,
-    };
-  })
-}
-
-function mapComments(comments) {
-  let newcomments = comments.map((comment) => {
-  	return { ...comment, comments: []};
-  });
-  let descendents = newcomments.filter((comment) => comment.parent_cid != null);
-  descendents.forEach((descendent) => {
-    	const parent = newcomments.findIndex((com) => com.cid === descendent.parent_cid);
-      if(parent > -1) {
-      	newcomments[parent].comments.push(descendent);
-      }
-  });
-  return normalizeComments(newcomments.filter((comment) => comment.parent_cid == null));
-}
-
-function normalizeMeta(meta) {
-  return {
-    author: meta.author || meta.artist || '',
-    date: new Date(meta.date) || new Date(meta.updated) || '',
-    title: meta.title || meta.name || '',
-    description: meta.description || '',
-    tags : meta.tags || meta.keywords || [],
-    rating: meta.userRating || (Math.floor((meta.favorites / meta.views) * 100000) / 1000) || 100,
-    comments: mapComments(meta.comments || []),
-  }
-}
-
-function buildCommentsDom(comments) {
-	let output = '';
-  comments.forEach((comment) => {
-  	output += `<div class="comment" style="width:100%;"><h4>${comment.author}</h4><h5>${comment.date}</h5><p>${comment.message}</p><div class="indent" style="margin-left:5%;width:95%;">`;
-    output += buildCommentsDom(comment.comments);
-    output += `</div></div>`;
-  });
-    return output;
-}
-
-function buildDom(meta) {
-	let output = '';
-  	output += `<div class="meta"><h2>${meta.author}</h2><h3>${meta.title}</h3><h4>${meta.date}</h4><h4>${meta.rating}</h4><h4>${meta.tags.join(', ')}</h4><p>${meta.description}</p></div>`;
-    output += buildCommentsDom(meta.comments);
-    return output;
-}
-
 </script>
 
 </head>
@@ -537,17 +460,8 @@ jQuery.fancybox.defaults = { ...jQuery.fancybox.defaults, hash: false, loop: !0,
 caption : function( instance, item ) {
  let el = $('.gallerypicture[href="' + item.src + '"]');
   let metadata = el.find('script').text();
-  try{
-          let meta = JSON.parse(metadata || '{}');
-          let normalMeta = normalizeMeta(meta);
-          let html =  '<a class="btn btn-secondary toggle-collapsible">Expand Details</a><div class="collapsible collapsed">' + buildDom(normalMeta) + '</div>';
-          if (normalMeta.author) {
-            return html;
-        }
-  } catch(e){
-    let html =  '<a class="btn btn-secondary toggle-collapsible">Expand Details</a><div class="collapsible collapsed">' + metadata + '</div>';
     if (metadata.length > 0) {
-              return html;
+        return '<a class="btn btn-secondary toggle-collapsible">Expand Details</a><div class="collapsible collapsed">' + metadata + '</div>';
     }
   }
 	},
@@ -753,7 +667,7 @@ $(document).on('click', '.toggle-collapsible', function(event) {
                   c.$thumb = el.find('img');
                   $.fancybox.getInstance().current.$slide.trigger("onReset");
                   $(".fancybox-content").removeClass('fancybox-error').html('<img style="max-width:100%; max-height:100%;" src="'+uri+'" alt="" />');
-                  
+
                 if ($.fancybox.getInstance()
               .SlideShow.isActive && ($.fancybox.getInstance()
                 .SlideShow.stop(), j = !0), !j) return;
