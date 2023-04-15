@@ -142,7 +142,7 @@ class mediaFile {
     }
 
     public function setMetadata($metadata) {
-        $this->metadata = json_encode($metadata, JSON_PRETTY_PRINT);
+        $this->metadata = is_string($metadata) ? $metadata : json_encode($metadata, JSON_PRETTY_PRINT);
         $stmt = $this->pdo->prepare('UPDATE media SET metadata = ? WHERE ((filename = ? AND album = ?) OR hash = ?)');
         $stmt->execute([$this->metadata, $this->filename, $this->album, $this->hash]);
         $test = $stmt->rowCount();
