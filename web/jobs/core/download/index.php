@@ -527,7 +527,7 @@ $viewerHTML = <<<'HEREHTML'
           },
           caption: function(instance, item) {
             let el = $('.gallerypicture[href="' + item.src + '"]');
-            let metadata = el.find('script').text();
+            let metadata = el.find('script').text().trim();
             if (metadata.length > 0) {
               return '<a class="btn btn-secondary toggle-collapsible">Expand Details</a><div class="collapsible collapsed">' + metadata + '</div>';
             }
