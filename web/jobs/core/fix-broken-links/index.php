@@ -33,25 +33,40 @@ foreach(array_chunk($results, 2000) as $key => $chunk) {
             $protocol = parse_url($row['url'],  PHP_URL_SCHEME);
             $hostname = parse_url($row['url'],  PHP_URL_HOST);
             $hostHeaders = get_headers($protocol."://".$hostname, TRUE);
-            if ( (strpos($hostHeaders[0], '200') !== FALSE || strpos($hostHeaders[0], '302') !== FALSE || strpos($hostHeaders[0], '301') !== FALSE ) && (strpos($headers[0], '200') === FALSE || (strpos($head['content-type'], 'image') === FALSE && strpos($head['content-type'], 'video') === FALSE) )) {
+            $hostOk = (
+                strpos($hostHeaders[0], '200') !== FALSE
+                || strpos($hostHeaders[0], '302') !== FALSE
+                || strpos($hostHeaders[0], '301') !== FALSE
+                || strpos($hostHeaders[0], '403') !== FALSE
+            );
+            $fileMissing = (
+                strpos($headers[0], '200') === FALSE
+                || (
+                    strpos($head['content-type'], 'image') === FALSE
+                    && strpos($head['content-type'], 'video') === FALSE
+                )
+            );
+            if (
+                $fileMissing && $hostOk
+            ) {
                 $delete_stmt = $conn->prepare("delete FROM media WHERE id = ?");
                 $delete_stmt->execute([$row['id']]);
                 echo PHP_EOL.$delete_stmt->rowCount() . " - Deleted missing remote media url: " . $row['url'];
             } else if ( strpos($head['content-type'], 'video') !== FALSE ) {
                 if(!is_null($row['thumbnail'])) {
-            			//echo PHP_EOL."Checking thumbnail: " . $row['thumbnail'];
-            			$headers = get_headers($row['thumbnail'], TRUE);
-            			$head = array_change_key_case($headers);
-            			$protocol = parse_url($row['thumbnail'],  PHP_URL_SCHEME);
-            			$hostname = parse_url($row['thumbnail'],  PHP_URL_HOST);
-            			$hostHeaders = get_headers($protocol."://".$hostname, TRUE);
+                    //echo PHP_EOL."Checking thumbnail: " . $row['thumbnail'];
+                    $headers = get_headers($row['thumbnail'], TRUE);
+                    $head = array_change_key_case($headers);
+                    $protocol = parse_url($row['thumbnail'],  PHP_URL_SCHEME);
+                    $hostname = parse_url($row['thumbnail'],  PHP_URL_HOST);
+                    $hostHeaders = get_headers($protocol."://".$hostname, TRUE);
 
-            			if ( (strpos($hostHeaders[0], '200') !== FALSE || strpos($hostHeaders[0], '302') !== FALSE || strpos($hostHeaders[0], '301') !== FALSE ) && (strpos($headers[0], '200') === FALSE || (strpos($head['content-type'], 'image') === FALSE && strpos($head['content-type'], 'video') === FALSE) )) {
-                			$delete_stmt = $conn->prepare("delete FROM media WHERE id = ?");
-                			$delete_stmt->execute([$row['id']]);
-                			echo PHP_EOL.$delete_stmt->rowCount() . " - Deleted missing remote media thumbnail: " . $row['thumbnail'];
+                    if ( (strpos($hostHeaders[0], '200') !== FALSE || strpos($hostHeaders[0], '302') !== FALSE || strpos($hostHeaders[0], '301') !== FALSE ) && (strpos($headers[0], '200') === FALSE || (strpos($head['content-type'], 'image') === FALSE && strpos($head['content-type'], 'video') === FALSE) )) {
+                        $delete_stmt = $conn->prepare("delete FROM media WHERE id = ?");
+                        $delete_stmt->execute([$row['id']]);
+                        echo PHP_EOL.$delete_stmt->rowCount() . " - Deleted missing remote media thumbnail: " . $row['thumbnail'];
 
-            			}
+                    }
 				}
 			}
         }
