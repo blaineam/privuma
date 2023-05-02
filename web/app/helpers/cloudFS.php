@@ -233,7 +233,6 @@ class cloudFS {
         /* return false; */
     }
 
-
     public function remove_public_link(string $path): bool {
         if($this->is_file($path)){
             try{

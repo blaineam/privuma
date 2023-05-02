@@ -11,19 +11,16 @@ date_default_timezone_set('America/Los_Angeles');
 
 session_start();
 
-use DateTimeZone;
-use privuma\helpers\dotenv;
 use privuma\privuma;
 use privuma\helpers\cloudFS;
+use privuma\helpers\tokenizer;
 use privuma\helpers\mediaFile;
-use mysqli;
-use PDO;
 
 $ops = privuma::getCloudFS();
 
-
 $privuma = privuma::getInstance();
 
+$tokenizer = new tokenizer();
 $USE_MIRROR= privuma::getEnv('USE_MIRROR');
 $RCLONE_MIRROR = privuma::getEnv('RCLONE_MIRROR');
 $DEOVR_MIRROR = privuma::getEnv('DEOVR_MIRROR');
@@ -172,50 +169,6 @@ function redirectToMedia($path) {
 
 }
 
-function roundToNearestMinuteInterval(\DateTime $dateTime, $minuteInterval = 10)
-{
-    return $dateTime->setTime(
-        $dateTime->format('H'),
-        round($dateTime->format('i') / $minuteInterval) * $minuteInterval,
-        0
-    );
-}
-if (isset($_SERVER["HTTP_CF_CONNECTING_IP"])) {
-    $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_CF_CONNECTING_IP"];
-  }
-  if (isset($_SERVER["HTTP_PVMA_IP"])) {
-      $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_PVMA_IP"];
-    }
-
-
-
-  //die("-" . $_SERVER['HTTP_USER_AGENT'] . "-" . $_SERVER['REMOTE_ADDR'] );
-function rollingTokens($seed, $noIp = false) {
-    $d1 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
-    $d2 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
-    $d3 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
-    $d1->modify('-12 hours');
-    $d3->modify('+12 hours');
-    $d1 = roundToNearestMinuteInterval($d1, 60*12);
-    $d2 = roundToNearestMinuteInterval($d2, 60*12);
-    $d3 = roundToNearestMinuteInterval($d3, 60*12);
-    return [
-        sha1(md5($d1->format('Y-m-d H:i:s'))."-".$seed . "-" .
-//          $_SERVER['HTTP_USER_AGENT'] . "-" .
-          ($noIp ? "" : $_SERVER['REMOTE_ADDR'] ) ),
-        sha1(md5($d2->format('Y-m-d H:i:s'))."-".$seed . "-" .
-//          $_SERVER['HTTP_USER_AGENT'] . "-" .
-          ($noIp ? "" : $_SERVER['REMOTE_ADDR'] ) ),
-        sha1(md5($d3->format('Y-m-d H:i:s'))."-".$seed . "-" .
-//          $_SERVER['HTTP_USER_AGENT'] . "-" .
- ($noIp ? "" : $_SERVER['REMOTE_ADDR'] ) ),
-    ];
-};
-
-function checkToken($token, $seed) {
-    return in_array($token, rollingTokens($seed));
-}
-
 function is_base64_encoded($data)
 {
     if (preg_match('%^[a-zA-Z0-9/+]*={0,2}$%', $data)) {
@@ -230,7 +183,7 @@ if (session_status() == PHP_SESSION_ACTIVE && isset($_SESSION['SessionAuth']) &&
 } else if (isset($_GET['AuthToken']) && $_GET['AuthToken'] === $AUTHTOKEN) {
     $_SESSION['SessionAuth'] = $_GET['AuthToken'];
     run();
-} else if(isset($_GET['token']) && checkToken($_GET['token'], $AUTHTOKEN)) {
+} else if(isset($_GET['token']) && $tokenizer->checkToken($_GET['token'], $AUTHTOKEN)) {
     run();
 } else {
     die("Malformed Request");
@@ -305,7 +258,8 @@ function getProtectedUrlForMediaPath($path, $use_fallback = false, $noIp = false
     global $ENDPOINT;
     global $FALLBACK_ENDPOINT;
     global $AUTHTOKEN;
-    $uri = "?token=" . rollingTokens($AUTHTOKEN, $noIp)[1]  . "&media=" . urlencode(base64_encode($path));
+    global $tokenizer;
+    $uri = "?token=" . $tokenizer->rollingTokens($AUTHTOKEN, $noIp)[1]  . "&media=" . urlencode(base64_encode($path));
     return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
 }
 
@@ -314,7 +268,8 @@ function getProtectedUrlForMedia($media, $use_fallback = false) {
     global $ENDPOINT;
     global $FALLBACK_ENDPOINT;
     global $AUTHTOKEN;
-    $uri = "?token=" . rollingTokens($AUTHTOKEN)[1]  . "&media=" . $media;
+    global $tokenizer;
+    $uri = "?token=" . $tokenizer->rollingTokens($AUTHTOKEN)[1]  . "&media=" . $media;
     return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
 }
 
@@ -322,7 +277,8 @@ function getProtectedUrlForMediaHash($hash, $use_fallback = false) {
     global $ENDPOINT;
     global $FALLBACK_ENDPOINT;
     global $AUTHTOKEN;
-    $uri = "?token=" . rollingTokens($AUTHTOKEN)[1]  . "&media=" . urlencode($hash);
+    global $tokenizer;
+    $uri = "?token=" . $tokenizer->rollingTokens($AUTHTOKEN)[1]  . "&media=" . urlencode($hash);
     return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
 }
 
@@ -439,6 +395,7 @@ function run()
     global $RCLONE_MIRROR;
     global $USE_X_Accel_Redirect;
     global $privuma;
+    global $tokenizer;
 
 
     $MAX_URL_CHARACTERS = 1600;
@@ -662,7 +619,7 @@ function run()
             header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
             header("Cache-Control: post-check=0, pre-check=0", false);
             header("Pragma: no-cache");
-            header('Location: ' . $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=" . urlencode($_GET['media']));
+            header('Location: ' . $ENDPOINT . "?token=" . $tokenizer->rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=" . urlencode($_GET['media']));
             die();
         }
 
@@ -727,9 +684,9 @@ function run()
                 }
                 $photoPath = getProtectedUrlForMedia($media);
 
-                //$photoPath = $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=".urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path']) . "-----" . "1.jpg"));
+                //$photoPath = $ENDPOINT . "?token=" . $tokenizer->rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=".urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path']) . "-----" . "1.jpg"));
             } else {
-                $photoPath = $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=blank.gif";;
+                $photoPath = $ENDPOINT . "?token=" . $tokenizer->rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=blank.gif";;
                 $hash = "checkCache";
             }
             if(!in_array(explode(DIRECTORY_SEPARATOR, $folderObj['Path'])[0], ['SCRATCH'])) {
@@ -779,7 +736,7 @@ function run()
             }
 
             if (empty($photoPath)) {
-                $photoPath = $ENDPOINT . "?token=" . rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=blank.gif";
+                $photoPath = $ENDPOINT . "?token=" . $tokenizer->rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=blank.gif";
             }
 
             $realbums[] = array("id" => (string)urlencode(base64_encode($album["album"])), "updated" => (string)(strtotime($album["time"])*1000), "title" => (string)$album["album"], "img" => (string)$photoPath , "mediaId" => (string)$album["hash"]);

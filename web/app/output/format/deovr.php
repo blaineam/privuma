@@ -7,10 +7,12 @@ session_start();
 use privuma\helpers\dotenv;
 use privuma\privuma;
 use privuma\helpers\cloudFS;
+use privuma\helpers\tokenizer;
 use privuma\helpers\mediaFile;
 
 $DEOVR_MIRROR = privuma::getEnv('DEOVR_MIRROR') ?? privuma::getEnv('RCLONE_DESTINATION');
 $ops = new cloudFS($DEOVR_MIRROR);
+$tokenizer = new tokenizer();
 $FALLBACK_ENDPOINT = privuma::getEnv('FALLBACK_ENDPOINT');
 $ENDPOINT = privuma::getEnv('ENDPOINT');
 $AUTHTOKEN = privuma::getEnv('AUTHTOKEN');
@@ -18,48 +20,13 @@ $DEOVR_LOGIN = privuma::getEnv('DEOVR_LOGIN');
 $DEOVR_PASSWORD = privuma::getEnv('DEOVR_PASSWORD');
 $DEOVR_DATA_DIRECTORY = privuma::getEnv('DEOVR_DATA_DIRECTORY');
 
-function roundToNearestMinuteInterval(\DateTime $dateTime, $minuteInterval = 10)
-{
-    return $dateTime->setTime(
-        $dateTime->format('H'),
-        round($dateTime->format('i') / $minuteInterval) * $minuteInterval,
-        0
-    );
-}
-
-if (isset($_SERVER["HTTP_CF_CONNECTING_IP"])) {
-    $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_CF_CONNECTING_IP"];
-}
-
-if (isset($_SERVER["HTTP_PVMA_IP"])) {
-    $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_PVMA_IP"];
-}
-
-function rollingTokens($seed) {
-    $d1 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
-    $d2 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
-    $d3 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
-    $d1->modify('-12 hours');
-    $d3->modify('+12 hours');
-    $d1 = roundToNearestMinuteInterval($d1, 60*12);
-    $d2 = roundToNearestMinuteInterval($d2, 60*12);
-    $d3 = roundToNearestMinuteInterval($d3, 60*12);
-    return [
-        sha1(md5($d1->format('Y-m-d H:i:s'))."-".$seed . "-" .
-          $_SERVER['REMOTE_ADDR'] ),
-        sha1(md5($d2->format('Y-m-d H:i:s'))."-".$seed . "-" .
-          $_SERVER['REMOTE_ADDR'] ),
-        sha1(md5($d3->format('Y-m-d H:i:s'))."-".$seed . "-" .
-          $_SERVER['REMOTE_ADDR'] ),
-    ];
-};
-
 function getProtectedUrlForMediaPath($path, $use_fallback = false, $useMediaFile = false) {
     global $ENDPOINT;
     global $FALLBACK_ENDPOINT;
     global $AUTHTOKEN;
+    global $tokenizer;
     $mediaFile = $useMediaFile ? 'media.mp4' : '';
-    $uri = $mediaFile . "?token=" . rollingTokens($AUTHTOKEN)[1]  . "&deovr=1&&media=" . urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path)));
+    $uri = $mediaFile . "?token=" . $tokenizer->rollingTokens($AUTHTOKEN)[1]  . "&deovr=1&&media=" . urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path)));
     return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
 }
 

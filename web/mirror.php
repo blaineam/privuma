@@ -39,13 +39,21 @@ function streamFile($file) {
     die();
 }
 
-function roundToNearestMinuteInterval(\DateTime $dateTime, $minuteInterval = 10)
+function roundToNearestMinuteInterval(\DateTime $dateTime, $minuteInterval = 60)
 {
-    return $dateTime->setTime(
-        $dateTime->format('H'),
+    $hourInterval = 1;
+	if($minuteInterval > 60) {
+		$hourInterval = floor($minuteInterval/60);
+		$minuteInterval = $minuteInterval - ($hourInterval * 60);
+		if ($minuteInterval == 0) {
+			$minuteInterval = 60;
+		}
+	}
+     return $dateTime->setTime(
+        round($dateTime->format('H') / $hourInterval) * $hourInterval,
         round($dateTime->format('i') / $minuteInterval) * $minuteInterval,
-        0
-    );
+    	0
+     );
 }
 
 if (isset($_SERVER["HTTP_CF_CONNECTING_IP"])) {
@@ -63,11 +71,11 @@ function rollingTokens($seed, $noIp = true) {
     $d1 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
     $d2 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
     $d3 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
-    $d1->modify('-12 hours');
-    $d3->modify('+12 hours');
-    $d1 = roundToNearestMinuteInterval($d1, 60*12);
-    $d2 = roundToNearestMinuteInterval($d2, 60*12);
-    $d3 = roundToNearestMinuteInterval($d3, 60*12);
+    $d1->modify('-4 hours');
+    $d3->modify('+4 hours');
+    $d1 = roundToNearestMinuteInterval($d1, 60*4);
+    $d2 = roundToNearestMinuteInterval($d2, 60*4);
+    $d3 = roundToNearestMinuteInterval($d3, 60*4);
     return [
         sha1(md5($d1->format('Y-m-d H:i:s'))."-".$seed . "-" .
          ($noIp ? "" : $_SERVER['REMOTE_ADDR'] )),
