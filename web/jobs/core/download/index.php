@@ -2,12 +2,14 @@
 
 use privuma\privuma;
 use privuma\helpers\mediaFile;
+use privuma\helpers\tokenizer;
 use privuma\helpers\cloudFS;
 use MediaCrypto\MediaCrypto;
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
 
 $privuma = privuma::getInstance();
+$tokenizer = new tokenizer();
 $downloadLocation = $privuma->getEnv('DOWNLOAD_LOCATION');
 if(!$downloadLocation){
     exit();
@@ -1077,13 +1079,16 @@ if((!is_file($cachePath) || !$cacheStillRecent) && !is_file($rawCachePath)) {
   exec("rclone --config ../../../config/rclone/rclone.conf lsjson -R {$downloadLocation} --exclude=\"@eaDir/**\" > {$rawCachePath}");
 }
 if(is_file($rawCachePath)) {
-  $downloadedFiles = array_map(function($file) {
-    $file['Name'] = cloudFS::decode($file['Name'], true);
-    $file['Path'] = cloudFS::decode($file['Path'], true);
-    return $file;
-  }, json_decode(file_get_contents($rawCachePath), true, 512, JSON_INVALID_UTF8_IGNORE+JSON_THROW_ON_ERROR));
-  file_put_contents($cachePath, json_encode($downloadedFiles, JSON_INVALID_UTF8_IGNORE+JSON_THROW_ON_ERROR));
-  unset($downloadedFiles);
+    $jsonObj = json_decode(file_get_contents($rawCachePath), true, 512, JSON_INVALID_UTF8_IGNORE);
+    if (is_array($jsonObj)) {
+        $downloadedFiles = array_map(function($file) {
+            $file['Name'] = cloudFS::decode($file['Name'], true);
+            $file['Path'] = cloudFS::decode($file['Path'], true);
+            return $file;
+        }, $jsonObj);
+        file_put_contents($cachePath, json_encode($downloadedFiles, JSON_INVALID_UTF8_IGNORE+JSON_THROW_ON_ERROR));
+        unset($downloadedFiles);
+    }
   unlink($rawCachePath);
 }
 if(is_file($cachePath)) {
@@ -1137,9 +1142,9 @@ foreach($newDlData as $item) {
     && !$ops->is_file($preserve)
   ) {
     if (!isset($item["url"])) {
-      if ($item["url"] = $privuma->getCloudFS()->public_link($path)) {
+      if ($item["url"] = $privuma->getCloudFS()->public_link($path) ?: $tokenizer->mediaLink($path)) {
         if (strpos($filename, '.mp4') !== false) {
-          $item["thumbnail"] = $privuma->getCloudFS()->public_link($thumbnailPath);
+          $item["thumbnail"] = $privuma->getCloudFS()->public_link($thumbnailPath) ?: $tokenizer->mediaLink($thumbnailPath);
         }
       } else {
         echo PHP_EOL."Skipping unavailable media: $path";
@@ -1166,7 +1171,7 @@ foreach($newDlData as $item) {
       && !$ops->is_file($thumbnailPreserve)
 
     )
-    &&  $item["thumbnail"] = $privuma->getCloudFS()->public_link($thumbnailPath)
+    &&  $item["thumbnail"] = $privuma->getCloudFS()->public_link($thumbnailPath) ?: $tokenizer->mediaLink($thumbnailPath)
   ) {
     echo PHP_EOL."Queue Downloading of media file: " . $thumbnailPreserve . " from album: " . $item['album'];
     $privuma->getQueueManager()->enqueue(json_encode([
