@@ -26,52 +26,37 @@ class tokenizer {
         if (isset($_SERVER["HTTP_PVMA_IP"])) {
             $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_PVMA_IP"];
         }
-
         if(!isset($_SERVER['REMOTE_ADDR'])) {
             $_SERVER['REMOTE_ADDR'] = file_get_contents("http://ipecho.net/plain");
         }
 
-        $d1 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
-        $d2 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
-        $d3 = new \DateTime("now", new \DateTimeZone("America/Los_Angeles"));
-        $d1->modify('-4 hours');
-        $d3->modify('+4 hours');
-        $d1 = $this->roundToNearestMinuteInterval($d1, 60*4);
-        $d2 = $this->roundToNearestMinuteInterval($d2, 60*4);
-        $d3 = $this->roundToNearestMinuteInterval($d3, 60*4);
-        return [
-            sha1(md5($d1->format('Y-m-d H:i:s'))."-".$seed . "-" .
-    //          $_SERVER['HTTP_USER_AGENT'] . "-" .
-            ($noIp ? "" : $_SERVER['REMOTE_ADDR'] ) ),
-            sha1(md5($d2->format('Y-m-d H:i:s'))."-".$seed . "-" .
-    //          $_SERVER['HTTP_USER_AGENT'] . "-" .
-            ($noIp ? "" : $_SERVER['REMOTE_ADDR'] ) ),
-            sha1(md5($d3->format('Y-m-d H:i:s'))."-".$seed . "-" .
-    //          $_SERVER['HTTP_USER_AGENT'] . "-" .
-            ($noIp ? "" : $_SERVER['REMOTE_ADDR'] ) ),
-        ];
+        $interval = 30;
+        $count = 2;
+
+        $interval = max(1, min($interval, 60));
+        $count = max(1, $count);
+
+        $tokens = [$seed];
+        for($iteration=0;$iteration<=$count;$iteration++) {
+            $modifiedMinutes = $iteration*$interval;
+            $date = new \DateTime("-$modifiedMinutes minutes", new \DateTimeZone("America/Los_Angeles"));
+            $date = $date->setTime($date->format('H'), round($date->format('i') / $interval) * $interval);
+            $tokens[] = sha1(md5($date->format('Y-m-d H:i:s'))."-".$seed . "-" .
+            ($noIp ? "" : $_SERVER['REMOTE_ADDR'] )) ;
+
+        }
+
+        for($iteration=1;$iteration<=$count;$iteration++) {
+            $modifiedMinutes = $iteration*$interval;
+            $date = new \DateTime("+$modifiedMinutes minutes", new \DateTimeZone("America/Los_Angeles"));
+            $date = $date->setTime($date->format('H'), round($date->format('i') / $interval) * $interval);
+            $tokens[] = sha1(md5($date->format('Y-m-d H:i:s'))."-".$seed . "-" .
+            ($noIp ? "" : $_SERVER['REMOTE_ADDR'] )) ;
+        }
+        return $tokens;
     }
 
     public function checkToken($token, $seed) {
         return in_array($token, $this->rollingTokens($seed));
     }
-
-    private function roundToNearestMinuteInterval(\DateTime $dateTime, $minuteInterval = 10)
-    {
-        $hourInterval = 1;
-        if($minuteInterval > 60) {
-            $hourInterval = floor($minuteInterval/60);
-            $minuteInterval = $minuteInterval - ($hourInterval * 60);
-            if ($minuteInterval == 0) {
-                $minuteInterval = 60;
-            }
-        }
-        return $dateTime->setTime(
-            round($dateTime->format('H') / $hourInterval) * $hourInterval,
-            round($dateTime->format('i') / $minuteInterval) * $minuteInterval,
-            0
-        );
-
-    }
-
 }
