@@ -51,8 +51,6 @@ class processMedia {
                             // Empty File
                             'd41d8cd98f00b204e9800998ecf8427e',
                         ]) || !in_array(explode('/', strtolower(mime_content_type($mediaPath)))[0], ['image', 'video'])) {
-                            echo PHP_EOL."Removing broken url from database";
-                            $mediaFile->delete($data['hash']);
                             return;
                         }
                         $passphrase = (new dotenv())->get('DOWNLOAD_PASSWORD') ?? "";
@@ -104,10 +102,6 @@ class processMedia {
                     }else if($tempPath = $this->downloadUrl($data['url'])) {
                         echo PHP_EOL."Downloaded Media File to: " . $tempPath;
                         $qm->enqueue(json_encode(['type'=> 'preserveMedia', 'data' => ['path' => $tempPath, 'album' => $data['album'], 'filename' => $data['filename']]]));
-                    } else {
-                        echo PHP_EOL."Failed to obtain media file from url: " . $data['url'];
-                        echo PHP_EOL."Removing broken url from database";
-                        $mediaFile->delete($data['hash'] ?? null);
                     }
                 } else {
                     echo PHP_EOL."Existing MediaFile located at: " . $existingFile . " For: " . $data['url'];

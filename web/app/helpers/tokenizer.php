@@ -1,6 +1,7 @@
 <?php
 
 namespace privuma\helpers;
+use privuma\helpers\cloudFS;
 use privuma\helpers\dotenv;
 
 class tokenizer {
@@ -14,7 +15,12 @@ class tokenizer {
         $FALLBACK_ENDPOINT = $this->env->get('FALLBACK_ENDPOINT');
         $ENDPOINT = $this->env->get('ENDPOINT');
         $AUTHTOKEN = $this->env->get('AUTHTOKEN');
-        $uri = "?token=" . $this->rollingTokens($AUTHTOKEN, $noIp)[1]  . "&media=" . urlencode(base64_encode($path));
+        $STREAM_MEDIA_FROM_FALLBACK_ENDPOINT = $this->env->get('STREAM_MEDIA_FROM_FALLBACK_ENDPOINT');
+        if ($STREAM_MEDIA_FROM_FALLBACK_ENDPOINT) {
+            $use_fallback = true;
+            $noIp = true;
+        }
+        $uri = "?token=" . $this->rollingTokens($AUTHTOKEN, $noIp)[1]  . "&media=" . urlencode(base64_encode(cloudFS::encode($path)));
         return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
     }
 

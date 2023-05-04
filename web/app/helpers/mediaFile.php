@@ -180,12 +180,8 @@ class mediaFile {
             $this->hash = $hash;
         }
 
-        $fileParts = explode('---', $this->filename);
-        $stmt = $this->pdo->prepare('SELECT * FROM media WHERE hash = ? AND album = ? AND filename LIKE "' . trim($fileParts[0],'-') . '%"  ORDER BY time ASC');
-        $stmt->execute([$this->hash, $this->album]);
-        $test = $stmt->fetch();
-
-        if ($test === false) {
+        if ($this->preserved() === false) {
+            echo PHP_EOL."persisting media".PHP_EOL;
             $date = date('Y-m-d H:i:s');
             $stmt = $this->pdo->prepare('INSERT INTO media (dupe, album, hash, filename, url, thumbnail, time, metadata)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
