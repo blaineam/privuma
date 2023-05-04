@@ -297,10 +297,27 @@ class cloudFS {
     public function md5_file(string $path) {
         if ($this->is_file($path)) {
             try {
-                return explode(' ', $this->execute('md5sum', $path, null, false, true, ['--download']))[0];
+                return explode(' ', $this->execute('md5sum', $path, null, false, true, [
+                    '--sftp-path-override',
+                    $this->env->get('RCLONE_SFTP_PREFIX')
+                    . DIRECTORY_SEPARATOR
+                    . ltrim(
+                        end(
+                            explode(
+                                ':',
+                                $this->formatPath(dirname($path))
+                            )
+                        ),
+                        DIRECTORY_SEPARATOR
+                    )
+                ]))[0];
             } catch (Exception $e) {
-                error_log($e->getMessage());
-                return false;
+                try {
+                    return explode(' ', $this->execute('md5sum', $path, null, false, true, ['--download']))[0];
+                } catch (Exception $e) {
+                    error_log($e->getMessage());
+                    return false;
+                }
             }
         }
         return false;
@@ -455,6 +472,39 @@ class cloudFS {
         return true;
     }
 
+    private function formatPath(string $path, bool $remote = true): string {
+        return str_replace(
+            DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,
+            DIRECTORY_SEPARATOR,
+            $remote
+            ? rtrim($this->rCloneDestination, DIRECTORY_SEPARATOR)
+            . DIRECTORY_SEPARATOR
+            . ltrim(
+                $this->encoded
+                ? (
+                    $this->segmented
+                    ? dirname(
+                        $this->encode($path)
+                    )
+                    . DIRECTORY_SEPARATOR
+                    .substr(
+                        basename(
+                            $this->encode(
+                                $path
+                            )
+                        ),
+                        0, 2
+                    )
+                    . DIRECTORY_SEPARATOR
+                    . $this->encode($path)
+                    : $this->encode($path)
+                )
+                : $path
+            , DIRECTORY_SEPARATOR)
+            : $path
+        );
+    }
+
     private function execute(
         string $command,
         string $destination,
@@ -574,7 +624,7 @@ class cloudFS {
                 '2>&1',
             ]
             );
-            //echo PHP_EOL.$cmd;
+            /* echo PHP_EOL.$cmd; */
         if($passthru) {
             passthru($cmd, $result_code);
         } else {

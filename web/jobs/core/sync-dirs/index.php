@@ -1,6 +1,7 @@
 <?php
 
 use privuma\privuma;
+use privuma\helpers\cloudFS;
 use privuma\helpers\mediaFile;
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
@@ -29,6 +30,9 @@ function processDir($dir, $sync) {
     global $privuma;
     $files = scandir($dir);
     foreach ($files as $value) {
+        if(in_array($value, ['.', '..'])) {
+            continue;
+        }
         $path = $dir . DIRECTORY_SEPARATOR . $value;
         if (!is_dir($path)) {
             $ext = pathinfo($path, PATHINFO_EXTENSION);
@@ -60,7 +64,7 @@ function processDir($dir, $sync) {
                         echo PHP_EOL. "Removing file that already exists in media sync destination: " . $preserve . " for path: " . $path;
                         unlink($path);
                         exec('rmdir ' . escapeshellarg(dirname($path)) . " 2>&1 > /dev/null");
-                    } 
+                    }
                 } else if($sync['removeFromSource']) {
                     echo PHP_EOL. "Removing file that already exists in media sync destination: " . $preserve . " for path: " . $path;
                     unlink($path);
