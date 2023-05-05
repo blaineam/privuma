@@ -39,6 +39,23 @@ function streamFile($file) {
     die();
 }
 
+function roundToNearestMinuteInterval(\DateTime $dateTime, $minuteInterval = 60)
+{
+    $hourInterval = 1;
+	if($minuteInterval > 60) {
+		$hourInterval = floor($minuteInterval/60);
+		$minuteInterval = $minuteInterval - ($hourInterval * 60);
+		if ($minuteInterval == 0) {
+			$minuteInterval = 60;
+		}
+	}
+     return $dateTime->setTime(
+        round($dateTime->format('H') / $hourInterval) * $hourInterval,
+        round($dateTime->format('i') / $minuteInterval) * $minuteInterval,
+    	0
+     );
+}
+
 if (isset($_SERVER["HTTP_CF_CONNECTING_IP"])) {
     $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_CF_CONNECTING_IP"];
 }
@@ -51,8 +68,8 @@ if(!isset($_SERVER['AUTHTOKEN']) && is_file($dataDirectory.'/AUTHTOKEN.txt')) {
 }
 
 function rollingTokens($seed, $noIp = true) {
-    $interval = 30;
-	$count = 2;
+	$interval = 30;
+	$count = 12;
 
 	$interval = max(1, min($interval, 60));
 	$count = max(1, $count);
@@ -82,8 +99,9 @@ function checkToken($token, $seed) {
 }
 
 if(isset($_GET['token']) && checkToken($_GET['token'], $_SERVER['AUTHTOKEN']) && isset($_GET['media'])) {
-    streamFile($dataDirectory.base64_decode($_GET['media']));
+    streamFile($dataDirectory.DIRECTORY_SEPARATOR . ltrim(base64_decode($_GET['media']), DIRECTORY_SEPARATOR));
 }
+
 
 http_response_code(404);
 
