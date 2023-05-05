@@ -85,14 +85,15 @@ class preserveMedia {
         $allowedPhotos = ["BMP", "GIF", "HEIC", "ICO", "JPG", "JPEG", "PNG", "TIFF", "WEBP"];
         $allowedVideos = ["MPG", "MOD", "MMV", "TOD", "WMV", "ASF", "AVI", "DIVX", "MOV", "M4V", "3GP", "3G2", "MP4", "M2T", "M2TS", "MTS", "MKV", "WEBM"];
 
-$mimes = json_decode(file_get_contents(privuma::getOutputDirectory().DIRECTORY_SEPARATOR."cache".DIRECTORY_SEPARATOR."mimes.json"), true);
-$mimeExt = array_search(mime_content_type($file), $mimes);
+                $mimes = json_decode(file_get_contents(privuma::getOutputDirectory().DIRECTORY_SEPARATOR."cache".DIRECTORY_SEPARATOR."mimes.json"), true);
+                $mimeExt = array_search(mime_content_type($file), $mimes);
 
         $ext = !empty(pathinfo($file, PATHINFO_EXTENSION)) ? pathinfo($file, PATHINFO_EXTENSION): $mimeExt;
+        $preserveExt = pathinfo($preserve, PATHINFO_EXTENSION);
 
-        if(in_array(strtoupper($ext), $allowedPhotos)) {
+        if(in_array(strtoupper($ext), $allowedPhotos) || in_array(strtoupper($preserveExt), $allowedPhotos)) {
             return $this->compressPhoto($file, $preserve, $passphrase);
-        } else if(in_array(strtoupper($ext), $allowedVideos)) {
+        } else if(in_array(strtoupper($ext), $allowedVideos) || in_array(strtoupper($preserveExt), $allowedVideos)) {
             return $this->compressVideo($file, $preserve, $passphrase);
         }else{
             echo PHP_EOL."Unsupported File Extension: " . $ext;
