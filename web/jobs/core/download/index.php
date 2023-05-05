@@ -31,10 +31,10 @@ $stmt->execute();
 $dlData = $stmt->fetchAll();
 
 echo PHP_EOL."Building web app payload of media to download";
-$stmt = $conn->prepare("SELECT json_group_array( json_object('filename', substr(filename,-10), 'album',album, 'dupe',dupe,'time',time,'hash',hash)    ) AS json_result FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed' ORDER BY id)");
+$stmt = $conn->prepare("SELECT json_group_array( json_object('filename', substr(filename,-10), 'album',album, 'dupe',dupe,'time',time,'hash',hash)    ) AS json_result FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed' ORDER BY time desc)");
 $stmt->execute();
 $mobiledata = $stmt->fetchAll()[0]["json_result"];
-$stmt = $conn->prepare("SELECT json_group_array( json_object('filename', substr(filename,-10), 'album',album, 'dupe',dupe,'time',time,'hash',hash, 'metadata', metadata)    ) AS json_result FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed' ORDER BY id)");
+$stmt = $conn->prepare("SELECT json_group_array( json_object('filename', substr(filename,-10), 'album',album, 'dupe',dupe,'time',time,'hash',hash, 'metadata', metadata)    ) AS json_result FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed' ORDER BY time desc)");
 $stmt->execute();
 $data = str_replace('`', '', $stmt->fetchAll()[0]["json_result"]);
 
@@ -509,7 +509,7 @@ $viewerHTML = <<<'HEREHTML'
       function runApp() {
         var delim = "1--57--2";
         var alldata = window.mobileCheck() ? JSON.parse(encrypted_data) : encrypted_data;
-        var allAlbums = alasql("select *,filename, album, max(time) as time, hash FROM ? where dupe = 0 GROUP by album order by time DESC", [alldata]);
+        var allAlbums = alasql("select * FROM ? where dupe = 0 GROUP by album order by time DESC", [alldata]);
 
         jQuery.fancybox.defaults = {
           ...jQuery.fancybox.defaults,
