@@ -550,6 +550,7 @@ class cloudFS {
                 '--s3-no-check-bucket',
                 '--s3-no-head',
                 '--ignore-checksum',
+                '--size-only',
                 '--retries 3',
                 '--checkers 1',
                 '--transfers 1',
