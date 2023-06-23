@@ -282,6 +282,35 @@ function getProtectedUrlForMediaHash($hash, $use_fallback = false) {
     return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
 }
 
+function compressImage($url, $quality = 70, $maxWidth=2048, $maxHeight=2048) {
+    $extension = strtolower(pathinfo(explode("?", $url)[0], PATHINFO_EXTENSION));
+    $command = implode(" ", [
+        "convert",
+        escapeshellarg($url),
+        "-resize",
+        escapeshellarg($maxWidth."x".$maxHeight.'>'),
+        "-quality",
+        escapeshellarg($quality),
+        "-fuzz",
+        "4%",
+        "+dither",
+        "-layers",
+        "optimize",
+        "$extension:-"
+    ]);
+    header('Content-Type: image/' . $extension);
+    header('Content-Disposition: attachment;  filename="' . basename(explode("?", $url)[0]) . '"');
+    passthru($command);
+}
+
+function getCompressionUrl($url) {
+    if(isset($_GET['c']) && $_GET['c'] == '1' && in_array(strtolower(pathinfo(explode("?", $url)[0], PATHINFO_EXTENSION)), ["jpg","jpeg","png","gif"])) {
+        compressImage($url);
+        die();
+    }
+    return $url;
+}
+
 function streamMedia($file, bool $useOps = false) {
     global $USE_X_Accel_Redirect;
     if($useOps){
@@ -292,6 +321,7 @@ function streamMedia($file, bool $useOps = false) {
         header('Content-Length:' . $ops->filesize($file));
         $ops->readfile($file);
     }else if ($USE_X_Accel_Redirect && (filter_var(idn_to_ascii($file), FILTER_VALIDATE_URL)  || filter_var($file, FILTER_VALIDATE_URL))){
+        $file = getCompressionUrl($file);
         header('Content-Type: ' . get_mime_by_filename(basename(explode('?', $file)[0])));
         $protocol = parse_url($file,  PHP_URL_SCHEME);
         $hostname = parse_url($file,  PHP_URL_HOST);
@@ -300,13 +330,12 @@ function streamMedia($file, bool $useOps = false) {
         header('X-Accel-Redirect: ' . $internalMediaPath);
         die();
     }else if(pathinfo($file, PATHINFO_EXTENSION) !== "mp4" || is_file($file)) {
-
+        $file = getCompressionUrl($file);
         $headers = get_headers($file, TRUE);
         $head = array_change_key_case($headers);
         header('Accept-Ranges: bytes');
         header('Content-Disposition: inline');
-        header('Content-Type: ' . get_mime_by_filename($file));
-        header('Content-Length:' . $head['content-length']);
+        header('Content-Type: ' . ($head['content-type'] ?? get_mime_by_filename($file)));
         readfile($file);
     } else {
         set_time_limit(0);
@@ -575,18 +604,23 @@ function run()
             $ext = pathinfo($file, PATHINFO_EXTENSION);
             $filename = basename($file, "." . $ext);
             $_GET['media'] = str_Replace(DIRECTORY_SEPARATOR, '-----',dirname($file) . DIRECTORY_SEPARATOR . $filename . ".jpg");
-        }else if(isValidMd5($_GET['media'])) {
-            $hash = $_GET['media'];
-            $original = mediaFile::desanitize($hash);
-            if($original !== $hash) {
-                $file = ltrim($original, DIRECTORY_SEPARATOR);
-            }else {
-                $file = (str_replace(mediaFile::MEDIA_FOLDER.DIRECTORY_SEPARATOR, '', (new mediaFile('foo','bar',null, $hash))->original()));
-                mediaFile::sanitize($hash, $file);
+        }else if(isValidMd5($_GET['media']) || strpos($_GET['media'], 'h-') === 0 )  {
+            $hash = str_replace('h-','',$_GET['media']);
+            $mediaFileUrl = (new mediaFile("foo","bar", null, $hash))->source();
+            if (is_string($mediaFileUrl)) {
+                $_GET['media'] = $mediaFileUrl;
+            } else {
+                $original = mediaFile::desanitize($hash);
+                if($original !== $hash) {
+                    $file = ltrim($original, DIRECTORY_SEPARATOR);
+                }else {
+                    $file = (str_replace(mediaFile::MEDIA_FOLDER.DIRECTORY_SEPARATOR, '', (new mediaFile('foo','bar',null, $hash))->original()));
+                    mediaFile::sanitize($hash, $file);
+                }
+                $ext = pathinfo($file, PATHINFO_EXTENSION);
+                $filename = basename($file, "." . $ext);
+                $_GET['media'] = str_Replace(DIRECTORY_SEPARATOR, '-----',dirname($file) . DIRECTORY_SEPARATOR . $filename . "." . $ext);
             }
-            $ext = pathinfo($file, PATHINFO_EXTENSION);
-            $filename = basename($file, "." . $ext);
-            $_GET['media'] = str_Replace(DIRECTORY_SEPARATOR, '-----',dirname($file) . DIRECTORY_SEPARATOR . $filename . "." . $ext);
         }else if(is_base64_encoded($_GET['media'])) {
             $_GET['media'] = base64_decode($_GET['media']);
         }
