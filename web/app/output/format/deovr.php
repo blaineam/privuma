@@ -42,7 +42,7 @@ function findMedia($path) {
     if(is_file($cachePath) && $cacheStillRecent) {
         $scan = json_decode(file_get_contents($cachePath), true);
     } else {
-        $scan = $ops->scandir($path, true);
+        $scan = $ops->scandir($path, true, true);
         if($scan === false) {
             $scan = [];
         } else {
@@ -57,12 +57,20 @@ function findMedia($path) {
         } else {
             $ext = pathinfo($obj['Name'], PATHINFO_EXTENSION);
             if(in_array(strtolower($ext),  ["mp4"])){
+                $dir = dirname($obj['Path']);
                 $filename = basename($obj['Name'], '.' . $ext);
                 $thumbnailPath = $path .'/' . $filename . '.jpg';
                 //if($ops->is_file($thumbnailPath)) {
-                    $output[] = [
-                        "video_url" => $ENDPOINT . 'deovr/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path .'/'.$filename.'.'.$ext)),
-                        "thumbnailUrl" => getProtectedUrlForMediaPath($path .'/' . $filename . '.jpg'),
+                    if (!is_array($output[$dir])) {
+                        $output[$dir] = [
+                            "name" => $dir === '.' ? 'Privuma' : $dir,
+                            "list" => [],
+                        ];
+                    }
+
+                    $output[$dir]['list'][] = [
+                        "video_url" => $ENDPOINT . 'deovr/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path .'/' . $dir . '/' .$filename.'.'.$ext)),
+                        "thumbnailUrl" => getProtectedUrlForMediaPath($path .'/' . $dir . '/' . $filename . '.jpg'),
                         "title" => $filename,
                     ];
                 //}
@@ -258,10 +266,7 @@ foreach($json as $site => $search){
 
 $deoJSON = [
     "scenes"=> [
-        [
-            "name" => "Privuma",
-            "list" => $media
-        ],
+        ...array_values($media),
         ...array_values($cached)
         ],
     "authorized" => "1"
