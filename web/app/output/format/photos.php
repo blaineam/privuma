@@ -38,6 +38,10 @@ $STREAM_MEDIA_FROM_FALLBACK_ENDPOINT = privuma::getEnv('STREAM_MEDIA_FROM_FALLBA
 
 $rcloneConfig = parse_ini_file(privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'rclone' . DIRECTORY_SEPARATOR . 'rclone.conf', true);
 
+function isUrl($path) : bool
+{
+    return (filter_var(idn_to_ascii($path), FILTER_VALIDATE_URL) || filter_var($path, FILTER_VALIDATE_URL));
+}
 
 
 function RClone_S3_PresignedURL($AWSAccessKeyId, $AWSSecretAccessKey, $BucketName, $AWSRegion, $canonical_uri, $S3Endpoint = null, $expires = 86400)
@@ -98,6 +102,7 @@ function redirectToMedia($path) {
     global $ops;
     global $USE_X_Accel_Redirect;
     global $STREAM_MEDIA_FROM_FALLBACK_ENDPOINT;
+    global $USE_MIRROR;
     $path = $ops->encode($path);
 
     if($STREAM_MEDIA_FROM_FALLBACK_ENDPOINT) {
@@ -106,13 +111,11 @@ function redirectToMedia($path) {
         die();
     }
 
-    if ($USE_X_Accel_Redirect){
+    if ($USE_X_Accel_Redirect && !$USE_MIRROR){
         header('Content-Type: ' . get_mime_by_filename(privuma::canonicalizePath(ltrim( $path, DIRECTORY_SEPARATOR))));
         header('X-Accel-Redirect: ' . DIRECTORY_SEPARATOR . privuma::canonicalizePath(ltrim( $path, DIRECTORY_SEPARATOR)));
         die();
     }
-
-    global $USE_MIRROR;
 
     if($USE_MIRROR) {
         global $RCLONE_MIRROR;
@@ -165,8 +168,6 @@ function redirectToMedia($path) {
         header('Location: ' . $url);
         die();
     }
-
-
 }
 
 function is_base64_encoded($data)
@@ -320,7 +321,7 @@ function streamMedia($file, bool $useOps = false) {
         header('Content-Type: ' . get_mime_by_filename($file));
         header('Content-Length:' . $ops->filesize($file));
         $ops->readfile($file);
-    }else if ($USE_X_Accel_Redirect && (filter_var(idn_to_ascii($file), FILTER_VALIDATE_URL)  || filter_var($file, FILTER_VALIDATE_URL))){
+    }else if ($USE_X_Accel_Redirect && isUrl($file)){
         $file = getCompressionUrl($file);
         header('Content-Type: ' . get_mime_by_filename(basename(explode('?', $file)[0])));
         $protocol = parse_url($file,  PHP_URL_SCHEME);
@@ -631,7 +632,7 @@ function run()
             return;
         }
 
-        if (filter_var(idn_to_ascii($_GET['media']), FILTER_VALIDATE_URL) !== false || filter_var($_GET['media'], FILTER_VALIDATE_URL) !== false) {
+        if (isUrl($_GET['media'])) {
             streamMedia($_GET['media'], false);
         }
 
