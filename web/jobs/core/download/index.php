@@ -378,9 +378,21 @@ $viewerHTML = <<<'HEREHTML'
           var ext = re.exec(resource)[1];
           return ['mp4', 'webm'].includes(ext);
         },
-        requestQueue: Promise.resolve(),
+        requestQueue: [],
+        startQueue: async () => {
+          var res = []
+          while (medcrypt.requestQueue.length) {
+            const item = medcrypt.requestQueue.shift()
+            res.push(await item())
+          }
+          return res
+        },
+        flushQueue: () => {
+          medcrypt.requestQueue = [];
+        },
+        processingQueue: false,
         getSrc: function(resource, action = () => {}) {
-            medcrypt.requestQueue = medcrypt.requestQueue.then( async () => {
+            medcrypt.requestQueue.push(async () => {
                 return new Promise((resolve, reject) => {
                     fetch(resource, {
                         headers: {
@@ -463,6 +475,10 @@ $viewerHTML = <<<'HEREHTML'
                     return Promise.resolve(success);
                 }).then(action).catch(() => action(""));
             });
+          if (!medcrypt.processingQueue) medcrypt.processingQueue = medcrypt.startQueue()
+          return medcrypt.processingQueue.finally(() => {
+            medcrypt.processingQueue = undefined
+          });
         }
       };
 
@@ -849,7 +865,7 @@ $viewerHTML = <<<'HEREHTML'
           const getQueryParameter = (param) => new URLSearchParams(document.location.search.substring(1)).get(param);
 
           function run() {
-
+            medcrypt.flushQueue();
             jQuery("#content").empty();
             var hash = window.location.hash;
             if (hash.length > 1) {
@@ -1041,6 +1057,7 @@ $viewerHTML = <<<'HEREHTML'
           }
 
           $(window).on('hashchange', function(e) {
+            medcrypt.flushQueue();
             let newhash = window.location.hash;
             if (!newhash) {
               newhash = "none";
