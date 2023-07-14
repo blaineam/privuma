@@ -15,21 +15,27 @@ class MediaCrypto
     public static function encryptString(
         string $passphrase,
         string $data,
+        bool $gzip = false,
     ) {
         $tmpfile = tempnam(sys_get_temp_dir(), 'PVMA');
         file_put_contents($tmpfile, $data);
-        self::encrypt($passphrase, $tmpfile);
-        return file_get_contents($tmpfile);
+        self::encrypt($passphrase, $tmpfile, false, null, true, $gzip);
+        $result = file_get_contents($gzip ? ($tmpfile . "-gz") : $tmpfile);
+        unlink($gzip ? ($tmpfile . "-gz") : $tmpfile);
+        return $result;
     }
 
     public static function decryptString(
         string $passphrase,
         string $data,
+        bool $gzip = false,
     ) {
         $tmpfile = tempnam(sys_get_temp_dir(), 'PVMA');
         file_put_contents($tmpfile, $data);
-        self::decrypt($passphrase, $tmpfile);
-        return file_get_contents($tmpfile);
+        self::decrypt($passphrase, $tmpfile, false, true, false, $gzip);
+        $result = file_get_contents($gzip ? str_replace('-gz', '', $tmpfile) : $tmpfile);
+        unlink($gzip ? str_replace('-gz', '', $tmpfile) : $tmpfile);
+        return $result;
     }
 
     public static function encrypt(
@@ -37,9 +43,20 @@ class MediaCrypto
         string $path,
         bool $enableOutput = false,
         int $chunkSize = null,
+        bool $force = false,
+        bool $gzip = false,
     )
     {
         $memory_limit = self::return_bytes(ini_get('memory_limit'));
+
+        clearstatcache();
+        if($force === false && strstr(MediaCrypto::getMime($path), 'image') == false
+        && strstr(MediaCrypto::getMime($path), 'video') == false) {
+            if ($enableOutput) {
+                echo "Unexpected Filetype found, skipping encryption" . PHP_EOL;
+            }    
+            return;
+        }
 
         if ($enableOutput) {
             echo "Encrypting: {$path}" . PHP_EOL;
@@ -52,7 +69,13 @@ class MediaCrypto
         }
 
         $tempName = tempnam(sys_get_temp_dir(), "MedCrypt_");
-        $read = fopen($path, 'r');
+
+        if ($gzip) {
+            $newPath = tempnam(sys_get_temp_dir(), "MedCrypt_");
+            exec("gzip < " . escapeshellarg($path) . " > " . escapeshellarg($newPath));
+        }
+
+        $read = fopen($gzip? $newPath : $path, 'r');
         $write = fopen($tempName, 'w');
         $total = filesize($path);
         $progress = 0;
@@ -78,14 +101,21 @@ class MediaCrypto
 
         fclose($read);
         fclose($write);
-        copy($tempName, $path);
+        copy($tempName, $gzip ? ($path . "-gz") : $path);
         unlink($tempName);
+        if ($gzip) {
+            unlink($path);
+            unlink($newPath);
+        }
     }
 
     public static function decrypt(
         string $passphrase,
         string $path,
-        bool $enableOutput = false
+        bool $enableOutput = false,
+        bool $force = false,
+        bool $cleanup = false,
+        bool $gzip = false,
     )
     {
 
@@ -135,8 +165,47 @@ class MediaCrypto
 
         fclose($read);
         fclose($write);
-        copy($tempName, $path);
+
+        if ($gzip) {
+            $newPath = tempnam(sys_get_temp_dir(), "MedCrypt_");
+            exec("gzip -d < " . escapeshellarg($tempName) . " > " . escapeshellarg($newPath));
+        }
+
+        clearstatcache();
+        $isMediaFile = strstr(MediaCrypto::getMime($gzip ? $newPath : $tempName), 'image') !== false 
+        || strstr(MediaCrypto::getMime($gzip ? $newPath : $tempName), 'video') !== false;
+        if(
+            $force === true 
+            || (
+                $cleanup === false 
+                && $isMediaFile
+            )
+        ) {
+            copy($gzip ? $newPath : $tempName, $gzip ? str_replace('-gz', '', $path) : $path);
+        }else if (
+            $cleanup === true 
+            && !$isMediaFile
+        ) {
+            unlink($path);
+            if ($enableOutput) {
+                echo "Cleaned Up corrupted encrypted file" . PHP_EOL;
+            }  
+        } else if (
+            $cleanup === false 
+            && $enableOutput
+        ) {
+            echo "Unexpected Decrypted Filetype found, skipping decryption result" . PHP_EOL;
+        }else if (
+            $cleanup === true 
+            && $enableOutput
+        ) {
+            echo "Decryption was successful, skipping cleanup" . PHP_EOL;
+        }  
         unlink($tempName);
+        if ($gzip) {
+            unlink($path);
+            unlink($newPath);
+        }
     }
 
     private static function getSaltAndKeyAndIv(string $passphrase)
@@ -176,7 +245,7 @@ class MediaCrypto
     {
         // Use this line to decrypt base64 encrypted files if you have them.
         //return openssl_decrypt($data, 'aes-256-cbc', hex2bin($key), 0, hex2bin($iv));
-
+    
         return openssl_decrypt(base64_encode(self::z85_decode($data)), 'aes-256-cbc', hex2bin($key), 0, hex2bin($iv));
     }
 
