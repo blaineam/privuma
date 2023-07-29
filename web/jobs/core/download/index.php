@@ -509,6 +509,39 @@ $viewerHTML = <<<'HEREHTML'
         }
       };
 
+      function setWithExpiry(key, value, ttl) {
+        const now = new Date()
+
+        // `item` is an object which contains the original value
+        // as well as the time when it's supposed to expire
+        const item = {
+          value: value,
+          expiry: now.getTime() + ttl,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      }
+
+      function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+        // if the item doesn't exist, return null
+        if (!itemStr) {
+          return null
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+        // compare the expiry time of the item with the current time
+        if (now.getTime() > item.expiry) {
+          // If the item is expired, delete the item from storage
+          // and return null
+          localStorage.removeItem(key)
+          return null
+        }
+        return item.value
+      }
+
+      window.idleTimer = setInterval(() => {
+        setWithExpiry('offline-viewer-pass', passphrase, 5 * 60 * 1000)
+      }, 30 * 1000);
 
       function loadScript(url, callback) {
         var head = document.head;
@@ -554,7 +587,21 @@ $viewerHTML = <<<'HEREHTML'
       <button class="btn btn-secondary" id="backBtn">Back</button><input type="search" class="form-control" id="searchInput" placeholder="Search">
     </div>
     <script>
-      var passphrase = "";
+      function init() {
+        medcrypt.getSrc(
+          window.mobileCheck() ?
+          '../ZW/ZW5jcnlwdGVkX21vYmlsZV9kYXRh.js-gz' :
+          '../ZW/ZW5jcnlwdGVkX2RhdGE=.js-gz',
+        (encrypted_data_file) => {
+          loadScript(encrypted_data_file, runApp);
+        });
+      }
+
+      var passphrase = getWithExpiry('offline-viewer-pass') ?? "";
+      if (passphrase.length > 0) {
+        $("#content").empty();
+        init();
+      }
       var unlock = function() {
         passphrase = $('#downloadPassword').val();
         medcrypt.getSrc('../a2/a2V5.txt', (keyUrl) => {
@@ -562,13 +609,7 @@ $viewerHTML = <<<'HEREHTML'
           .then(response => response.text())
           .then(data => {
             passphrase = data;
-            medcrypt.getSrc(
-              window.mobileCheck() ?
-              '../ZW/ZW5jcnlwdGVkX21vYmlsZV9kYXRh.js-gz' :
-              '../ZW/ZW5jcnlwdGVkX2RhdGE=.js-gz',
-            (encrypted_data_file) => {
-              loadScript(encrypted_data_file, runApp);
-            });
+            init();
           });
         });
       };
@@ -1098,6 +1139,9 @@ $viewerHTML = <<<'HEREHTML'
           run();
         })();
       }
+
+
+
 
       function freezeUri(uri) {
         (new Freezeframe('img[src="' + uri + '"]', {
