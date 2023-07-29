@@ -731,10 +731,7 @@ function run()
             }
         }
 
-
         $conn = $privuma->getPDO();
-
-
         $stmt = $conn->prepare('select filename, album, url, thumbnail, max(time) as time, hash FROM media where dupe = 0 GROUP by album order by time DESC;');
         $stmt->execute([]);
         $data = $stmt->fetchAll();
@@ -743,7 +740,6 @@ function run()
             $ext = pathinfo($album["filename"], PATHINFO_EXTENSION);
             $filename = basename($album["filename"], "." . $ext);
             $filePath = $album['album'] . DIRECTORY_SEPARATOR . $album["filename"];
-            $relativePath = $album['album'] . "-----" . basename($filePath);
             if (strtolower($ext) === "mp4" || strtolower($ext) === "webm") {
                 $dest = $album['album'] . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext) . ".jpg";
                 $media = urlencode(base64_encode($dest));
@@ -756,7 +752,6 @@ function run()
                     $photoPath = getProtectedUrlForMediaHash(base64_encode($album['thumbnail']));
                 }
             } else {
-
                 $dest = $album['album'] . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext) . "." . $ext;
                 $media = urlencode(base64_encode($dest));
                 if(strlen($media) > $MAX_URL_CHARACTERS) {
@@ -764,7 +759,6 @@ function run()
                     $media = $album['hash'];
                 }
                 $photoPath = getProtectedUrlForMedia($media);
-
                 if(!is_null($album['url'])) {
                     $photoPath = getProtectedUrlForMediaHash(base64_encode($album['url']));
                 }
@@ -774,7 +768,13 @@ function run()
                 $photoPath = $ENDPOINT . "?token=" . $tokenizer->rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=blank.gif";
             }
 
-            $realbums[] = array("id" => (string)urlencode(base64_encode($album["album"])), "updated" => (string)(strtotime($album["time"])*1000), "title" => (string)$album["album"], "img" => (string)$photoPath , "mediaId" => (string)$album["hash"]);
+            $realbums[] = array(
+                "id" => (string)urlencode(base64_encode($album["album"])),
+                "updated" => (string)(strtotime($album["time"])*1000),
+                "title" => (string)$album["album"],
+                "img" => (string)$photoPath ,
+                "mediaId" => (string)$album["hash"]
+            );
         }
 
         usort($realbums, function ($a1, $a2) {
