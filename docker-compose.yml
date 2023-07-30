@@ -113,7 +113,7 @@ services:
         user: "${UID}:${GID}"
         ports:
             - "8993:80"
-        command: serve http --read-only --no-checksum --no-modtime --addr :80 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm} --dir-cache-time 72h --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+        command: serve http --read-only --no-checksum --no-modtime --addr :80 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm} --dir-cache-time 2h --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
     adminer:
         image: adminer
         restart: always
