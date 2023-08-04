@@ -11,7 +11,11 @@ class tokenizer {
         $this->env = new dotenv();
     }
 
-    public function mediaLink($path, $use_fallback = false, $noIp = false) {
+    public function mediaLink($path, $use_fallback = false, $noIp = false, $localOk = false) {
+        if($localOk && is_string($this->env->get('CLOUDFS_HTTP_REMOTE')) && is_string($this->env->get('CLOUDFS_HTTP_ENDPOINT'))){
+        	return "http://" . $this->env->get('CLOUDFS_HTTP_ENDPOINT') ."/" . ltrim(cloudFS::encode($path));
+        }
+
         $FALLBACK_ENDPOINT = $this->env->get('FALLBACK_ENDPOINT');
         $ENDPOINT = $this->env->get('ENDPOINT');
         $AUTHTOKEN = $this->env->get('AUTHTOKEN');
