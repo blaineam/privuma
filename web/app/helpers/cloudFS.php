@@ -219,7 +219,7 @@ class cloudFS {
     }
 
     public function public_link(string $path, string $expire = "1d") {
-        /* if($this->is_file($path)){ */
+        if(!is_string($this->env->get('CLOUDFS_HTTP_REMOTE')) || !is_string($this->env->get('CLOUDFS_HTTP_ENDPOINT'))){
         	  try{
                   $flags = ['--expire', $expire];
                   $link = $this->execute('link', $path, null, false, true, $flags, false, true, 5.0);
@@ -229,8 +229,8 @@ class cloudFS {
                 error_log($e->getMessage());
                 return false;
             }
-        /* } */
-        /* return false; */
+        }
+        return false;
     }
 
     public function remove_public_link(string $path): bool {

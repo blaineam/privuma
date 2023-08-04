@@ -1281,9 +1281,9 @@ foreach($newDlData as $item) {
     && !$ops->is_file($preserve)
   ) {
     if (!isset($item["url"])) {
-      if ($item["url"] = $privuma->getCloudFS()->public_link($path) ?: $tokenizer->mediaLink($path)) {
+      if ($item["url"] = $privuma->getCloudFS()->public_link($path) ?: $tokenizer->mediaLink($path, false, false, true)) {
         if (strpos($filename, '.mp4') !== false) {
-          $item["thumbnail"] = $privuma->getCloudFS()->public_link($thumbnailPath) ?: $tokenizer->mediaLink($thumbnailPath);
+          $item["thumbnail"] = $privuma->getCloudFS()->public_link($thumbnailPath) ?: $tokenizer->mediaLink($thumbnailPath, false, false, true);
         }
       } else {
         echo PHP_EOL."Skipping unavailable media: $path";
@@ -1310,7 +1310,7 @@ foreach($newDlData as $item) {
       && !$ops->is_file($thumbnailPreserve)
 
     )
-    &&  $item["thumbnail"] = $privuma->getCloudFS()->public_link($thumbnailPath) ?: $tokenizer->mediaLink($thumbnailPath)
+    &&  $item["thumbnail"] = $privuma->getCloudFS()->public_link($thumbnailPath) ?: $tokenizer->mediaLink($thumbnailPath, false, false, true)
   ) {
     echo PHP_EOL."Queue Downloading of media file: " . $thumbnailPreserve . " from album: " . $item['album'];
     $privuma->getQueueManager()->enqueue(json_encode([
