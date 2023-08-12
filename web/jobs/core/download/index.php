@@ -50,6 +50,7 @@ $data = str_replace('`', '', $stmt->fetchAll()[0]["json_result"]);
 echo PHP_EOL."All Database Lookup Operations have been completed.";
 
 $viewerHTML = <<<'HEREHTML'
+<!DOCTYPE html>
 <meta charset="utf8" />
 <html>
   <head>
@@ -393,21 +394,26 @@ $viewerHTML = <<<'HEREHTML'
         isImage: function(resource) {
           var re = /(?:\.([^.]+))?$/;
           var ext = re.exec(resource)[1];
-          return ['jpg', 'jpeg', 'gif', 'png'].includes(ext);
+          return ['jpg', 'jpeg', 'png'].includes(ext);
         },
         isVideo: function(resource) {
           var re = /(?:\.([^.]+))?$/;
           var ext = re.exec(resource)[1];
-          return ['mp4', 'webm'].includes(ext);
+          return ['mp4', 'webm', 'gif'].includes(ext);
         },
         requestQueue: [],
+        dirCache: {},
         startQueue: async () => {
-          var res = []
+          var chunkSize = 8;
           while (medcrypt.requestQueue.length) {
-            const item = medcrypt.requestQueue.shift()
-            res.push(await item())
+            await new Promise(r => setTimeout(r, Math.floor(Math.random() * 400) + 100));
+            if (medcrypt.requestQueue.length >= chunkSize) {
+                await Promise.allSettled(Array(chunkSize).fill().map((v,i)=>medcrypt.requestQueue.shift()()));
+            } else {
+                const item = medcrypt.requestQueue.shift()
+                await item()
+            }
           }
-          return res
         },
         flushQueue: () => {
           medcrypt.requestQueue = [];
@@ -417,95 +423,95 @@ $viewerHTML = <<<'HEREHTML'
             medcrypt.requestQueue.push(async () => {
                 return new Promise((resolve, reject) => {
                     fetch(resource, {
-                        headers: {
-                        'content-type': 'text/plain;charset=UTF-8',
-                        'range': 'bytes=0-10'
-                        },
-                    })
-                    .then(response => {
-                        return response.text();
-                    })
-                    .then(start => {
-                        if (start[0] === '{') {
-                        // it looks like a json file and is likely encrypted
-                        fetch(resource)
-                            .then(response => new Promise((pass, deny) => {
-                            let fetchReader = response.body.getReader(),
-                                decoder = new TextDecoder(),
-                                salts = "",
-                                currentLineData = "",
-                                blobs = [];
-                            return fetchReader.read()
-                                .then(function processRead({
-                                done,
-                                value
-                                }) {
-                                if (done === true) {
-                                    // Get the total length of all arrays.
-                                    let length = 0;
-                                    blobs.forEach(item => {
-                                    length += item.length;
-                                    });
+                            headers: {
+                            'content-type': 'text/plain;charset=UTF-8',
+                            'range': 'bytes=0-10'
+                            },
+                        })
+                        .then(response => {
+                            return response.text();
+                        })
+                        .then(start => {
+                            if (start[0] === '{') {
+                            // it looks like a json file and is likely encrypted
+                            fetch(resource)
+                                .then(response => new Promise((pass, deny) => {
+                                let fetchReader = response.body.getReader(),
+                                    decoder = new TextDecoder(),
+                                    salts = "",
+                                    currentLineData = "",
+                                    blobs = [];
+                                return fetchReader.read()
+                                    .then(function processRead({
+                                    done,
+                                    value
+                                    }) {
+                                    if (done === true) {
+                                        // Get the total length of all arrays.
+                                        let length = 0;
+                                        blobs.forEach(item => {
+                                        length += item.length;
+                                        });
 
-                                    // Create a new array with total length and merge all source arrays.
-                                    let mergedArray = new Uint8Array(length);
-                                    let offset = 0;
-                                    blobs.forEach(item => {
-                                    mergedArray.set(item, offset);
-                                    offset += item.length;
-                                    });
-                                    var mime = response.headers.get("Content-Type");
-                                    if(resource.split('.').pop().includes('-gz')) {
-                                      mergedArray = pako.inflate(mergedArray);
-                                      mime = medcrypt.getMime(resource.replace('-gz', ''));
-                                    }
-
-                                    return pass(
-                                    window.URL.createObjectURL(
-                                        new Blob(
-                                        [mergedArray], {
-                                            type: mime
+                                        // Create a new array with total length and merge all source arrays.
+                                        let mergedArray = new Uint8Array(length);
+                                        let offset = 0;
+                                        blobs.forEach(item => {
+                                        mergedArray.set(item, offset);
+                                        offset += item.length;
+                                        });
+                                        var mime = response.headers.get("Content-Type");
+                                        if(resource.split('.').pop().includes('-gz')) {
+                                        mergedArray = pako.inflate(mergedArray);
+                                        mime = medcrypt.getMime(resource.replace('-gz', ''));
                                         }
+
+                                        return pass(
+                                        window.URL.createObjectURL(
+                                            new Blob(
+                                            [mergedArray], {
+                                                type: mime
+                                            }
+                                            )
                                         )
-                                    )
-                                    );
-                                }
-                                decoder.decode(
-                                    value, {
-                                    stream: !done
+                                        );
                                     }
-                                ).split("\n").forEach((line) => {
-                                    if (isJsonString(line)) {
-                                    salts = line;
-                                    } else {
-                                      if (!isencrypted(currentLineData)) {
-                                          currentLineData += line;
-                                      }
-                                      if (isencrypted(currentLineData)) {
-                                          let bytes = CryptoJSAesEnc.decrypt(salts + "\n" + currentLineData.substring(1, currentLineData.length - 1), passphrase);
-                                          blobs.push(w2a(bytes));
-                                          currentLineData = "";
-                                      }
-                                    }
-                                });
-                                return fetchReader.read().then(processRead).catch(deny);
-                                }).catch(deny);
-                            }))
-                            .then((blobUrl) => {
-                            resolve(blobUrl);
-                            }).catch(reject);
-                        } else {
-                        resolve(resource);
-                        }
-                    }).catch(reject);
+                                    decoder.decode(
+                                        value, {
+                                        stream: !done
+                                        }
+                                    ).split("\n").forEach((line) => {
+                                        if (isJsonString(line)) {
+                                        salts = line;
+                                        } else {
+                                        if (!isencrypted(currentLineData)) {
+                                            currentLineData += line;
+                                        }
+                                        if (isencrypted(currentLineData)) {
+                                            let bytes = CryptoJSAesEnc.decrypt(salts + "\n" + currentLineData.substring(1, currentLineData.length - 1), passphrase);
+                                            blobs.push(w2a(bytes));
+                                            currentLineData = "";
+                                        }
+                                        }
+                                    });
+                                    return fetchReader.read().then(processRead).catch(deny);
+                                    }).catch(deny);
+                                }))
+                                .then((blobUrl) => {
+                                resolve(blobUrl);
+                                }).catch(reject);
+                            } else {
+                            resolve(resource);
+                            }
+                        }).catch(reject);
                 }).then((success) => {
                     return Promise.resolve(success);
                 }).then(action).catch(() => action(""));
             });
-          if (!medcrypt.processingQueue) medcrypt.processingQueue = medcrypt.startQueue()
-          return medcrypt.processingQueue.finally(() => {
-            medcrypt.processingQueue = undefined
-          });
+            if (!medcrypt.processingQueue) medcrypt.processingQueue = medcrypt.startQueue()
+            return medcrypt.processingQueue.finally(() => {
+                medcrypt.processingQueue = undefined
+            });
         }
       };
 
@@ -542,6 +548,11 @@ $viewerHTML = <<<'HEREHTML'
       window.idleTimer = setInterval(() => {
         setWithExpiry('offline-viewer-pass', passphrase, 5 * 60 * 1000)
       }, 30 * 1000);
+      window.idleTimer = setInterval(() => {
+        for (const [dir, cache] of Object.entries(medcrypt.dirCache)) {
+            setWithExpiry('offline-viewer-dirs-'+dir, cache, 7 * 24 * 60 * 60 * 1000);
+        }
+      }, 5 * 1000);
 
       function loadScript(url, callback) {
         var head = document.head;
@@ -572,10 +583,11 @@ $viewerHTML = <<<'HEREHTML'
 
       function imgLoad(img) {
         jQuery(img).parent().show();
-        window.getGifDuration(jQuery(img)
-            .attr("src"))
+        var source = jQuery(img)
+            .attr("src");
+        window.getGifDuration(source)
           .then(duration => {
-            jQuery(img)
+            jQuery(`img[src="${source}"]`)
               .data("duration", duration)
           });
       }
@@ -637,8 +649,6 @@ $viewerHTML = <<<'HEREHTML'
             "zoom",
             "slideShow",
             "fullScreen",
-            "download",
-            "thumbs",
             "close"
           ],
           wheel: false,
@@ -806,33 +816,32 @@ $viewerHTML = <<<'HEREHTML'
               let dbAlbum = item.album;
               let filenameParts = filename.split(".");
               let extension = filenameParts.pop();
-              let isVideo = [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".mp4", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"].includes("." + extension);
+              let isVideo = [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".mp4", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm", ".gif"].includes("." + extension.toLowerCase());
               if (("video" == kind || "all" == kind) && isVideo) {
                 let thumbnailFilename = filenameParts.join(".") + ".jpg";
-                let video = btoa(item.hash) + ".mp4";
+                let video = btoa(item.hash) + "." + extension;
                 let thumbnail = btoa(item.hash) + ".jpg";
                 let resource = `../${thumbnail.substring(0,2)}/${thumbnail}`;
-                return Promise.resolve([resource, true, filename, video, item.metadata]);
+                return Promise.resolve([resource, true, filename, video, item.metadata, extension.toLowerCase() == 'gif' ? 'image' : 'video']);
               }
               if (("photo" == kind || "all" == kind) && !isVideo) {
                 let photo = btoa(item.hash) + "." + extension;
                 let resource = `../${photo.substring(0,2)}/${photo}`;
-                return Promise.resolve([resource, false, filename, '', item.metadata]);
+                return Promise.resolve([resource, false, filename, '', item.metadata, '']);
               }
             })).then(results => {
               results
                 .filter(result => typeof result.value !== 'undefined')
                 .map(result => result.value).forEach(
-                  ([uri, isVideo, filename, video, meta]) =>
+                  ([uri, isVideo, filename, video, meta, datatype]) =>
                   isVideo ?
                   jQuery("#content")
-                  .append(`<a class="gallerypicture" title="${filename}" data-type="video" data-fancybox="gallery" href="../${video.substring(0,2)}/${video}"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""><script type="text/json">${meta}<\/script></a>`) :
+                  .append(`<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery" href="../${video.substring(0,2)}/${video}"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""><script type="text/json">${meta}<\/script></a>`) :
                   jQuery("#content")
                   .append(`<a class="gallerypicture" data-width="1920" href="${uri}" title="${filename}" data-fancybox="gallery"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)"><script type="text/json">${meta}<\/script></a>`)
                 );
             }).finally(() => {
               processLazyLoad();
-              console.log("rendered");
             });
           }
 
@@ -861,7 +870,7 @@ $viewerHTML = <<<'HEREHTML'
               let filenameParts = filename.split('.');
               let extension = filenameParts.pop();
               let photo = item['filename'];
-              let isVideo = [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".mp4", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"].includes("." + extension);
+              let isVideo = [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".mp4", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm", ".gif"].includes("." + extension.toLowerCase());
               let image = btoa(item.hash) + "." + (isVideo ? "jpg" : extension);
               let resource = `../${image.substring(0,2)}/${image}`;
               return Promise.resolve([resource, displayName, album]);
@@ -966,11 +975,9 @@ $viewerHTML = <<<'HEREHTML'
               $('[data-fancybox="gallery"]').fancybox({
                 loop: true,
                 buttons: [
-                  //"share",
+                  "zoom",
                   "slideShow",
                   "fullScreen",
-                  "download",
-                  "thumbs",
                   "close"
                 ],
                 video: {
@@ -1006,9 +1013,11 @@ $viewerHTML = <<<'HEREHTML'
                   slide.src = uri;
                   slide.thumb = uri;
                   slide.$thumb = element.find('img');
-                  freezeUri(uri);
+                  if (targetsrc.includes(".gif")) {
+                    freezeUri(uri);
+                  }
                   $.fancybox.getInstance().current.$slide.trigger("onReset");
-                  $(".fancybox-content").removeClass('fancybox-error').html('<img style="max-width:100%; max-height:100%;" src="' + uri + '" alt="" />');
+                  $(".fancybox-content").removeClass('fancybox-error').html('<img style="max-width:100%; max-height:100%;" onLoad="imgLoad(this)" src="' + uri + '" alt="" />');
                   new Freezeframe('.gallerypicture[href="' + uri + '"]', { 'trigger' : false}).start();
                   if ($.fancybox.getInstance().SlideShow.isActive) {
                     $.fancybox.getInstance().SlideShow.stop();
@@ -1140,9 +1149,6 @@ $viewerHTML = <<<'HEREHTML'
         })();
       }
 
-
-
-
       function freezeUri(uri) {
         (new Freezeframe('img[src="' + uri + '"]', {
           trigger: false,
@@ -1159,7 +1165,9 @@ $viewerHTML = <<<'HEREHTML'
               if (entry.isIntersecting && lazyImage.dataset.src != "") {
                 medcrypt.getSrc(lazyImage.dataset.src, (uri) => {
                   lazyImage.src = uri;
-                  freezeUri(uri);
+                  if (lazyImage.dataset.src.includes(".gif")) {
+                    freezeUri(uri);
+                  }
                 });
                 lazyImage.classList.remove("lazy-waiting");
                 lazyImage.classList.add("lazy-loaded");
