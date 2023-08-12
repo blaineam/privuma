@@ -54,6 +54,19 @@ class processMedia {
                             return;
                         }
                         $passphrase = (new dotenv())->get('DOWNLOAD_PASSWORD') ?? "";
+                        $dlExt = !empty(pathinfo($mediaPath, PATHINFO_EXTENSION)) ? pathinfo($mediaPath, PATHINFO_EXTENSION): pathinfo($mediaPreservationPath, PATHINFO_EXTENSION);
+                        if (strtoupper($dlExt) === "GIF") {
+                            echo PHP_EOL."generating thumbnail for gif image";
+                            $dlThumbDest = str_replace(".gif", "", $mediaPath) . ".jpg";
+                            $dlThumbPreservationPath = str_replace(".gif", "", $mediaPreservationPath) . ".jpg";
+                            exec("convert '{$mediaPath}[0]' -monitor -sampling-factor 4:2:0 -strip -interlace JPEG -colorspace sRGB -resize 1000 -compress JPEG -quality 70 '$dlThumbDest'");
+                            if(!empty($passphrase)) {
+                                MediaCrypto::encrypt($passphrase, $dlThumbDest, true);
+                            }
+
+                            echo PHP_EOL."Downloading media thumbnail to: $dlThumbPreservationPath";
+                            $downloadOps->rename($dlThumbDest, $dlThumbPreservationPath, false);
+                        }
 
                         echo PHP_EOL."Attempting to Compress Media: $mediaPath";
                         if(
