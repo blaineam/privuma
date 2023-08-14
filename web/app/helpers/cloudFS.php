@@ -248,6 +248,7 @@ class cloudFS {
 
 
     public function unlink(string $path): bool {
+        echo PHP_EOL."Attempting to remove file at: " .$path;
         if($this->is_file($path)){
             try{
                 $this->execute('delete', $path);
