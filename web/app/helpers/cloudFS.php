@@ -246,19 +246,14 @@ class cloudFS {
         return false;
     }
 
-
     public function unlink(string $path): bool {
-        echo PHP_EOL."Attempting to remove file at: " .$path;
-        if($this->is_file($path)){
-            try{
-                $this->execute('delete', $path);
-            } catch(Exception $e) {
-                error_log($e->getMessage());
-                return false;
-            }
-            return true;
+        try{
+            $this->execute('delete', $path);
+        } catch(Exception $e) {
+            error_log($e->getMessage());
+            return false;
         }
-        return false;
+        return true;
     }
 
     public function rmdir(string $path, bool $recursive = false): bool {

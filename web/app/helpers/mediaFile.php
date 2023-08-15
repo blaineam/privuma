@@ -174,6 +174,17 @@ class mediaFile {
         return true;
     }
 
+    public function duplicateHashes() {
+        if(is_null($this->hash) && $hash = $this->persistedHash()) {
+            $this->hash = $hash;
+        }
+
+        $stmt = $this->pdo->prepare('SELECT hash, album, id, filename, dupe FROM media WHERE hash = ? AND album != ? limit 1');
+        $stmt->execute([$this->hash, $this->album]);
+        $data = $stmt->fetchAll();
+        return empty($data) ? false : $data;
+    }
+
     public function persistedHash() {
         $stmt = $this->pdo->prepare('SELECT * FROM media WHERE filename = ? AND album = ? limit 1');
         $stmt->execute([$this->filename, $this->album]);
@@ -228,11 +239,18 @@ class mediaFile {
     }
 
     public function delete(?string $hash = null) {
-        $dlPath = str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', ($this->persistedHash() ?? $hash ?? $this->hash) . "." . pathinfo($this->path(), PATHINFO_EXTENSION));
+        $this->hash = $this->persistedHash();
+        if(!$this->duplicateHashes()) {
+            $dlPath = str_replace(
+                [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4',
+                ($this->persistedHash() ?? $hash ?? $this->hash) . "." . pathinfo($this->path(), PATHINFO_EXTENSION)
+            );
+            $this->dlOps->unlink($dlPath);
+        }
+
         if(!is_null($hash)){
             $stmt = $this->pdo->prepare('DELETE FROM media WHERE hash = ?');
             $stmt->execute([$hash]);
-            $this->dlOps->unlink($dlPath);
             return;
         }
 
@@ -240,7 +258,6 @@ class mediaFile {
             $stmt = $this->pdo->prepare('DELETE FROM media WHERE id = ?');
             $stmt->execute([$this->id]);
             $this->cloudFS->unlink($this->path());
-            $this->dlOps->unlink($dlPath);
             return;
         }
 
@@ -248,7 +265,6 @@ class mediaFile {
         $stmt = $this->pdo->prepare('DELETE FROM media WHERE album = ? AND filename LIKE "' . trim($fileParts[0],'-') . '%"');
         $stmt->execute([$this->album]);
 
-        $this->dlOps->unlink($dlPath);
         $this->cloudFS->unlink($this->path());
     }
 
