@@ -80,6 +80,8 @@ $privuma = new privuma();
 
         file_put_contents($cron, json_encode($cronConfig, JSON_PRETTY_PRINT));
 
+        // Truncate logs to last 3k lines;
+        exec('echo "$(tail -3000 \''.$log.'\')" > "' . $log . '"');
         $flockPath = PHP_OS_FAMILY == 'Darwin' ? "/usr/local/bin/flock" : "/usr/bin/flock";
 $cmd = implode(' ', [
             // path to flock in container
@@ -94,8 +96,8 @@ $cmd = implode(' ', [
             $phpPath,
             // path to normal cron job definition
             $command,
-            // overwrite the log file with new log entries
-            '>',
+            // append the log file with new log entries
+            '>>',
             // logs go to the same logs folder for easy tailing with multiple -f flags
             $log,
             // redirect any errors to the log file
