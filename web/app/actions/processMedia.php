@@ -29,7 +29,11 @@ class processMedia {
                     if (isset($data['download'])) {
                         $downloadOps = new cloudFS($data['download'], true, '/usr/bin/rclone', null, true);
                         $mediaPreservationPath = str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', $data['hash'] . "." . pathinfo($mediaFile->path(), PATHINFO_EXTENSION));
-                        if($downloadOps->is_file($mediaPreservationPath)) {
+                        $dlExt = pathinfo($mediaPreservationPath, PATHINFO_EXTENSION);
+                        $isGif = strtoupper($dlExt) === "GIF";
+                        $gifThumbnailPath = str_replace(['.gif', '.GIF'], '.jpg', $mediaPreservationPath);
+                        $gifThumbnailExists = $downloadOps->is_file($gifThumbnailPath);
+                        if(($isGif && $gifThumbnailExists) || !$isGif && $downloadOps->is_file($mediaPreservationPath)) {
                             echo PHP_EOL."Skip Existing Media already downloaded to: $mediaPreservationPath";
                             return;
                         }

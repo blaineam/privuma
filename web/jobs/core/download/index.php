@@ -73,6 +73,49 @@ $viewerHTML = <<<'HEREHTML'
       /* Custom CSS */
       html, body{margin: 0;padding: 0;height: 100%;width: 100%;background-color: #000000;color:#ffffff;}.gallerypicture {width: calc(100%/4)!important;float: left;height: 18.75vw!important;position: relative;overflow: hidden;background-color: #000;}.gallerypicture img {object-fit: cover;cursor: pointer;object-position: 50% 50%;width: 100%;height: 100%;transition: transform .5s ease-in-out,opacity .5s ease-in-out;}.gallerypicture img:hover {transform: scale(1.2);}.gallerypicture p{z-index:1;display: block;position: absolute;top:0px;width: 100%;background-color: rgba(0, 0, 0, 0.85);height: auto;line-height: 30px;font-size: 25px;padding: 10px 0px 10px 10px;color: white;}.logout{position: fixed;display: block;top:5px;right: 5px;width: auto;color: white;z-index: 5;background-color: #333333;}h1,h3{margin-top: 50px;}img {border: 0;}img:not([src]) {visibility: hidden;}@media screen and (max-width: 1200px) {.gallerypicture {width: calc(100%/3)!important;height: 25vw!important;}}@media screen and (max-width: 992px) {.gallerypicture {width: calc(100%/2)!important;height: 37.5vw!important;}}#searchBox {z-index:1;position: fixed;bottom: 5px;;left: 5px;padding:5px;max-width:300px;width:100%;height:auto;background-color: rgba(0,0,0,0.7);border-radius:10px;}#searchInput {width:75%;background-color: #000000;color:#ffffff;display:inline-block;} #backBtn{width:25%;display:inline-block;vertical-align:baseline;}#downloadPassword {background-color: #000000;color:#ffffff;} #backBtn{width:25%;display:inline-block;vertical-align:baseline;} .collapsible { white-space: pre-wrap; text-align: left; margin-top:50px; background: #000000; padding:15px; } .toggle-collapsible { position:fixed; margin-top:-25px; } .collapsed{ display:none;} .fancybox-content {background:#000000 !important;overflow-y:scroll !important; color: #ffffff !important;}
       .ff-loading-icon{background:none !important;}*::-webkit-scrollbar {display: none; }*{-ms-overflow-style: none;scrollbar-width: none;}.fancybox-content{padding:0px !important;}.ff-container.ff-loading-icon:before{background-image:none !important;}
+
+#progress {
+  position: fixed;
+  z-index: 100000;
+  top: 0;
+  left: -6px;
+  width: 1%;
+  height: 3px;
+  background-color: #ce0000;
+  -moz-border-radius: 1px;
+  -webkit-border-radius: 1px;
+  border-radius: 1px;
+  -moz-transition: width 600ms ease-out, opacity 500ms linear;
+  -ms-transition: width 600ms ease-out, opacity 500ms linear;
+  -o-transition: width 600ms ease-out, opacity 500ms linear;
+  -webkit-transition: width 600ms ease-out, opacity 500ms linear;
+  transition: width 1000ms ease-out, opacity 500ms linear;
+}
+#progress b,
+#progress i {
+  position: absolute;
+  top: 0;
+  height: 3px;
+  -moz-box-shadow: #777777 1px 0 6px 1px;
+  -ms-box-shadow: #777777 1px 0 6px 1px;
+  -webkit-box-shadow: #777777 1px 0 6px 1px;
+  box-shadow: #777777 1px 0 6px 1px;
+  -moz-border-radius: 100%;
+  -webkit-border-radius: 100%;
+  border-radius: 100%;
+}
+#progress b {
+  clip: rect(-6px, 22px, 14px, 10px);
+  opacity: 0.6;
+  width: 20px;
+  right: 0;
+}
+#progress i {
+  clip: rect(-6px, 90px, 14px, -6px);
+  opacity: 0.6;
+  width: 180px;
+  right: -80px;
+}
     </style>
     <script>
 
@@ -357,6 +400,29 @@ $viewerHTML = <<<'HEREHTML'
       }
 
       let medcrypt = {
+        transfers: {
+          loaded: 0,
+          size: 0,
+        },
+        displayProgress: function() {
+          if ($("#progress").length === 0) {
+            $("body").append($("<div><b></b><i></i></div>").attr("id", "progress"));
+          }
+          var progress = Math.round(medcrypt.transfers.loaded/medcrypt.transfers.size*100);
+          $("#progress").width(progress+'%').delay(800);
+          if (progress >= 100) {
+            $("#progress").fadeOut(1000, function() {
+              $(this).remove();
+            });
+          }
+        },
+        finishProgress: function() {
+          medcrypt.transfers.loaded = 0;
+          medcrypt.transfers.size = 0;
+          $("#progress").fadeOut(1000, function() {
+            $(this).remove();
+          });
+        },
         extToMimes: {
           'jpg': 'image/jpeg',
           'jpeg': 'image/jpeg',
@@ -420,6 +486,9 @@ $viewerHTML = <<<'HEREHTML'
                             // it looks like a json file and is likely encrypted
                             fetch(resource)
                                 .then(response => new Promise((pass, deny) => {
+                                  var contentLength = response.headers.get('content-length');
+                                  medcrypt.transfers.size = parseInt(contentLength, 10);
+                                  medcrypt.transfers.loaded = 0;
                                 let fetchReader = response.body.getReader(),
                                     decoder = new TextDecoder(),
                                     salts = "",
@@ -431,6 +500,7 @@ $viewerHTML = <<<'HEREHTML'
                                     value
                                     }) {
                                     if (done === true) {
+                                        medcrypt.finishProgress();
                                         // Get the total length of all arrays.
                                         let length = 0;
                                         blobs.forEach(item => {
@@ -460,6 +530,9 @@ $viewerHTML = <<<'HEREHTML'
                                         )
                                         );
                                     }
+
+                                    medcrypt.transfers.loaded += value.byteLength;
+                                    medcrypt.displayProgress();
                                     decoder.decode(
                                         value, {
                                         stream: !done
@@ -582,12 +655,15 @@ $viewerHTML = <<<'HEREHTML'
     <div id="searchBox">
       <button class="btn btn-secondary" id="backBtn">Back</button><input type="search" class="form-control" id="searchInput" placeholder="Search">
     </div>
+    <script src="index.php?RapiServe=1"></script>
     <script>
+      var usingRapiServe = typeof canrapiserve !== 'undefined' ? true : window.location.hash.includes("rapiserve");
+
       function init() {
         medcrypt.getSrc(
           window.mobileCheck() ?
-          '../ZW/ZW5jcnlwdGVkX21vYmlsZV9kYXRh.js-gz' :
-          '../ZW/ZW5jcnlwdGVkX2RhdGE=.js-gz',
+          (usingRapiServe ? '' : '../') + 'ZW/ZW5jcnlwdGVkX21vYmlsZV9kYXRh.js-gz' :
+          (usingRapiServe ? '' : '../') + 'ZW/ZW5jcnlwdGVkX2RhdGE=.js-gz',
         (encrypted_data_file) => {
           loadScript(encrypted_data_file, runApp);
         });
@@ -595,17 +671,49 @@ $viewerHTML = <<<'HEREHTML'
 
       var passphrase = getWithExpiry('offline-viewer-pass') ?? "";
       if (passphrase.length > 0) {
-        $("#content").empty();
+        if(usingRapiServe) {
+            var formData = new FormData();
+            formData.append('key', btoa(passphrase));
+          fetch('index.php', {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X_AUTH_KEY': btoa(passphrase)
+            }
+          }).then(() => {
+
+            $("#content").empty();
         init();
+          });
+        } else {
+          $("#content").empty();
+          init();
+        }
       }
       var unlock = function() {
         passphrase = $('#downloadPassword').val();
-        medcrypt.getSrc('../a2/a2V5.txt', (keyUrl) => {
+        medcrypt.getSrc((usingRapiServe ? '' : '../') + 'a2/a2V5.txt', (keyUrl) => {
           fetch(keyUrl)
           .then(response => response.text())
           .then(data => {
             passphrase = data;
+
+            if(usingRapiServe) {
+                var formData = new FormData();
+                formData.append('key', btoa(passphrase));
+                fetch('index.php', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                  'X_AUTH_KEY': btoa(passphrase)
+                }
+              }).then(() => {
+
             init();
+              });
+            } else {
+              init();
+            }
           });
         });
       };
@@ -805,22 +913,23 @@ $viewerHTML = <<<'HEREHTML'
                 let thumbnailFilename = filenameParts.join(".") + ".jpg";
                 let video = btoa(item.hash) + "." +  (extension.toLowerCase() == 'gif' ? 'gif' : 'mp4');
                 let thumbnail = btoa(item.hash) + ".jpg";
-                let resource = `../${thumbnail.substring(0,2)}/${thumbnail}`;
-                return Promise.resolve([resource, true, filename, video, item.metadata, extension.toLowerCase() == 'gif' ? 'image' : 'video']);
+                let resource = (usingRapiServe ? '' : '../') + `${thumbnail.substring(0,2)}/${thumbnail}`;
+                let videoResource = (usingRapiServe ? 'index.php/' : '../') + `${video.substring(0,2)}/${video}`;
+                return Promise.resolve([resource, true, filename, video, item.metadata, extension.toLowerCase() == 'gif' ? 'image' : 'video', videoResource]);
               }
               if (("photo" == kind || "all" == kind) && !isVideo) {
                 let photo = btoa(item.hash) + "." + extension;
-                let resource = `../${photo.substring(0,2)}/${photo}`;
-                return Promise.resolve([resource, false, filename, '', item.metadata, '']);
+                let resource = (usingRapiServe ? '' : '../') + `${photo.substring(0,2)}/${photo}`;
+                return Promise.resolve([resource, false, filename, '', item.metadata, '', '']);
               }
             })).then(results => {
               results
                 .filter(result => typeof result.value !== 'undefined')
                 .map(result => result.value).forEach(
-                  ([uri, isVideo, filename, video, meta, datatype]) =>
+                  ([uri, isVideo, filename, video, meta, datatype, videoResource]) =>
                   isVideo ?
                   jQuery("#content")
-                  .append(`<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery" href="../${video.substring(0,2)}/${video}"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""><script type="text/json">${meta}<\/script></a>`) :
+                  .append(`<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery" href="${videoResource}"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""><script type="text/json">${meta}<\/script></a>`) :
                   jQuery("#content")
                   .append(`<a class="gallerypicture" data-width="1920" href="${uri}" title="${filename}" data-fancybox="gallery"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)"><script type="text/json">${meta}<\/script></a>`)
                 );
@@ -856,7 +965,7 @@ $viewerHTML = <<<'HEREHTML'
               let photo = item['filename'];
               let isVideo = [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".mp4", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm", ".gif"].includes("." + extension.toLowerCase());
               let image = btoa(item.hash) + "." + (isVideo ? "jpg" : extension);
-              let resource = `../${image.substring(0,2)}/${image}`;
+              let resource = (usingRapiServe ? '' : '../') + `${image.substring(0,2)}/${image}`;
               return Promise.resolve([resource, displayName, album]);
             })).then(results => {
               results.filter(result => typeof result.value !== 'undefined')
@@ -984,6 +1093,12 @@ $viewerHTML = <<<'HEREHTML'
 
           $(document).on('afterClose.fb', function(e, instance) {
             slideshowStarted = false;
+            $("video")
+                  .trigger("pause")
+                  .find("Source:first")
+                  .removeAttr("src")
+                  .parent()
+                  .trigger("load")
           });
 
           $(document).on('afterShow.fb', function(e, instance, slide) {
@@ -1033,7 +1148,38 @@ $viewerHTML = <<<'HEREHTML'
             }
 
             $("video").trigger("pause");
-            medcrypt.getSrc(slide.src, (uri) => {
+            var videoDuration = $("video").attr('duration');
+
+            var updateProgressBar = function(){
+                if ($("video").attr('readyState')) {
+                    var buffered = $("video").attr("buffered").end(0);
+                    var percent = 100 * buffered / videoDuration;
+
+                    medcrypt.transfers.loaded = percent;
+                    medcrypt.transfers.size = 100;
+                    medcrypt.displayProgress();
+                    if (percent > 10) {
+                      $("video")
+                        .trigger("play")
+                    }
+                    if (buffered >= videoDuration) {
+                            clearInterval(this.watchBuffer);
+                            medcrypt.finishProgress();
+                    }
+                }
+            };
+            var watchBuffer = setInterval(updateProgressBar, 500);
+            if (usingRapiServe) {
+              $('.gallerypicture[href="' + slide.src + '"]')
+                  .attr("href", slide.src);
+                $("video")
+                  .find("Source:first")
+                  .attr("src", slide.src)
+                  .parent()
+                  .trigger("load")
+                  .trigger("play")
+            } else {
+              medcrypt.getSrc(slide.src, (uri) => {
                 $('.gallerypicture[href="' + slide.src + '"]')
                   .attr("href", uri);
                 $("video")
@@ -1043,6 +1189,7 @@ $viewerHTML = <<<'HEREHTML'
                   .trigger("load")
                   .trigger("play")
               });
+            }
             $("video")
               .removeAttr("controls");
             $("video")
