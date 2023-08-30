@@ -144,6 +144,18 @@ class mediaFile {
         return $test['url'] ?? false;
     }
 
+    public function record() {
+        $stmt = $this->pdo->prepare('SELECT * FROM media WHERE ((filename = ? AND album = ?) OR hash = ?) limit 1');
+        $stmt->execute([$this->filename, $this->album, $this->hash]);
+        $test = $stmt->fetch();
+
+        if ($test === false) {
+            return false;
+        }
+
+        return $test ?? false;
+    }
+
     public function setMetadata($metadata) {
         $this->metadata = is_string($metadata) ? $metadata : json_encode($metadata, JSON_PRETTY_PRINT);
         $stmt = $this->pdo->prepare('UPDATE media SET metadata = ? WHERE ((filename = ? AND album = ?) OR hash = ?)');
