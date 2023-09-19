@@ -105,10 +105,6 @@ class mediaFile {
     }
 
     public function hash() {
-        $fileParts = explode('---', $this->filename);
-        if (count($fileParts) > 1 && $fileParts[1] !== "compressed" && !empty($fileParts[1])) {
-            return $fileParts[1];
-        }
         if(!is_null($this->url)) {
             return md5($this->url);
         }
