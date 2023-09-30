@@ -778,6 +778,18 @@ function dangerousEVPKDF(passwordUint8Array, saltUint8Array, keySizeDWORD, itera
 
         var allAlbums = alasql("select submedia.* FROM submedia where dupe = 0 GROUP by album order by time DESC");
 
+        function findSearch(searchText) {
+          return alldata.filter((item) => {
+              let match = true
+              searchText.split(' ').forEach((searchPartial) => {
+                if ( !item.album.toLowerCase().includes(searchPartial.toLowerCase()) && !(item.metadata ?? "").toLowerCase().includes(searchPartial.toLowerCase())) {
+                  match = false;
+                }
+              });
+              return match;
+            });
+        } 
+
         jQuery.fancybox.defaults = {
           ...jQuery.fancybox.defaults,
           hash: false,
@@ -820,8 +832,9 @@ function dangerousEVPKDF(passwordUint8Array, saltUint8Array, keySizeDWORD, itera
 
         function getFolderContent(results, desiredPath, search = "") {
           if (search) {
+            let foundAlbums = findSearch(search).map((item) => item.album);
             return results.filter((value, index, self) => {
-              return value.album.split("---").pop().includes(search);
+              return foundAlbums.includes(value.album);
             }).filter((value, index, self) => {
               return self.map(({
                 album
@@ -901,6 +914,11 @@ function dangerousEVPKDF(passwordUint8Array, saltUint8Array, keySizeDWORD, itera
                 "m1.filename asc" :
                 "CASE WHEN m1.filename LIKE '%.gif' THEN 1 WHEN m1.filename LIKE '%.mp4' THEN 2 WHEN m1.filename LIKE '%.webm' THEN 3 ELSE 4 END, m1.time DESC"
               ), [album]);
+              let foundHashes = findSearch(search).map((item) => item.hash);
+              let testRes = res.filter((item) => foundHashes.includes(item.hash))
+              if ( testRes.length > 0 ) {
+                res = testRes;
+              }
             if (!res) {
               alert('This album contains no content please add content to this album via the privuma web service');
               window.history.back();
