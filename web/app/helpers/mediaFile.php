@@ -229,7 +229,7 @@ class mediaFile {
                 $this->metadata,
             ]) !== false;
         }
-        return false;
+        return true;
     }
 
     public function getFieldValuesForAlbum($field): array {
