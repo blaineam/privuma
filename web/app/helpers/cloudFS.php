@@ -537,6 +537,7 @@ class cloudFS {
             ' ',
             [
                 'export GOGC=20;',
+                'nice',
                 is_null($timeout) ? '': 'timeout ' . $timeout . ' ',
                 $this->rCloneBinaryPath,
                 '--config',
