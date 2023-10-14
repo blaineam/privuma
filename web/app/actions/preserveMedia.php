@@ -113,7 +113,7 @@ class preserveMedia {
         // h624
         //$cmd = "$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $file . "' -c:v " . $ffmpegVideoCodec . " -r 24 -crf 24 -c:a aac -movflags +faststart -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFileTemp . "'";
         // x265
-        $cmd = "$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $file . "' -c:v libx265 -x265-params log-level=error -r 24 -crf 26 -c:a aac -b:a 96k -tag:v hvc1 -movflags +faststart -preset ultrafast -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFileTemp . "'";
+        $cmd = "nice $ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $file . "' -c:v libx265 -x265-params log-level=error -r 24 -crf 26 -c:a aac -b:a 96k -tag:v hvc1 -movflags +faststart -preset ultrafast -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFileTemp . "'";
         echo PHP_EOL."Runnning command: " . $cmd;
         exec($cmd, $void, $response);
 
@@ -153,7 +153,7 @@ class preserveMedia {
             if($binNotFound !== 0){
                 $path = '/usr/bin/gifsicle';
             }
-            exec($path . " -O3 --careful --conserve-memory --colors=100 --no-ignore-errors --no-warnings --crop-transparency --no-comments --no-extensions --no-names --resize-fit 1920x1920 '" . $tempFile . "' -o '" . $newFileTemp . "'", $void, $response);
+            exec("nice " . $path . " -O3 --careful --conserve-memory --colors=100 --no-ignore-errors --no-warnings --crop-transparency --no-comments --no-extensions --no-names --resize-fit 1920x1920 '" . $tempFile . "' -o '" . $newFileTemp . "'", $void, $response);
 
             if($response == 0 ) {
                 echo PHP_EOL."gifsicle was successful";
@@ -172,7 +172,7 @@ class preserveMedia {
             if($binNotFound !== 0){
                 $path = '/usr/bin/convert';
             }
-            exec($path . " '".$ext.':'.$tempFile."' -resize 1920x1920 -quality 60 -fuzz 7% '".$newFileTemp."'", $void, $response);
+            exec("nice " . $path . " '".$ext.':'.$tempFile."' -resize 1920x1920 -quality 60 -fuzz 7% '".$newFileTemp."'", $void, $response);
             $is = getimagesize($newFileTemp);
             if($response == 0 ) {
                 echo PHP_EOL."convert was successful";

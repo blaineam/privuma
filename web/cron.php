@@ -93,6 +93,7 @@ $cmd = implode(' ', [
             '-c',
             // use php to script each cron job
             '"',
+            'nice',
             $phpPath,
             // path to normal cron job definition
             $command,
