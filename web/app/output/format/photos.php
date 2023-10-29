@@ -447,7 +447,7 @@ function run()
         and dupe = 0
         group by filename
          order by
-         " . (strpos(strtolower($albumName), "comic") !== false ? "filename asc" : "
+         " . ((strpos(strtolower($albumName), "comic") !== false &&  strpos(strtolower($albumName), "-comic") === false ) ? "filename asc" : "
             CASE
                 WHEN filename LIKE '%.gif' THEN 1
                 WHEN filename LIKE '%.mp4' THEN 2
