@@ -24,12 +24,12 @@ if (is_file($privumaPath)) {
     $test = "http://" . $privuma->getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT');
     if (get_headers($test) && strstr(get_headers($test)[0], "200") !== false) {
         $prefix = $test . "/";
-    };
-
-    $test = "http://" . $privuma->getEnv('CLOUDFS_HTTP_TERTIARY_ENDPOINT');
-    if (get_headers($test) && strstr(get_headers($test)[0], "200") !== false) {
-        $prefix = $test . "/";
-    };
+    } else {
+        $test = "http://" . $privuma->getEnv('CLOUDFS_HTTP_TERTIARY_ENDPOINT');
+        if (get_headers($test) && strstr(get_headers($test)[0], "200") !== false) {
+            $prefix = $test . "/";
+        };
+    }
 
     if (strlen($prefix) === 0) {
         return;
