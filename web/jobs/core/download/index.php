@@ -992,7 +992,12 @@ function dangerousEVPKDF(passwordUint8Array, saltUint8Array, keySizeDWORD, itera
                   ([uri, isVideo, filename, video, meta, datatype, videoResource]) =>
                   isVideo ?
                   jQuery("#content")
-                  .append(`<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery" href="${videoResource}"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""><script type="text/json">${meta}<\/script></a>`) :
+                  .append(`<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery" href="${videoResource}"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""><script type="text/json">${meta}<\/script>` + ((datatype === 'video') ? `<svg style="position: absolute;z-index: 2;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="0" fill="none" width="24" height="24"/>
+                      <g>
+                        <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
+                      </g>
+                    </svg>` : ``) + `</a>`) :
                   jQuery("#content")
                   .append(`<a class="gallerypicture" data-width="1920" href="${uri}" title="${filename}" data-fancybox="gallery"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)"><script type="text/json">${meta}<\/script></a>`)
                 );
