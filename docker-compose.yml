@@ -112,8 +112,28 @@ services:
             - ./web/config/rclone:/config/rclone
         user: "${UID}:${GID}"
         ports:
+            - "8991:80"
+        command: serve http --read-only --no-checksum --no-modtime --addr :80 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+    cloudfs-http-secondary:
+        image: rclone/rclone:latest
+        container_name: privuma_cloudfs_http_secondary
+        restart: always
+        volumes:
+            - ./web/config/rclone:/config/rclone
+        user: "${UID}:${GID}"
+        ports:
+            - "8992:80"
+        command: serve http --read-only --no-checksum --no-modtime --addr :80 ${CLOUDFS_HTTP_SECONDARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+    cloudfs-http-tertiary:
+        image: rclone/rclone:latest
+        container_name: privuma_cloudfs_http_teriary
+        restart: always
+        volumes:
+            - ./web/config/rclone:/config/rclone
+        user: "${UID}:${GID}"
+        ports:
             - "8993:80"
-        command: serve http --read-only --no-checksum --no-modtime --addr :80 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm} --dir-cache-time 1m --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+        command: serve http --read-only --no-checksum --no-modtime --addr :80 ${CLOUDFS_HTTP_TERTIARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
     adminer:
         image: adminer
         restart: always

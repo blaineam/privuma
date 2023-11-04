@@ -6,6 +6,7 @@ web/.auth
 .gitmodules
 web/data/**
 web/app/queue/*.txt
+web/rapiserve
 web/app/*.sqlite3
 web/config/*
 !web/config/*-example.*
