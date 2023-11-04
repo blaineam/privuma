@@ -5,6 +5,22 @@ $privumaPath = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app
 if (is_file($privumaPath)) {
     require_once($privumaPath);
     $privuma = privuma\privuma::getInstance();
+    if (!isset($_SESSION['key'])) {
+        // use something like this in a totp password manager:
+        // otpauth://totp/rapiserve@wemiller.com:sha1?digits=6&period=30&algorithm=sha1&secret=<Put your TOTP_KEY .env value here>
+        $timestamp = privuma\helpers\totp::get_timestamp();
+        $secretKey = privuma\helpers\totp::base32_decode($privuma->getEnv('TOTP_KEY'));
+        $otp = privuma\helpers\totp::oath_hotp($secretKey, $timestamp);
+
+        $result = privuma\helpers\totp::verify_key($privuma->getEnv('TOTP_KEY'), $_GET['key'] ?? "");
+
+        if ($result !== true) {
+            exit();
+        }
+
+        $_SESSION['key'] = $_GET['key'];
+    }
+
     $test = "http://" . $privuma->getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT');
     if (get_headers($test) && strstr(get_headers($test)[0], "200") !== false) {
         $prefix = $test . "/";
@@ -451,7 +467,7 @@ $file = $prefix . str_replace(basename(__DIR__) . "/" , "", ($_POST["media"] ?? 
 $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
 
 if ($noDecode) {
-    if ($prefix === $file || (get_headers($file) && strstr(get_headers($file)[0], "200") === false)) {
+    if ($prefix === $file) {
         header('Content-Type: ' . $ext2mimeApp["html"]);
         header("Location: " . "aW/aW5kZXg=.html");
         exit();
