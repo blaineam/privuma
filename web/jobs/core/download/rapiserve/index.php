@@ -1,22 +1,45 @@
 <?php
 session_start();
+$prefix = "";
+$privumaPath = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php';
+if (is_file($privumaPath)) {
+    require_once($privumaPath);
+    $privuma = privuma\privuma::getInstance();
+    $test = "http://" . $privuma->getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT');
+    if (get_headers($test) && strstr(get_headers($test)[0], "200") !== false) {
+        $prefix = $test . "/";
+    };
 
-if(isset($_GET['RapiServe'])) {
-    header('Content-Type: application/javascript');
-    echo 'var canrapiserve = true;';
-    exit();
-}
+    $test = "http://" . $privuma->getEnv('CLOUDFS_HTTP_TERTIARY_ENDPOINT');
+    if (get_headers($test) && strstr(get_headers($test)[0], "200") !== false) {
+        $prefix = $test . "/";
+    };
 
-if(isset($_SESSION['key']) && strlen($_SESSION['key']) > 10) {
-    $authKey = $_SESSION['key'];
-} else {
-    $rawKey = $_SERVER['HTTP_X_AUTH_KEY'] ?? $_POST['key'] ?? $_GET["key"] ?? null;
-    if (is_null($rawKey)) {
-        include("aW/aW5kZXg=.html");
+    if (strlen($prefix) === 0) {
+        return;
+    }
+
+    $noDecode = true;
+    if(isset($_GET['RapiServe'])) {
+        header('Content-Type: application/javascript');
         exit();
     }
-    $authKey = trim(base64_decode($rawKey));
-    $_SESSION['key'] = $authKey;
+} else {
+    if(isset($_GET['RapiServe'])) {
+        header('Content-Type: application/javascript');
+        echo 'var canrapiserve = true;';
+        exit();
+    }
+
+    if(isset($_SESSION['key']) && strlen($_SESSION['key']) > 10) {
+        $authKey = $_SESSION['key'];
+    } else {
+        $rawKey = $_SERVER['HTTP_X_AUTH_KEY'] ?? $_POST['key'] ?? $_GET["key"] ?? null;
+        if (!is_null($rawKey)) {
+            $authKey = trim(base64_decode($rawKey));
+            $_SESSION['key'] = $authKey;
+        }
+    }
 }
 
 class MediaCrypto
@@ -406,7 +429,7 @@ class MediaCrypto
 
 }
 
-$ext2mime = [
+$ext2mimeMedia = [
     "mp4" => "video/mp4",
     "webm" => "video/webm",
     "jpg" => "image/jpeg",
@@ -414,21 +437,49 @@ $ext2mime = [
     "png" => "image/png",
     "gif" => "image/gif",
 ];
+$ext2mimeApp = [
+    "js" => "application/javascript",
+    "js-gz" => "application/javascript",
+    "html" => "text/html",
+    "txt" => "text/plain",
+    "txt-gz" => "text/plain",
+
+];
 $pathParts = explode('index.php/', $_SERVER["REQUEST_URI"]);
 $path = end($pathParts);
-$file = $_POST["media"] ?? $_GET["media"] ?? explode('?', ltrim($path, '/'))[0];
+$file = $prefix . str_replace(basename(__DIR__) . "/" , "", ($_POST["media"] ?? $_GET["media"] ?? explode('?', ltrim($path, '/'))[0]));
 $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-if (!is_file($file) || !array_key_exists($ext, $ext2mime)) {
+
+if ($noDecode) {
+    if ($prefix === $file || (get_headers($file) && strstr(get_headers($file)[0], "200") === false)) {
+        header('Content-Type: ' . $ext2mimeApp["html"]);
+        header("Location: " . "aW/aW5kZXg=.html");
+        exit();
+    };
+    header('Content-Type: ' . array_merge($ext2mimeApp, $ext2mimeMedia)[$ext]);
+    $protocol = parse_url($file,  PHP_URL_SCHEME);
+    $hostname = parse_url($file,  PHP_URL_HOST);
+    $port = parse_url($file,  PHP_URL_PORT);
+    $path = ltrim(parse_url($file,  PHP_URL_PATH) . ((strpos($file, '?') !== false) ? '?' . parse_url($file,  PHP_URL_QUERY) : ''), DIRECTORY_SEPARATOR);
+    $internalMediaPath = DIRECTORY_SEPARATOR . 'media' . DIRECTORY_SEPARATOR . $protocol . DIRECTORY_SEPARATOR . $hostname . ":" . $port . DIRECTORY_SEPARATOR . $path . DIRECTORY_SEPARATOR;
+    header('X-Accel-Redirect: ' . $internalMediaPath);
+    exit();
+}
+
+if (!array_key_exists($ext, $ext2mimeMedia)) {
     if (in_array($ext, ["js", "js-gz", "txt", "txt-gz"])) {
-        include($file);
+        header('Content-Type: ' . $ext2mimeApp[$ext]);
+        readfile($file);
     } else {
-        include("aW/aW5kZXg=.html");
+        header('Content-Type: ' . $ext2mimeApp["html"]);
+        readfile($prefix . "aW/aW5kZXg=.html");
     }
     exit();
 }
+
 header('Accept-Ranges: bytes');
 header('Content-Disposition: inline');
-header('Content-Type: ' . $ext2mime[$ext]);
+header('Content-Type: ' . array_merge($ext2mimeApp, $ext2mimeMedia)[$ext]);
 if ($ext === "mp4") {
     set_time_limit(900);
     header('Content-Length:' . MediaCrypto::estimateDecodedSize($file));
