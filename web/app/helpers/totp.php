@@ -3,8 +3,8 @@
 namespace privuma\helpers;
 
 class totp {
-	const keyRegeneration 	= 30;	// Interval between key regeneration
-	const otpLength		= 6;	// Length of the Token generated
+	const keyRegeneration 	= 20;	// Interval between key regeneration
+	const otpLength		= 8;	// Length of the Token generated
 
 	private static $lut = array(	// Lookup needed for Base32 encoding
 	"A" => 0,	"B" => 1,

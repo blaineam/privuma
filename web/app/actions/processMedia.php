@@ -12,16 +12,18 @@ use privuma\privuma;
 class processMedia {
     function __construct(array $data) {
         $qm = new QueueManager();
+        $ext = pathinfo($data['filename'], PATHINFO_EXTENSION);
+        $correctedFilename = basename($data['filename'], "." . $ext) . "." . strtolower($ext);
         if(isset($data['album']) && isset($data['filename'])) {
             if(isset($data['url'])) {
-                $mediaFile = new mediaFile($data['filename'], $data['album']);
+                $mediaFile = new mediaFile($correctedFilename, $data['album']);
 
                 if (isset($data['metadata'])) {
                     $mediaFile->setMetadata($data['metadata']);
                 }
 
                 if(!isset($data['cache']) || isset($data['download'])) {
-                    $mediaFile = new mediaFile($data['filename'], $data['album'], null, null, null, null, $data['url'], isset($data['thumbnail']) ? $data['thumbnail'] : null );
+                    $mediaFile = new mediaFile($correctedFilename, $data['album'], null, null, null, null, $data['url'], isset($data['thumbnail']) ? $data['thumbnail'] : null );
                 }
                 $existingFile = $mediaFile->source();
                 echo PHP_EOL."Loaded MediaFile: " . $mediaFile->path();
@@ -126,7 +128,7 @@ class processMedia {
                 return;
             }
 
-            $mediaFile = new mediaFile($data['filename'], $data['album']);
+            $mediaFile = new mediaFile($correctedFilename, $data['album']);
             $existingFile = $mediaFile->realPath();
             echo PHP_EOL."Loaded MediaFile: " . $mediaFile->path();
             if(isset($data['path'])) {

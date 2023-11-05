@@ -15,15 +15,17 @@ class preserveMedia {
     function __construct(array $data = [], ?cloudFS $operator = null) {
         $qm = new QueueManager();
         $this->ops = is_null($operator) ? privuma::getCloudFS() : $operator;
+        $ext = pathinfo($data['filename'], PATHINFO_EXTENSION);
+        $correctedFilename = basename($data['filename'], "." . $ext) . "." . strtolower($ext);
         if(isset($data['album']) && isset($data['filename'])) {
             $hash =  md5_file($data['path']);
             echo PHP_EOL."creating media file with: " . json_encode([
-                "filename" => $data['filename'],
+                "filename" => $correctedFilename,
                 "album" => $data['album'],
                 "path" => $data['path'],
                 "hash" => $hash,
             ]);
-            $mediaFile = new mediaFile(str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', $data['filename']), $data['album'], null,$hash);
+            $mediaFile = new mediaFile(str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', $correctedFilename), $data['album'], null,$hash);
             echo PHP_EOL."New mediaFile: " . $mediaFile->path();
             if($mediaFile->hashConflict()) {
                 echo PHP_EOL."There was a hash conflict";
