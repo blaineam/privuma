@@ -1159,7 +1159,7 @@ function dangerousEVPKDF(passwordUint8Array, saltUint8Array, keySizeDWORD, itera
           let slideshowTimer;
           let slideshowStarted = false;
 
-          $(document).on('afterClose.fb', function(e, instance) {
+          $(document).on('beforeClose.fb', function(e, instance) {
             slideshowStarted = false;
             $("video")
                   .trigger("pause")

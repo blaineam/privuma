@@ -1,13 +1,15 @@
 <?php
+// if you have php installed locally you can use `php -S 0.0.0.0:8080 index.php` to self host a local server for better performance.
 session_start();
 $prefix = "";
+$noDecode = false;
 $privumaPath = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php';
 if (is_file($privumaPath)) {
     require_once($privumaPath);
     $privuma = privuma\privuma::getInstance();
     if (!isset($_SESSION['key'])) {
         // use something like this in a totp password manager:
-        // otpauth://totp/rapiserve@wemiller.com:sha1?digits=6&period=30&algorithm=sha1&secret=<Put your TOTP_KEY .env value here>
+        // otpauth://totp/rapiserve@example.com:sha1?digits=8&period=20&algorithm=sha1&secret=<Put your TOTP_KEY .env value here>
         $timestamp = privuma\helpers\totp::get_timestamp();
         $secretKey = privuma\helpers\totp::base32_decode($privuma->getEnv('TOTP_KEY'));
         $otp = privuma\helpers\totp::oath_hotp($secretKey, $timestamp);
@@ -108,7 +110,7 @@ class MediaCrypto
         }
 
         $keys = self::getDecryptionKeyAndIv($passphrase, $salts["salt"], $salts["iv"]);
-        while (!feof($read)) {
+        while (!feof($read) && connection_aborted() === 0) {
             $line = rtrim(fgets($read), "\r\n");
             $line = preg_replace('/^{/', '', $line);
             $line = preg_replace('/}$/', '', $line);
