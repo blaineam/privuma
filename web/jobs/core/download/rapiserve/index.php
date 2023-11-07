@@ -480,12 +480,6 @@ $path = end($pathParts);
 $file = $prefix . str_replace(basename(__DIR__) . "/" , "", ($_POST["media"] ?? $_GET["media"] ?? explode('?', ltrim($path, '/'))[0]));
 $size = 0;
 $isUrl = strpos($file, "http") === 0;
-if($isUrl) {
-    $data = get_headers($file, true);
-    $size = isset($data['Content-Length'])?(int) $data['Content-Length']:0;
-} else {
-    $size = filesize($file);
-}
 
 $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
 $isAppFile = in_array($ext, ["js", "js-gz", "txt", "txt-gz"]);
@@ -504,6 +498,12 @@ if (!array_key_exists($ext, $ext2mimeMedia)) {
             exit();
         }
         if ($isAppFile) {
+            if($isUrl) {
+                $data = get_headers($file, true);
+                $size = isset($data['Content-Length'])?(int) $data['Content-Length']:0;
+            } else {
+                $size = filesize($file);
+            }
             header('Accept-Ranges: bytes');
             header('Content-Type: ' . array_merge($ext2mimeApp, $ext2mimeMedia)[$ext]);
             header('Content-Length: ' . $size);
