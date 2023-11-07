@@ -66,6 +66,19 @@ if ($blockServerSideDecoding) {
 
 class MediaCrypto
 {
+    public static function flexiFileSize($path)
+    {
+        $size = 0;
+        $isUrlish = strpos($path, "http") === 0;
+        if($isUrlish) {
+            $data = get_headers($path, true);
+            $size = isset($data['Content-Length'])?(int) $data['Content-Length']:0;
+        } else {
+            $size = filesize($path);
+        }
+        return $size;
+    }
+
     public static function getMime($filePath)
     {
         $finfo = new finfo(FILEINFO_MIME_TYPE);
@@ -133,14 +146,8 @@ class MediaCrypto
         $line = fgets($f);
         fclose($f);
         $size = 0;
-        $isUrl = strpos($path, "http") === 0;
-        if($isUrl) {
-            $data = get_headers($path, true);
-            $size = isset($data['Content-Length'])?(int) $data['Content-Length']:0;
-        } else {
-            $size = filesize($path);
-        }
-        $originalFileSize = $size;
+        
+        $originalFileSize = self::flexiFileSize($path);
         if (strpos($line, "{") === false) {
             return $originalFileSize;
         }
@@ -186,7 +193,7 @@ class MediaCrypto
 
         $read = fopen($gzip? $newPath : $path, 'r');
         $write = fopen($tempName, 'w');
-        $total = filesize($path);
+        $total = self::flexiFileSize($path);
         $progress = 0;
         $loggedProgress = 0;
         $keys = self::getSaltAndKeyAndIv($passphrase);
@@ -235,7 +242,7 @@ class MediaCrypto
         $tempName = tempnam(sys_get_temp_dir(), "MedCrypt_");
         $read = fopen($path, 'r');
         $write = fopen($tempName, 'w');
-        $total = filesize($path);
+        $total = self::flexiFileSize($path);
         $progress = 0;
         $loggedProgress = 0;
 
@@ -498,15 +505,9 @@ if (!array_key_exists($ext, $ext2mimeMedia)) {
             exit();
         }
         if ($isAppFile) {
-            if($isUrl) {
-                $data = get_headers($file, true);
-                $size = isset($data['Content-Length'])?(int) $data['Content-Length']:0;
-            } else {
-                $size = filesize($file);
-            }
             header('Accept-Ranges: bytes');
             header('Content-Type: ' . array_merge($ext2mimeApp, $ext2mimeMedia)[$ext]);
-            header('Content-Length: ' . $size);
+            header('Content-Length: ' . MediaCrypto::flexiFileSize($file));
             header('Cache-Control: no-transform');
             readfile($file);
         } else {
