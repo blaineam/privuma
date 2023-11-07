@@ -3,6 +3,7 @@
 session_start();
 $prefix = "";
 $noDecode = false;
+$blockServerSideDecoding = false;
 $privumaPath = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php';
 if (is_file($privumaPath)) {
     require_once($privumaPath);
@@ -37,6 +38,9 @@ if (is_file($privumaPath)) {
         return;
     }
 
+}
+
+if ($blockServerSideDecoding) {
     $noDecode = true;
     if(isset($_GET['RapiServe'])) {
         header('Content-Type: application/javascript');
@@ -128,7 +132,15 @@ class MediaCrypto
         $f = fopen($path, 'r');
         $line = fgets($f);
         fclose($f);
-        $originalFileSize = filesize($path);
+        $size = 0;
+        $isUrl = strpos($path, "http") === 0;
+        if($isUrl) {
+            $data = get_headers($path, true);
+            $size = isset($data['Content-Length'])?(int) $data['Content-Length']:0;
+        } else {
+            $size = filesize($path);
+        }
+        $originalFileSize = $size;
         if (strpos($line, "{") === false) {
             return $originalFileSize;
         }
@@ -466,7 +478,44 @@ $ext2mimeApp = [
 $pathParts = explode('index.php/', $_SERVER["REQUEST_URI"]);
 $path = end($pathParts);
 $file = $prefix . str_replace(basename(__DIR__) . "/" , "", ($_POST["media"] ?? $_GET["media"] ?? explode('?', ltrim($path, '/'))[0]));
+$size = 0;
+$isUrl = strpos($file, "http") === 0;
+if($isUrl) {
+    $data = get_headers($file, true);
+    $size = isset($data['Content-Length'])?(int) $data['Content-Length']:0;
+} else {
+    $size = filesize($file);
+}
+
 $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+$isAppFile = in_array($ext, ["js", "js-gz", "txt", "txt-gz"]);
+if (!array_key_exists($ext, $ext2mimeMedia)) {
+    if ($isUrl  && $isAppFile) {
+        $noDecode = true;
+    } else {
+        if(isset($_SERVER['HTTP_RANGE'])) {
+            $file = fopen($file, 'r');
+            fseek($file, 0);
+            $data = fread($file, 10);
+            fclose($file);
+            header('HTTP/1.1 206 Partial Content');
+            header('Content-Range: bytes ' . 0 . '-' . (0 + 10) . '/' . 10);
+            print($data);
+            exit();
+        }
+        if ($isAppFile) {
+            header('Accept-Ranges: bytes');
+            header('Content-Type: ' . array_merge($ext2mimeApp, $ext2mimeMedia)[$ext]);
+            header('Content-Length: ' . $size);
+            header('Cache-Control: no-transform');
+            readfile($file);
+        } else {
+            header('Content-Type: ' . $ext2mimeApp["html"]);
+            readfile($prefix . "aW/aW5kZXg=.html");
+        }
+        exit();
+    }
+}
 
 if ($noDecode) {
     if ($prefix === $file) {
@@ -481,17 +530,6 @@ if ($noDecode) {
     $path = ltrim(parse_url($file,  PHP_URL_PATH) . ((strpos($file, '?') !== false) ? '?' . parse_url($file,  PHP_URL_QUERY) : ''), DIRECTORY_SEPARATOR);
     $internalMediaPath = DIRECTORY_SEPARATOR . 'media' . DIRECTORY_SEPARATOR . $protocol . DIRECTORY_SEPARATOR . $hostname . ":" . $port . DIRECTORY_SEPARATOR . $path . DIRECTORY_SEPARATOR;
     header('X-Accel-Redirect: ' . $internalMediaPath);
-    exit();
-}
-
-if (!array_key_exists($ext, $ext2mimeMedia)) {
-    if (in_array($ext, ["js", "js-gz", "txt", "txt-gz"])) {
-        header('Content-Type: ' . $ext2mimeApp[$ext]);
-        readfile($file);
-    } else {
-        header('Content-Type: ' . $ext2mimeApp["html"]);
-        readfile($prefix . "aW/aW5kZXg=.html");
-    }
     exit();
 }
 
