@@ -3,14 +3,14 @@
 session_start();
 $prefix = "";
 $noDecode = false;
-$blockServerSideDecoding = true;
+$blockServerSideDecoding = false;
 $decodePhotos = false;
 $decodeVideos = true;
 $privumaPath = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php';
 if (is_file($privumaPath)) {
     require_once($privumaPath);
     $privuma = privuma\privuma::getInstance();
-    if (!isset($_SESSION['key'])) {
+    if (!isset($_SESSION['totp'])) {
         // use something like this in a totp password manager:
         // otpauth://totp/rapiserve@example.com:sha1?digits=8&period=20&algorithm=sha1&secret=<Put your TOTP_KEY .env value here>
         $timestamp = privuma\helpers\totp::get_timestamp();
@@ -23,7 +23,7 @@ if (is_file($privumaPath)) {
             exit();
         }
 
-        $_SESSION['key'] = $_GET['key'];
+        $_SESSION['totp'] = $_GET['key'];
     }
 
     $test = "http://" . $privuma->getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT');
@@ -55,7 +55,7 @@ if ($blockServerSideDecoding) {
         exit();
     }
 
-    if(isset($_SESSION['key']) && strlen($_SESSION['key']) > 10) {
+    if(isset($_SESSION['key']) && strlen($_SESSION['key']) > 30) {
         $authKey = $_SESSION['key'];
     } else {
         $rawKey = $_SERVER['HTTP_X_AUTH_KEY'] ?? $_POST['key'] ?? $_GET["key"] ?? null;
@@ -508,8 +508,7 @@ if (!array_key_exists($ext, $ext2mimeMedia)) {
             header('Content-Length: ' . MediaCrypto::flexiFileSize($file));
             header('Cache-Control: no-transform');
             readfile($file);
-
-        } if ($prefix === $file) {
+        } else if ($blockServerSideDecoding && $prefix === $file) {
             header('Content-Type: ' . $ext2mimeApp["html"]);
             header("Location: " . "aW/aW5kZXg=.html");
         } else {
@@ -547,6 +546,12 @@ if ($noDecode) {
 header('Accept-Ranges: bytes');
 header('Content-Disposition: inline');
 header('Content-Type: ' . array_merge($ext2mimeApp, $ext2mimeMedia)[$ext]);
+if (!isset($authKey) ) {
+    header('Content-Length: ' . MediaCrypto::flexiFileSize($file));
+    readfile($file);
+    exit();
+}
+
 if ($ext === "mp4") {
     set_time_limit(120);
     header('Content-Length:' . MediaCrypto::estimateDecodedSize($file));
