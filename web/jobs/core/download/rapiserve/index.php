@@ -3,7 +3,9 @@
 session_start();
 $prefix = "";
 $noDecode = false;
-$blockServerSideDecoding = false;
+$blockServerSideDecoding = true;
+$decodePhotos = false;
+$decodeVideos = true;
 $privumaPath = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php';
 if (is_file($privumaPath)) {
     require_once($privumaPath);
@@ -118,8 +120,6 @@ class MediaCrypto
     {
         $read = fopen($path, 'r');
         $write = fopen('php://output','w');
-
-        $total = filesize($path);
         $salts = json_decode(rtrim(fgets($read), "\r\n"), true);
         if(is_null($salts)) {
             http_response_code(500);
@@ -132,10 +132,9 @@ class MediaCrypto
             $line = preg_replace('/^{/', '', $line);
             $line = preg_replace('/}$/', '', $line);
             if (strlen($line) > 0) {
-                $decrypted = self::decryptChunk($line, $keys["key"], $keys["iv"]);
-                $chunk = $decrypted;
-                fwrite($write, $chunk);
+                fwrite($write, self::decryptChunk($line, $keys["key"], $keys["iv"]));
             }
+            usleep(10);
         }
         fclose($read);
         fclose($write);
@@ -145,8 +144,6 @@ class MediaCrypto
         $f = fopen($path, 'r');
         $line = fgets($f);
         fclose($f);
-        $size = 0;
-        
         $originalFileSize = self::flexiFileSize($path);
         if (strpos($line, "{") === false) {
             return $originalFileSize;
@@ -404,7 +401,6 @@ class MediaCrypto
 
     private static function z85_encode ($data) {
         $encoder = self::$encoder;
-        $decoder = self::$decoder;
         if( !is_array($data) ) {
             $data = str_split($data);
         }
@@ -434,7 +430,6 @@ class MediaCrypto
     }
 
     private static function z85_decode($string) {
-        $encoder = self::$encoder;
         $decoder = self::$decoder;
         if ((strlen( $string ) % 5) !== 0) {
             return null;
@@ -466,14 +461,17 @@ class MediaCrypto
 
 }
 
-$ext2mimeMedia = [
-    "mp4" => "video/mp4",
-    "webm" => "video/webm",
+$ext2mimePhotos = [
     "jpg" => "image/jpeg",
     "jpeg" => "image/jpeg",
     "png" => "image/png",
     "gif" => "image/gif",
 ];
+$ext2mimeVideos = [
+    "mp4" => "video/mp4",
+    "webm" => "video/webm",
+];
+$ext2mimeMedia = array_merge($ext2mimePhotos, $ext2mimeVideos);
 $ext2mimeApp = [
     "js" => "application/javascript",
     "js-gz" => "application/javascript",
@@ -510,12 +508,24 @@ if (!array_key_exists($ext, $ext2mimeMedia)) {
             header('Content-Length: ' . MediaCrypto::flexiFileSize($file));
             header('Cache-Control: no-transform');
             readfile($file);
+
+        } if ($prefix === $file) {
+            header('Content-Type: ' . $ext2mimeApp["html"]);
+            header("Location: " . "aW/aW5kZXg=.html");
         } else {
             header('Content-Type: ' . $ext2mimeApp["html"]);
             readfile($prefix . "aW/aW5kZXg=.html");
         }
         exit();
     }
+}
+
+if ($isUrl  && !$decodePhotos && array_key_exists($ext, $ext2mimePhotos)) {
+    $noDecode = true;
+}
+
+if ($isUrl  && !$decodeVideos && array_key_exists($ext, $ext2mimeVideos)) {
+    $noDecode = true;
 }
 
 if ($noDecode) {
@@ -538,7 +548,7 @@ header('Accept-Ranges: bytes');
 header('Content-Disposition: inline');
 header('Content-Type: ' . array_merge($ext2mimeApp, $ext2mimeMedia)[$ext]);
 if ($ext === "mp4") {
-    set_time_limit(900);
+    set_time_limit(120);
     header('Content-Length:' . MediaCrypto::estimateDecodedSize($file));
 }
 MediaCrypto::decryptPassthru($authKey, $file);
