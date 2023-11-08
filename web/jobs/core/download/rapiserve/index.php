@@ -119,25 +119,25 @@ class MediaCrypto
     )
     {
         $read = fopen($path, 'r');
-        $write = fopen('php://output','w');
         $salts = json_decode(rtrim(fgets($read), "\r\n"), true);
         if(is_null($salts)) {
             http_response_code(500);
             return;
         }
 
+        flush();
         $keys = self::getDecryptionKeyAndIv($passphrase, $salts["salt"], $salts["iv"]);
-        while (!feof($read) && connection_aborted() === 0) {
+        while (!feof($read)) {
             $line = rtrim(fgets($read), "\r\n");
             $line = preg_replace('/^{/', '', $line);
             $line = preg_replace('/}$/', '', $line);
             if (strlen($line) > 0) {
-                fwrite($write, self::decryptChunk($line, $keys["key"], $keys["iv"]));
+                print self::decryptChunk($line, $keys["key"], $keys["iv"]);
             }
-            usleep(10);
+            flush();
         }
         fclose($read);
-        fclose($write);
+        exit();
     }
 
     public static function estimateDecodedSize($path) {
@@ -553,7 +553,7 @@ if (!isset($authKey) ) {
 }
 
 if ($ext === "mp4") {
-    set_time_limit(120);
+    set_time_limit(300);
     header('Content-Length:' . MediaCrypto::estimateDecodedSize($file));
 }
 MediaCrypto::decryptPassthru($authKey, $file);
