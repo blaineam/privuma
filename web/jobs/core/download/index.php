@@ -880,7 +880,7 @@ $viewerHTML = <<<'HEREHTML'
         });
 
         function getFolderContent(results, desiredPath, search = "") {
-          if (search) {
+          if (search.length > 3) {
             let foundAlbums = findSearch(search).map((item) => item.album);
             return results.filter((value, index, self) => {
               return foundAlbums.includes(value.album);
@@ -909,7 +909,7 @@ $viewerHTML = <<<'HEREHTML'
             });
           }
           return results.filter((value, index, self) => {
-            if (!value.album.includes(desiredPath)) {
+            if (!value.album.startsWith(desiredPath)) {
               return false;
             }
             return self.map(({
