@@ -609,7 +609,7 @@ function run()
 
         $mediaPath = str_replace('..', '', str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,str_replace('-----', DIRECTORY_SEPARATOR, $_GET['favorite'])));
         $filePath = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath;
-        echo json_encode(mediaFile::load('', $_GET['favorite'], basename($filePath), basename(dirname($filePath)))->favorite());
+        echo mediaFile::load('', $_GET['favorite'], basename($filePath), basename(dirname($filePath)))->favorite() ? "Item was added to Favorites" : "Item was removed from Favorites";
         exit();
     } else if (isset($_GET['media'])) {
         set_time_limit(2);
