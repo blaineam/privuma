@@ -289,11 +289,10 @@ class mediaFile {
         }
 
         if ($this->favorited() === false) {
-            echo PHP_EOL."favoriting media".PHP_EOL;
             $date = date('Y-m-d H:i:s');
             $stmt = $this->pdo->prepare('INSERT INTO media (dupe, album, hash, filename, url, thumbnail, time, metadata)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-            return $stmt->execute([
+            if($stmt->execute([
                 1,
                 'Favorites',
                 $this->hash,
@@ -302,16 +301,19 @@ class mediaFile {
                 $this->thumbnail,
                 $date,
                 $this->metadata,
-            ]) !== false;
+            ]) !== false) {
+                return true;
+            }
         } else {
-            echo PHP_EOL."unfavoriting media".PHP_EOL;
             $date = date('Y-m-d H:i:s');
             $stmt = $this->pdo->prepare('DELETE FROM media WHERE album = \'Favorites\' AND hash = ?');
-            return $stmt->execute([
+            if($stmt->execute([
                 $this->hash,
-            ]) !== false;
+            ]) !== false) {
+                return false;
+            }
         }
-        return true;
+        return false;
     }
 
     public function getFieldValuesForAlbum($field): array {
