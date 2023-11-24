@@ -206,7 +206,7 @@ class mediaFile {
     }
 
     public static function load(string $hash = '', string $url = '', string $filename = '', string $album = ''): mediaFile|null {
-        $stmt = privuma::getInstance()->getPDO()->prepare('SELECT * FROM media WHERE (hash = ? OR (filename = ? AND album = ?) OR url = ? OR thumbnail = ?) AND dupe = 0 limit 1');
+        $stmt = privuma::getInstance()->getPDO()->prepare('SELECT * FROM media WHERE (hash = ? OR (filename = ? AND album = ?) OR url = ? OR thumbnail = ?) ORDER BY dupe LIMIT 1');
         $stmt->execute([
             $hash,
             $filename,
