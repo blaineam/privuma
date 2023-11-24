@@ -456,7 +456,7 @@ function run()
         from media
         where hash in
         (select hash from media where album = ? and hash != 'compressed')
-        group by filename
+        group by hash
          order by
          " . ((strpos(strtolower($albumName), "comic") !== false &&  strpos(strtolower($albumName), "-comic") === false ) ? "filename asc" : "
             CASE
