@@ -205,6 +205,41 @@ class mediaFile {
         return $check['hash'] ?? null;
     }
 
+    public static function load(string $hash = '', string $url = '', string $filename = '', string $album = ''): mediaFile|null {
+        $stmt = privuma::getInstance()->getPDO()->prepare('SELECT * FROM media WHERE (hash = ? OR (filename = ? AND album = ?) OR url = ? OR thumbnail = ?) AND dupe = 0 limit 1');
+        $stmt->execute([
+            $hash,
+            $filename,
+            $album,
+            $url,
+            $url,
+        ]);
+        $check = $stmt->fetch();
+        if ($check === false) {
+            return null;
+        }
+
+        if (
+            strlen($check['hash']) === 0
+            || strlen($check['album']) === 0
+            || strlen($check['filename']) === 0
+        ) {
+            return null;
+        }
+
+        return new mediaFile(
+            $check['filename'],
+            $check['album'],
+            $check['id'],
+            $check['hash'],
+            new DateTime($check['time']),
+            $check['dupe'],
+            $check['url'],
+            $check['thumbnail'],
+            $check['metadata']
+        );
+    }
+
     public function dupe() : bool {
         return $this->original() === false ? false : true;
     }
@@ -228,6 +263,52 @@ class mediaFile {
                 $this->thumbnail,
                 $date,
                 $this->metadata,
+            ]) !== false;
+        }
+        return true;
+    }
+
+    public function favorited(): bool {
+        if(is_null($this->hash) && $hash = $this->hash()) {
+            $this->hash = $hash;
+        }
+
+        $stmt = $this->pdo->prepare('SELECT * FROM media WHERE hash = ? AND album = \'Favorites\' limit 1');
+        $stmt->execute([$this->hash]);
+        $check = $stmt->fetch();
+        if ($check === false) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function favorite(): bool {
+        if(is_null($this->hash) && $hash = $this->hash()) {
+            $this->hash = $hash;
+        }
+
+        if ($this->favorited() === false) {
+            echo PHP_EOL."favoriting media".PHP_EOL;
+            $date = date('Y-m-d H:i:s');
+            $stmt = $this->pdo->prepare('INSERT INTO media (dupe, album, hash, filename, url, thumbnail, time, metadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+            return $stmt->execute([
+                1,
+                'Favorites',
+                $this->hash,
+                $this->album . '-----' . $this->filename,
+                $this->url,
+                $this->thumbnail,
+                $date,
+                $this->metadata,
+            ]) !== false;
+        } else {
+            echo PHP_EOL."unfavoriting media".PHP_EOL;
+            $date = date('Y-m-d H:i:s');
+            $stmt = $this->pdo->prepare('DELETE FROM media WHERE album = \'Favorites\' AND hash = ?');
+            return $stmt->execute([
+                $this->hash,
             ]) !== false;
         }
         return true;

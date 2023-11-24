@@ -439,12 +439,23 @@ function run()
 
         $conn = $privuma->getPDO();
 
+        $favoritesStmt = $conn->prepare("select filename, hash
+            from media
+            where album = 'Favorites'
+        ");
+        $favoritesStmt->execute([]);
+        $favorites = [];
+        foreach($favoritesStmt->fetchAll() as $favorite) {
+            $favorites[$favorite['hash']] = [];
+            $favorites[$favorite['hash']]['hash'] = $favorite['hash'];
+            $favorites[$favorite['hash']]['album'] = explode('-----', $favorite['filename'])[0];
+            $favorites[$favorite['hash']]['filename'] = explode('-----', $favorite['filename'])[1];
+        }
 
         $stmt = $conn->prepare("select filename, album, time, hash, url, thumbnail, metadata
         from media
         where hash in
         (select hash from media where album = ? and hash != 'compressed')
-        and dupe = 0
         group by filename
          order by
          " . ((strpos(strtolower($albumName), "comic") !== false &&  strpos(strtolower($albumName), "-comic") === false ) ? "filename asc" : "
@@ -470,6 +481,7 @@ function run()
             $fileParts = explode('---', basename($filePath, "." . $ext));
             $hash = $fileParts[1] ?? $item['hash'];
             $relativePath = normalizeString($item['album']) . "-----" . basename($filePath);
+            $favroited = array_key_exists($hash, $favorites);
             if (strtolower($ext) === "mp4" || strtolower($ext) === "webm") {
                 $destt = $item['album'] . DIRECTORY_SEPARATOR . basename($filePath, ".".$ext) . ".jpg";
                 $mediat = urlencode(base64_encode($destt));
@@ -505,7 +517,7 @@ function run()
 
             $mime = (isset($videoPath)) ? "video/mp4": ((strtolower($ext) === "gif") ? "image/gif" :  ((strtolower($ext) === "png") ? "image/png" : "image/jpg")) ;
             if (!array_key_exists($hash, $media)) {
-                $media[$hash] = array("img" => $photoPath ?? "", "updated" => strtotime($item["time"]), "video" => $videoPath ?? "", "id" => (string)$hash, "filename" => (string)$fileParts[0], "mime" => (string)$mime, "epoch" => strtotime($item["time"]), "metadata" => (string)$item['metadata']);
+                $media[$hash] = array("favorited" => $favroited, "img" => $photoPath ?? "", "updated" => strtotime($item["time"]), "video" => $videoPath ?? "", "id" => (string)$hash, "filename" => (string)$fileParts[0], "mime" => (string)$mime, "epoch" => strtotime($item["time"]), "metadata" => (string)$item['metadata']);
             } elseif (isset($videoPath)) {
                 $media[$hash]["video"] = $videoPath;
             } elseif (isset($photoPath)) {
@@ -590,6 +602,15 @@ function run()
         header('Content-Type: application/json');
         print(json_encode($photos, JSON_UNESCAPED_SLASHES));
 
+    } else if (isset($_GET['favorite'])) {
+        if(is_base64_encoded($_GET['favorite'])) {
+            $_GET['favorite'] = base64_decode($_GET['favorite']);
+        }
+
+        $mediaPath = str_replace('..', '', str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,str_replace('-----', DIRECTORY_SEPARATOR, $_GET['favorite'])));
+        $filePath = $SYNC_FOLDER . DIRECTORY_SEPARATOR . $mediaPath;
+        echo json_encode(mediaFile::load('', $_GET['favorite'], basename($filePath), basename(dirname($filePath)))->favorite());
+        exit();
     } else if (isset($_GET['media'])) {
         set_time_limit(2);
         if(strpos($_GET['media'], 't-') === 0 ) {
@@ -637,6 +658,9 @@ function run()
         }
 
         $mediaPath = str_replace('..', '', str_replace(DIRECTORY_SEPARATOR.DIRECTORY_SEPARATOR,DIRECTORY_SEPARATOR,str_replace('-----', DIRECTORY_SEPARATOR, $_GET['media'])));
+        if (dirname($mediaPath, 2) === 'Favorites') {
+            $mediaPath = basename(dirname($mediaPath)) . DIRECTORY_SEPARATOR . basename($mediaPath);
+        }
 
         $pos = strpos($mediaPath, 'data' . DIRECTORY_SEPARATOR);
         if ($pos !== false) {
@@ -732,7 +756,7 @@ function run()
         }
 
         $conn = $privuma->getPDO();
-        $stmt = $conn->prepare('select filename, album, url, thumbnail, max(time) as time, hash FROM media where dupe = 0 GROUP by album order by time DESC;');
+        $stmt = $conn->prepare('select filename, album, url, thumbnail, max(time) as time, hash FROM media GROUP by album order by time DESC;');
         $stmt->execute([]);
         $data = $stmt->fetchAll();
 
