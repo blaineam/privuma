@@ -45,8 +45,6 @@ $dlData = array_merge(
 	$dlData,
 );
 
-var_dump($favorites);
-
 echo PHP_EOL."Building web app payload of media to download";
 /* $stmt = $conn->prepare("SELECT json_group_array( json_object('filename', substr(filename,-10), 'album',album, 'dupe',dupe,'time',time,'hash',hash, 'metadata', metadata)    ) AS json_result FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed' ORDER BY time desc)"); */
 /* $stmt->execute(); */
