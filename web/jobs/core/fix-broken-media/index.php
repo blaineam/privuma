@@ -20,7 +20,7 @@ if(isset($_GET['album'])){
 	$album = " and album = {$album} ";
 }
 
-$select_results = $conn->query("SELECT id, album, filename FROM media where url is null {$album} order by id desc");
+$select_results = $conn->query("SELECT id, album, filename FROM media where url is null and album != 'Favorites' {$album} order by id desc");
 $results = $select_results->fetchAll(PDO::FETCH_ASSOC);
 echo PHP_EOL."Checking ". count($results) . " database records";
 foreach(array_chunk($results, 2000) as $key => $chunk) {
