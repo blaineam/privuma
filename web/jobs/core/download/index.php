@@ -29,6 +29,23 @@ group by hash
     time DESC");
 $stmt->execute();
 $dlData = $stmt->fetchAll();
+$stmtFavorites = $conn->prepare("select filename, album, time, hash, url, thumbnail
+from media
+where hash in
+(select hash from media where hash is not null and hash != '' and hash != 'compressed')
+and album = 'Favorites'
+group by hash
+ order by
+    time DESC");
+
+$stmtFavorites->execute();
+$favorites = $stmtFavorites->fetchAll();
+$dlData = array_merge(
+	$favorites,
+	$dlData,
+);
+
+var_dump($favorites);
 
 echo PHP_EOL."Building web app payload of media to download";
 /* $stmt = $conn->prepare("SELECT json_group_array( json_object('filename', substr(filename,-10), 'album',album, 'dupe',dupe,'time',time,'hash',hash, 'metadata', metadata)    ) AS json_result FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed' ORDER BY time desc)"); */
@@ -826,7 +843,7 @@ $viewerHTML = <<<'HEREHTML'
         alasql("CREATE TABLE submedia (`album` TEXT, `dupe` INT, `filename` TEXT, `hash` TEXT, `time` TEXT)");
         alasql.tables.submedia.data = alldata;
 
-        var allAlbums = alasql("select submedia.* FROM submedia where dupe = 0 GROUP by album order by time DESC");
+        var allAlbums = alasql("select submedia.* FROM submedia GROUP by album order by time DESC");
 
         function findSearch(searchText) {
           return alldata.filter((item) => {
@@ -957,7 +974,7 @@ $viewerHTML = <<<'HEREHTML'
 
         (async () => {
           function showAlbum(album, kind) {
-            var res = alasql("select m1.* from allmedia m1 join allmedia m2 on m1.hash = m2.hash where m2.album = ? and m2.hash != 'compressed' and m1.dupe = 0 group by m1.filename order by " +
+            var res = alasql("select m1.* from allmedia m1 join allmedia m2 on m1.hash = m2.hash where m2.album = ? and m2.hash != 'compressed' group by m1.hash order by " +
               (
                 album.includes("comic") ?
                 "m1.filename asc" :
