@@ -170,7 +170,7 @@ $htmlStyle = '
                 color: white;
             }
             a {
-                width: 43vw;
+                width: 42vw;
                 height: 43vw;
                 margin: 2.5vw;
                 border-radius: 5vw;
@@ -179,10 +179,9 @@ $htmlStyle = '
             }
             img {
                 object-fit: cover;
-                min-height: 100%;
-                min-width: 100%;
-                width: auto;
-                height: auto;
+                height: 100%;
+                width: 100%;
+                object-position: 0% 50%;
             }
             video {
                 width:100%;
@@ -208,6 +207,7 @@ $htmlStyle = '
 
 $loginForm = '<html>
     <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 ' . $htmlStyle . '
     <head>
     <body>
@@ -358,11 +358,17 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                         } else {
                             echo '
                                 <html>
-    <head>
-' . $htmlStyle . '
-    <head>
+                                    <head>
+                                        <meta name="viewport" content="width=device-width, initial-scale=1">
+                                        ' . $htmlStyle . '
+                                    <head>
                                     <body>
-                                        <video autoplay muted controls src="' . $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] . '" poster="' . $thumbnailUrl . '" playsinline>
+                                        <video controls  poster="' . $thumbnailUrl . '" playsinline>
+                                            <source type="video/mp4" src="' . $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] . '">
+                                        </video>
+                                        <a href="' . $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] . '">
+                                            Download Video
+                                        </a>
                                     </body>
                                 </html>
                             ';
@@ -406,11 +412,17 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
     } else {
         echo '
             <html>
-    <head>
-' . $htmlStyle . '
-    <head>
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    ' . $htmlStyle . '
+                <head>
                 <body>
-                    <video autoplay controls muted src="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false) . '" poster="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg') . '" playsinline>
+                    <video controls  poster="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg') . '" playsinline>
+                        <source type="video/mp4" src="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false) . '">
+                    </video>
+                    <a href="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false) . '">
+                        Download Video
+                    </a>
                 </body>
             </html>
         ';
@@ -448,10 +460,11 @@ if($responseTypeJson) {
     echo json_encode($deoJSON);
 } else {
     echo '<html>
-    <head>
-' . $htmlStyle . '
-    <head>
-        <body>';
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                ' . $htmlStyle . '
+            <head>
+            <body>';
     $scenes = [
             ...array_values($media),
             ...array_values($cached)
@@ -462,6 +475,6 @@ if($responseTypeJson) {
             echo ' <a href="' . $item['video_url'] . '&html=1"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
         }
     }
-    echo ' </body>
+    echo '</body>
         </html>';
 }
