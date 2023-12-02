@@ -91,20 +91,163 @@ $unauthorizedJson = [
         "authorized" => "-1"
         ];
 
+$htmlStyle = '
+        <style>
+            /* Box sizing rules */
+            *,
+            *::before,
+            *::after {
+            box-sizing: border-box;
+            }
+
+            /* Prevent font size inflation */
+            html {
+            -moz-text-size-adjust: none;
+            -webkit-text-size-adjust: none;
+            text-size-adjust: none;
+            }
+
+            /* Remove default margin in favour of better control in authored CSS */
+            body, h1, h2, h3, h4, p,
+            figure, blockquote, dl, dd {
+            margin-block-end: 0;
+            }
+
+            /* Remove list styles on ul, ol elements with a list role, which suggests default styling will be removed */
+            ul[role=\'list\'],
+            ol[role=\'list\'] {
+            list-style: none;
+            }
+
+            /* Set core body defaults */
+            body {
+            min-height: 100vh;
+            line-height: 1.5;
+            }
+
+            /* Set shorter line heights on headings and interactive elements */
+            h1, h2, h3, h4,
+            button, input, label {
+            line-height: 1.1;
+            }
+
+            /* Balance text wrapping on headings */
+            h1, h2,
+            h3, h4 {
+            text-wrap: balance;
+            }
+
+            /* A elements that don\'t have a class get default styles */
+            a:not([class]) {
+            text-decoration-skip-ink: auto;
+            color: currentColor;
+            }
+
+            /* Make images easier to work with */
+            img,
+            picture {
+            display: block;
+            }
+
+            /* Inherit fonts for inputs and buttons */
+            input, button,
+            textarea, select {
+            font: inherit;
+            }
+
+            /* Make sure textareas without a rows attribute are not tiny */
+            textarea:not([rows]) {
+            min-height: 10em;
+            }
+
+            /* Anything that has been anchored to should have extra scroll margin */
+            :target {
+            scroll-margin-block: 5ex;
+            }
+
+            body {
+                background: black;
+                color: white;
+            }
+            a {
+                width: 43vw;
+                height: 43vw;
+                margin: 2.5vw;
+                border-radius: 5vw;
+                display:inline-block;
+                overflow: hidden;
+            }
+            img {
+                object-fit: cover;
+                min-height: 100%;
+                min-width: 100%;
+                width: auto;
+                height: auto;
+            }
+            video {
+                width:100%;
+                height: 100%;
+            }
+            input {
+                display: block;
+                width: 90%;
+                margin: 5% auto;
+                border: none;
+                border: solid 0px transparent;
+                border-radius: 10px;
+                overflow:hidden;
+                color: white;
+                background: dimgray;
+                padding: 2px 5px;
+            }
+            input[type="submit"] {
+                background: CornflowerBlue;
+            }
+        </style>
+';
+
+$loginForm = '<html>
+    <head>
+' . $htmlStyle . '
+    <head>
+    <body>
+        <form method="post">
+            <input type="text" name="login" placeholder="login">
+            <input type="password" name="password" placeholder="password">
+            <input type="submit">
+        </form>
+    </body>
+</html>';
+$responseTypeJson = true;
+if (isset($_GET['html'])) {
+    $responseTypeJson = false;
+    echo '<!DOCTYPE html>';
+}
+
 if(!isset($_SESSION['deoAuthozied'])){
     if(isset($_POST['login']) && isset($_POST['password'])) {
         if($_POST['login'] === $DEOVR_LOGIN && $_POST['password'] === $DEOVR_PASSWORD) {
             $_SESSION['deoAuthozied'] = true;
         } else {
-            header('Content-Type: application/json');
-            echo json_encode($unauthorizedJson);
-            die();
+            if ($responseTypeJson) {
+                header('Content-Type: application/json');
+                echo json_encode($unauthorizedJson);
+                die();
+            } else {
+                echo $loginForm;
+                die();
+            }
         }
     } else {
-        header('Content-Type: application/json');
-        $unauthorizedJson['authorized'] = "0";
-        echo json_encode($unauthorizedJson);
-        die();
+        if ($responseTypeJson) {
+            header('Content-Type: application/json');
+            $unauthorizedJson['authorized'] = "0";
+            echo json_encode($unauthorizedJson);
+            die();
+        } else {
+            echo $loginForm;
+            die();
+        }
     }
 }
 
@@ -191,25 +334,40 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                     if($_GET['id'] == $scenes['list'][$k]['id']) {
                         $originalUrl = $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"];
                         $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] = getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"])[0]));
-                        header('Content-Type: application/json');
-                        echo json_encode(array_filter([
-                        "encodings" => [
-                            $scenes['list'][$k]["encodings"][0]
-                        ],
-                        "title" => $scenes['list'][$k]["title"],
-                        "description" => $scenes['list'][$k]["description"],
-                        "id" => $scenes['list'][$k]["id"],
-                        "skipIntro" => 0,
-                        "videoPreview" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['videoPreview'])[0], '.mp4') . "_videoPreview.mp4"),
-                        "thumbnailUrl" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . "_thumbnail.jpg"),
-                        "is3d" => $scenes['list'][$k]['is3d'],
-                        "viewAngle" => $scenes['list'][$k]['viewAngle'],
-                        "stereomode" => $scenes['list'][$k]['stereomode'],
-                        "projection" => $scenes['list'][$k]['projection'],
-                        "projectID" => $scenes['list'][$k]['projectID'],
-                        "screenType" => isset($scenes['list'][$k]['screenType']) ? $scenes['list'][$k]['screenType']: null,
-                        ], function($value) { return !is_null($value) && $value !== ''; }));
-                        die();
+                        $thumbnailUrl = getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . "_thumbnail.jpg");
+                        if ($responseTypeJson) {
+                            header('Content-Type: application/json');
+                            echo json_encode(array_filter([
+                            "encodings" => [
+                                $scenes['list'][$k]["encodings"][0]
+                            ],
+                            "title" => $scenes['list'][$k]["title"],
+                            "description" => $scenes['list'][$k]["description"],
+                            "id" => $scenes['list'][$k]["id"],
+                            "skipIntro" => 0,
+                            "videoPreview" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['videoPreview'])[0], '.mp4') . "_videoPreview.mp4"),
+                            "thumbnailUrl" => $thumbnailUrl,
+                            "is3d" => $scenes['list'][$k]['is3d'],
+                            "viewAngle" => $scenes['list'][$k]['viewAngle'],
+                            "stereomode" => $scenes['list'][$k]['stereomode'],
+                            "projection" => $scenes['list'][$k]['projection'],
+                            "projectID" => $scenes['list'][$k]['projectID'],
+                            "screenType" => isset($scenes['list'][$k]['screenType']) ? $scenes['list'][$k]['screenType']: null,
+                            ], function($value) { return !is_null($value) && $value !== ''; }));
+                            die();
+                        } else {
+                            echo '
+                                <html>
+    <head>
+' . $htmlStyle . '
+    <head>
+                                    <body>
+                                        <video autoplay muted controls src="' . $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] . '" poster="' . $thumbnailUrl . '" playsinline>
+                                    </body>
+                                </html>
+                            ';
+                            die();
+                        }
                     }
                 }
             }
@@ -221,29 +379,43 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
     $filename = basename($mediaPath, '.' . $ext);
     $attrs = []; //get3dAttrs($filename);
 
-    header('Content-Type: application/json');
-    echo json_encode(array_merge([
-        "encodings" =>
-            [
+    if($responseTypeJson) {
+        header('Content-Type: application/json');
+        echo json_encode(array_merge([
+            "encodings" =>
                 [
-            "name" => "h265",
-            "videoSources" => [
-                [
-                "resolution" => getResolution($filename),
-                "url" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false)
+                    [
+                "name" => "h265",
+                "videoSources" => [
+                    [
+                    "resolution" => getResolution($filename),
+                    "url" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false)
+                    ]
                 ]
-            ]
-            ]
-        ],
-        "title" => $filename,
-        "id" => $_GET['id'],
-        "skipIntro" => 0,
-        "is3d" => true,
-        "thumbnailUrl" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg'),
+                ]
+            ],
+            "title" => $filename,
+            "id" => $_GET['id'],
+            "skipIntro" => 0,
+            "is3d" => true,
+            "thumbnailUrl" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg'),
 
-    ], $attrs));
+        ], $attrs));
 
-    die();
+        die();
+    } else {
+        echo '
+            <html>
+    <head>
+' . $htmlStyle . '
+    <head>
+                <body>
+                    <video autoplay controls muted src="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false) . '" poster="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg') . '" playsinline>
+                </body>
+            </html>
+        ';
+        die();
+    }
 }
 
 $media = findMedia($DEOVR_DATA_DIRECTORY);
@@ -263,14 +435,33 @@ foreach($json as $site => $search){
         $cached[] = $scenes;
     }
 }
+if($responseTypeJson) {
+    $deoJSON = [
+        "scenes"=> [
+            ...array_values($media),
+            ...array_values($cached)
+            ],
+        "authorized" => "1"
+            ];
 
-$deoJSON = [
-    "scenes"=> [
-        ...array_values($media),
-        ...array_values($cached)
-        ],
-    "authorized" => "1"
-        ];
-
-header('Content-Type: application/json');
-echo json_encode($deoJSON);
+    header('Content-Type: application/json');
+    echo json_encode($deoJSON);
+} else {
+    echo '<html>
+    <head>
+' . $htmlStyle . '
+    <head>
+        <body>';
+    $scenes = [
+            ...array_values($media),
+            ...array_values($cached)
+            ];
+    foreach( $scenes as $scene) {
+        echo '<h2>' . $scene['name'] . '</h2>';
+        foreach($scene['list'] as $item) {
+            echo ' <a href="' . $item['video_url'] . '&html=1"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
+        }
+    }
+    echo ' </body>
+        </html>';
+}
