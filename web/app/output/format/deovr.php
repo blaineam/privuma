@@ -169,24 +169,7 @@ $htmlStyle = '
                 background: black;
                 color: white;
             }
-            a {
-                width: 42vw;
-                height: 43vw;
-                margin: 2.5vw;
-                border-radius: 5vw;
-                display:inline-block;
-                overflow: hidden;
-            }
-            img {
-                object-fit: cover;
-                height: 100%;
-                width: 100%;
-                object-position: 0% 50%;
-            }
-            video {
-                width:100%;
-                height: 100%;
-            }
+            
             input {
                 display: block;
                 width: 90%;
@@ -359,16 +342,36 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                             echo '
                                 <html>
                                     <head>
-                                        <meta name="viewport" content="width=device-width, initial-scale=1">
-                                        ' . $htmlStyle . '
+                                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                                    <meta charset="utf-8">
+                                    ' . $htmlStyle . '
+                                        <style>
+                                        ' . file_get_contents(__DIR__.DIRECTORY_SEPARATOR."360player.css") .'
+                                        </style>
                                     <head>
                                     <body>
-                                        <video controls  poster="' . $thumbnailUrl . '" playsinline>
+                                        <video poster="' . $thumbnailUrl . '" id="videojs-vr-player" class="video-js vjs-16-9 vjs-default-skin" playsinline controls>
                                             <source type="video/mp4" src="' . $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] . '">
                                         </video>
                                         <a href="' . $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] . '">
                                             Download Video
                                         </a>
+                                        <select id="actionMenu" onchange="selectAction(this)">
+                                            <option value="">Select Projection</option>
+                                            <option value="180">180</option>
+                                            <option value="180_LR">180_LR</option>
+                                            <option value="180_MONO">180_MONO</option>
+                                            <option value="360">360</option>
+                                            <option value="Cube">Cube</option>
+                                            <option value="NONE">NONE</option>
+                                            <option value="360_LR">360_LR</option>
+                                            <option value="360_TB">360_TB</option>
+                                            <option value="EAC">EAC</option>
+                                            <option value="EAC_LR">EAC_LR</option>
+                                        </select>
+                                        <script>
+                                        ' . file_get_contents(__DIR__.DIRECTORY_SEPARATOR."360player.js") .'
+                                        </script>
                                     </body>
                                 </html>
                             ';
@@ -413,20 +416,40 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
         echo '
             <html>
                 <head>
-                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                    ' . $htmlStyle . '
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                ' . $htmlStyle . '
+                    <style>
+                    ' . file_get_contents(__DIR__.DIRECTORY_SEPARATOR."360player.css") .'
+                    </style>
                 <head>
                 <body>
-                    <video controls  poster="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg') . '" playsinline>
+                    <video poster="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg') . '" id="videojs-vr-player" class="video-js vjs-16-9  vjs-default-skin" playsinline controls>
                         <source type="video/mp4" src="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false) . '">
                     </video>
                     <a href="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false) . '">
                         Download Video
                     </a>
+                    <select id="actionMenu" onchange="selectAction(this)">
+                        <option value="">Select Projection</option>
+                        <option value="180">180</option>
+                        <option value="180_LR">180_LR</option>
+                        <option value="180_MONO">180_MONO</option>
+                        <option value="360">360</option>
+                        <option value="Cube">Cube</option>
+                        <option value="NONE">NONE</option>
+                        <option value="360_LR">360_LR</option>
+                        <option value="360_TB">360_TB</option>
+                        <option value="EAC">EAC</option>
+                        <option value="EAC_LR">EAC_LR</option>
+                    </select>
+                    <script>
+                    ' . file_get_contents(__DIR__.DIRECTORY_SEPARATOR."360player.js") .'
+                    </script>
                 </body>
             </html>
         ';
-        die();
+        die();  
     }
 }
 
@@ -463,6 +486,22 @@ if($responseTypeJson) {
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 ' . $htmlStyle . '
+                <style>
+                a {
+                    width: 42vw;
+                    height: 43vw;
+                    margin: 2.5vw;
+                    border-radius: 5vw;
+                    display:inline-block;
+                    overflow: hidden;
+                }
+                img {
+                    object-fit: cover;
+                    height: 100%;
+                    width: 100%;
+                    object-position: 0% 50%;
+                }
+                </style>
             <head>
             <body>';
     $scenes = [
