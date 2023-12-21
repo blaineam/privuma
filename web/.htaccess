@@ -5,6 +5,16 @@ RedirectMatch 301 /jobs(.*) /
 RedirectMatch 301 /syncs(.*) /
 RedirectMatch 301 /tools(.*) /
 
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME}  -f [OR]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^deovr.json /deovr/index.php  [L,QSA]
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME}  -f [OR]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^media.mp4 /index.php  [L,QSA]
+
 # Block bad bots
 RewriteEngine On 
 RewriteCond %{HTTP_USER_AGENT} ^BlackWidow [OR]
@@ -84,6 +94,8 @@ RewriteCond %{HTTP_USER_AGENT} ^WWWOFFLE [OR]
 RewriteCond %{HTTP_USER_AGENT} ^Xaldon\ WebSpider [OR]
 RewriteCond %{HTTP_USER_AGENT} ^Zeus
 RewriteRule ^.* - [F,L]
+
+
 
 # Prevent viewing of .htaccess file
 <Files .htaccess>

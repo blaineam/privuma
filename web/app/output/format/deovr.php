@@ -71,7 +71,7 @@ function findMedia($path) {
                     $output[$dir]['list'][] = [
                         "video_url" => $ENDPOINT . 'deovr/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path .'/' . $dir . '/' .$filename.'.'.$ext)),
                         "thumbnailUrl" => getProtectedUrlForMediaPath($path .'/' . $dir . '/' . $filename . '.jpg'),
-                        "title" => $filename,
+                        "title" => $filename, "videoSrc" => getProtectedUrlForMediaPath($path .'/' . $dir . '/' . $filename . '.' . $ext, false, true),
                     ];
                 //}
             }
@@ -185,6 +185,60 @@ $htmlStyle = '
             input[type="submit"] {
                 background: CornflowerBlue;
             }
+						.fancybox-slide--iframe .fancybox-content {
+    max-width  : 100%;
+    max-height : 100%;
+    margin: 0;
+}
+
+
+[data-tab-content] {
+    display: none;
+  }
+  
+  .active[data-tab-content] {
+    display: block;
+  }
+
+  .tab-content {
+    margin-top: 100px;
+  }
+
+  * {
+    font-family: sans-serif;
+  }
+
+
+  .tabs {
+    display: flex;
+    justify-content: space-around;
+    list-style-type: none;
+    padding: 10px;
+    top: 0;
+    margin: 0;
+    width: 100%;
+    position: fixed;
+    background-color: rgba(0,0,0,0.85);
+  }
+  
+  .tab {
+    cursor: pointer;
+    padding: 10px 20px;
+    border-radius: 30px;
+    border: 1px solid #73859f;
+    color: #ffffff;
+
+  }
+  
+  .tab.active {
+    background-color: #2B333F;
+    border: 1px solid #2B333F;
+  }
+  
+  .tab:hover {
+    background-color: #73859f;
+  } 
+						
         </style>
 ';
 
@@ -202,7 +256,7 @@ $loginForm = '<html>
     </body>
 </html>';
 $responseTypeJson = true;
-if (isset($_GET['html'])) {
+if (true || isset($_GET['html'])) {
     $responseTypeJson = false;
     echo '<!DOCTYPE html>';
 }
@@ -232,6 +286,23 @@ if(!isset($_SESSION['deoAuthozied'])){
             die();
         }
     }
+}
+
+if ((isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > 60 * 15)) || isset($_GET['logout'])) {
+    // last request was more than 30 minutes ago
+    session_unset();     // unset $_SESSION variable for the run-time 
+    session_destroy();   // destroy session data in storage
+    header("Location: /deovr/");
+    die();
+}
+$_SESSION['LAST_ACTIVITY'] = time(); // update last activity time stamp
+
+if (!isset($_SESSION['CREATED'])) {
+    $_SESSION['CREATED'] = time();
+} else if (time() - $_SESSION['CREATED'] > 60 * 15) {
+    // session started more than 30 minutes ago
+    session_regenerate_id(true);    // change session ID for the current session and invalidate old session ID
+    $_SESSION['CREATED'] = time();  // update creation time
 }
 
 function get3dAttrs($filename) {
@@ -350,10 +421,15 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                                         </style>
                                     <head>
                                     <body>
-                                        <video poster="' . $thumbnailUrl . '" id="videojs-vr-player" class="video-js vjs-16-9 vjs-default-skin" playsinline controls>
+                                       
+
+  <div style="width:100%; height: calc( 100% - 25px ); display:block; position:absolute; margin:0; padding:0;top:0;left:0;"> <video poster="' . $thumbnailUrl . '" id="videojs-vr-player" class="video-js vjs-fill vjs-default-skin" playsinline controls>
                                             <source type="video/mp4" src="' . $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] . '">
                                         </video>
-                                        <a href="' . $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] . '">
+																																										
+    </div>
+    <div style="position:absolute; height:25px; width:auto; display:block; bottom:0; left:0; padding:0; margin:0 auto; overflow:hidden;">
+                                        <a target="_parent" href="' . $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] . '">
                                             Download Video
                                         </a>
                                         <select id="actionMenu" onchange="selectAction(this)">
@@ -369,7 +445,7 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                                             <option value="EAC">EAC</option>
                                             <option value="EAC_LR">EAC_LR</option>
                                         </select>
-                                        <script>
+                                       </div> <script>
                                         ' . file_get_contents(__DIR__.DIRECTORY_SEPARATOR."360player.js") .'
                                         </script>
                                     </body>
@@ -424,12 +500,18 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                     </style>
                 <head>
                 <body>
-                    <video poster="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg') . '" id="videojs-vr-player" class="video-js vjs-16-9  vjs-default-skin" playsinline controls>
+										
+
+  <div style="width:100%; height: calc( 100% - 25px ); display:block; position:absolute; margin:0; padding:0;top:0;left:0;">
+                    <video poster="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg') . '" id="videojs-vr-player" class="video-js vjs-fill vjs-default-skin" playsinline controls>
                         <source type="video/mp4" src="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false) . '">
                     </video>
-                    <a href="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false) . '">
+																						</div>
+				  <div style="position:absolute; height:25px; width:auto; display:block; bottom:0; left:0; padding:0; margin:0 auto; overflow:hidden;">																														
+                    <a target="_parent" href="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, true) . '">
                         Download Video
                     </a>
+																	
                     <select id="actionMenu" onchange="selectAction(this)">
                         <option value="">Select Projection</option>
                         <option value="180">180</option>
@@ -443,6 +525,7 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                         <option value="EAC">EAC</option>
                         <option value="EAC_LR">EAC_LR</option>
                     </select>
+																																											</div>
                     <script>
                     ' . file_get_contents(__DIR__.DIRECTORY_SEPARATOR."360player.js") .'
                     </script>
@@ -486,21 +569,34 @@ if($responseTypeJson) {
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 ' . $htmlStyle . '
+				<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha512-H9jrZiiopUdsLpg94A333EfumgUBpO9MdbxStdeITo+KEIMaNfHNvwyjjDJb+ERPaRS6DpyRlKbvPUasNItRyw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
                 <style>
-                a {
+                a[data-gallery-link="true"] {
                     width: 42vw;
                     height: 43vw;
                     margin: 2.5vw;
                     border-radius: 5vw;
                     display:inline-block;
                     overflow: hidden;
-                }
+                } 
                 img {
                     object-fit: cover;
                     height: 100%;
                     width: 100%;
                     object-position: 0% 50%;
                 }
+            @media (min-width:801px)  { 
+
+
+                a[data-gallery-link="true"] {
+                    width: 19vw;
+                    height: 20vw;
+                    margin: 2.5vw;
+                    border-radius: 5vw;
+                    display:inline-block;
+                    overflow: hidden;
+                }
+            }
                 </style>
             <head>
             <body>';
@@ -508,12 +604,70 @@ if($responseTypeJson) {
             ...array_values($media),
             ...array_values($cached)
             ];
-    foreach( $scenes as $scene) {
-        echo '<h2>' . $scene['name'] . '</h2>';
-        foreach($scene['list'] as $item) {
-            echo ' <a href="' . $item['video_url'] . '&html=1"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
-        }
+            ?>
+
+            <ul class="tabs">
+                <?php
+
+    foreach( $scenes as $index => $scene) {
+        echo '<li data-tab-target="#' . urlencode($scene['name']) . '" class="' . ($index === 0 ? 'active' : '') . ' tab">' . $scene['name'] . '</li>';
     }
-    echo '</body>
+    ?>
+    <li class="tab"><a style="width:100%;height:100%;" href="?logout=1"><svg fill="#ffffff" height="20px" width="20px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+	 viewBox="0 0 384.971 384.971" xml:space="preserve">
+<g>
+	<g id="Sign_Out">
+		<path d="M180.455,360.91H24.061V24.061h156.394c6.641,0,12.03-5.39,12.03-12.03s-5.39-12.03-12.03-12.03H12.03
+			C5.39,0.001,0,5.39,0,12.031V372.94c0,6.641,5.39,12.03,12.03,12.03h168.424c6.641,0,12.03-5.39,12.03-12.03
+			C192.485,366.299,187.095,360.91,180.455,360.91z"/>
+		<path d="M381.481,184.088l-83.009-84.2c-4.704-4.752-12.319-4.74-17.011,0c-4.704,4.74-4.704,12.439,0,17.179l62.558,63.46H96.279
+			c-6.641,0-12.03,5.438-12.03,12.151c0,6.713,5.39,12.151,12.03,12.151h247.74l-62.558,63.46c-4.704,4.752-4.704,12.439,0,17.179
+			c4.704,4.752,12.319,4.752,17.011,0l82.997-84.2C386.113,196.588,386.161,188.756,381.481,184.088z"/>
+	</g>
+</g>
+</svg></a></li>
+</ul>
+
+<div class="tab-content">
+    <?php
+    foreach( $scenes as $index => $scene) {
+        echo '<div data-tab-content id="' . urlencode($scene['name']) . '" class="' . ($index === 0 ? 'active' : '') . '"><h2>' . $scene['name'] . '</h2>';
+        foreach($scene['list'] as $item){
+					$ua = strtolower($_SERVER['HTTP_USER_AGENT']);
+if(stripos($ua,'x11') !== false) {
+	echo ' <a data-gallery-link="true" href="' . $item['videoSrc'] . '"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
+} else {
+	echo ' <a data-gallery-link="true" data-fancybox="gallery"  data-type="iframe" href="#" data-src="' . $item['video_url'] . '&html=1"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
+}
+					
+        }
+        echo '</div>';
+    }
+    echo '</div>'; 
+    echo " 
+    <script>  
+
+
+const tabs = document.querySelectorAll('[data-tab-target]')
+const tabContents = document.querySelectorAll('[data-tab-content]')
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    const target = document.querySelector(tab.dataset.tabTarget)
+    tabContents.forEach(tabContent => {
+      tabContent.classList.remove('active')
+    })
+    tabs.forEach(tab => {
+      tab.classList.remove('active')
+    })
+    tab.classList.add('active')
+    target.classList.add('active')
+  })
+})
+</script>";
+echo '
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+			<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+		</body>
         </html>';
 }
