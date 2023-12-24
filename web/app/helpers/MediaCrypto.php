@@ -47,14 +47,18 @@ class MediaCrypto
         bool $gzip = false,
     )
     {
-        $memory_limit = self::return_bytes(ini_get('memory_limit'));
+        $memory_limit = (int)self::return_bytes(ini_get('memory_limit'));
+
+        if ($memory_limit <= 0) {
+            $memory_limit = 2 * 1024; // 2 GB as a sane default;
+        }
 
         clearstatcache();
         if($force === false && strstr(MediaCrypto::getMime($path), 'image') == false
         && strstr(MediaCrypto::getMime($path), 'video') == false) {
             if ($enableOutput) {
                 echo "Unexpected Filetype found, skipping encryption" . PHP_EOL;
-            }    
+            }
             return;
         }
 
@@ -172,35 +176,35 @@ class MediaCrypto
         }
 
         clearstatcache();
-        $isMediaFile = strstr(MediaCrypto::getMime($gzip ? $newPath : $tempName), 'image') !== false 
+        $isMediaFile = strstr(MediaCrypto::getMime($gzip ? $newPath : $tempName), 'image') !== false
         || strstr(MediaCrypto::getMime($gzip ? $newPath : $tempName), 'video') !== false;
         if(
-            $force === true 
+            $force === true
             || (
-                $cleanup === false 
+                $cleanup === false
                 && $isMediaFile
             )
         ) {
             copy($gzip ? $newPath : $tempName, $gzip ? str_replace('-gz', '', $path) : $path);
         }else if (
-            $cleanup === true 
+            $cleanup === true
             && !$isMediaFile
         ) {
             unlink($path);
             if ($enableOutput) {
                 echo "Cleaned Up corrupted encrypted file" . PHP_EOL;
-            }  
+            }
         } else if (
-            $cleanup === false 
+            $cleanup === false
             && $enableOutput
         ) {
             echo "Unexpected Decrypted Filetype found, skipping decryption result" . PHP_EOL;
         }else if (
-            $cleanup === true 
+            $cleanup === true
             && $enableOutput
         ) {
             echo "Decryption was successful, skipping cleanup" . PHP_EOL;
-        }  
+        }
         unlink($tempName);
         if ($gzip) {
             unlink($path);
@@ -245,7 +249,7 @@ class MediaCrypto
     {
         // Use this line to decrypt base64 encrypted files if you have them.
         //return openssl_decrypt($data, 'aes-256-cbc', hex2bin($key), 0, hex2bin($iv));
-    
+
         return openssl_decrypt(base64_encode(self::z85_decode($data)), 'aes-256-cbc', hex2bin($key), 0, hex2bin($iv));
     }
 
