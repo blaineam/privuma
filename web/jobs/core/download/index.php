@@ -495,6 +495,9 @@ $viewerHTML = <<<'HEREHTML'
       function isencrypted(str) {
         return str.charAt(0) === "{" && str.charAt(str.length - 1) === "}";
       }
+      function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
 
       let medcrypt = {
     	loadedCache: {},
@@ -616,7 +619,7 @@ $viewerHTML = <<<'HEREHTML'
                                                 type: mime
                                             }
                                             )
-                                        );
+                                       );
 								        medcrypt.loadedCache[resource] = blobUrl;
                                         return pass(blobUrl);
                                     }
@@ -625,6 +628,7 @@ $viewerHTML = <<<'HEREHTML'
                             value,
                             { stream: !done }
                         ).split("\n")) {
+                              sleep(1000);
                           if(isJsonString(line)) {
                             salts = line;
                           }else{
@@ -640,6 +644,7 @@ $viewerHTML = <<<'HEREHTML'
                         };
 
                                     medcrypt.transfers.loaded += value.byteLength;
+                                    // console.log("transfered: " + medcrypt.transfers.loaded / 1024 / 1024 / 1024);
                                     medcrypt.displayProgress();
                                     return fetchReader.read().then(processRead).catch(deny);
                                     }).catch(deny);
@@ -656,11 +661,12 @@ $viewerHTML = <<<'HEREHTML'
                 }).then(action).catch((err) => {
                     medcrypt.finishProgress();
 	                if (currentTries < medcrypt.maxTries) {
-	                	console.log("Retrying Decryption");
+                    console.error(err);
+	                	//console.log("Retrying Decryption");
 	                	medcrypt.getSrc(resource, action, currentTries + 1);
 	                } else {
-                        console.error(err);
-	                	console.error("failed to decrypt");
+                        //console.error(err);
+	                	//console.error("failed to decrypt");
 	                	action("")
 	                }
                 });
@@ -748,7 +754,7 @@ $viewerHTML = <<<'HEREHTML'
         window.getGifDuration(source)
           .then(duration => {
             jQuery(`img[src="${source}"]`)
-              .data("duration", duration)
+              .attr("data-duration", duration)
           });
       }
     </script>
@@ -1258,26 +1264,53 @@ $viewerHTML = <<<'HEREHTML'
                     clearTimeout(slideshowTimer);
                   }
 
-                  let defaultDuration = 5000;
-                  let gifduration = jQuery(slide.$thumb).data('duration');
-                  gifduration = (!gifduration || typeof gifduration === 'undefined' || gifduration == 0) ? defaultDuration : gifduration;
-                  if (slide.$content && jQuery(slide.$content).find('video').length > 0) {
-                    jQuery(slide.$content).find('video').trigger('play');
-                    jQuery(slide.$content).find('video').on('ended', function() {
-                      $.fancybox.getInstance().next();
-                    });
-                    return;
-                  }
+                  window.getGifDuration(slide.src)
+                    .then(duration => {
+                      jQuery(`img[src="${slide.src}"]`)
+                        .attr("data-duration", duration)
+                    let defaultDuration = 5000;
+                    let gifduration = duration; //jQuery(slide.$thumb).data('duration');
+                    gifduration = (!gifduration || typeof gifduration === 'undefined' || gifduration == 0) ? defaultDuration : gifduration;
+                    if (slide.$content && jQuery(slide.$content).find('video').length > 0) {
+                      jQuery(slide.$content).find('video').trigger('play');
+                      jQuery(slide.$content).find('video').on('ended', function() {
+                        $.fancybox.getInstance().next();
+                      });
+                      return;
+                    }
 
-                  let targetDuration = gifduration;
-                  if (gifduration < defaultDuration) {
-                    let gifDivisible = Math.ceil(defaultDuration / gifduration);
-                    targetDuration = gifduration * gifDivisible;
-                  }
+                    let targetDuration = gifduration;
+                    if (gifduration < defaultDuration) {
+                      let gifDivisible = Math.ceil(defaultDuration / gifduration);
+                      targetDuration = gifduration * gifDivisible;
+                    }
 
-                  slideshowTimer = setTimeout(function() {
-                    $.fancybox.getInstance().next()
-                  }, targetDuration);
+                    slideshowTimer = setTimeout(function() {
+                      $.fancybox.getInstance().next()
+                    }, targetDuration);
+
+                  }).catch(() => {
+                    let defaultDuration = 5000;
+                    let gifduration = jQuery(slide.$thumb).data('duration');
+                    gifduration = (!gifduration || typeof gifduration === 'undefined' || gifduration == 0) ? defaultDuration : gifduration;
+                    if (slide.$content && jQuery(slide.$content).find('video').length > 0) {
+                      jQuery(slide.$content).find('video').trigger('play');
+                      jQuery(slide.$content).find('video').on('ended', function() {
+                        $.fancybox.getInstance().next();
+                      });
+                      return;
+                    }
+
+                    let targetDuration = gifduration;
+                    if (gifduration < defaultDuration) {
+                      let gifDivisible = Math.ceil(defaultDuration / gifduration);
+                      targetDuration = gifduration * gifDivisible;
+                    }
+
+                    slideshowTimer = setTimeout(function() {
+                      $.fancybox.getInstance().next()
+                    }, targetDuration);
+                  });
                 });
               return;
             }
@@ -1348,27 +1381,52 @@ $viewerHTML = <<<'HEREHTML'
             if (slideshowTimer) {
               clearTimeout(slideshowTimer);
             }
+            window.getGifDuration(slide.src)
+                    .then(duration => {
+                      jQuery(`img[src="${slide.src}"]`)
+                        .attr("data-duration", duration)
+              let defaultDuration = 5000;
+              let gifduration = duration; //jQuery(slide.$thumb).data('duration');
+              gifduration = (!gifduration || typeof gifduration === 'undefined' || gifduration == 0) ? defaultDuration : gifduration;
+              if (slide.$content && jQuery(slide.$content).find('video').length > 0) {
+                jQuery(slide.$content).find('video').trigger('play');
+                jQuery(slide.$content).find('video').on('ended', function() {
+                  $.fancybox.getInstance().next();
+                });
+                return;
+              }
 
-            let defaultDuration = 5000;
-            let gifduration = jQuery(slide.$thumb).data('duration');
-            gifduration = (!gifduration || typeof gifduration === 'undefined' || gifduration == 0) ? defaultDuration : gifduration;
-            if (slide.$content && jQuery(slide.$content).find('video').length > 0) {
-              jQuery(slide.$content).find('video').trigger('play');
-              jQuery(slide.$content).find('video').on('ended', function() {
-                $.fancybox.getInstance().next();
-              });
-              return;
-            }
+              let targetDuration = gifduration;
+              if (gifduration < defaultDuration) {
+                let gifDivisible = Math.ceil(defaultDuration / gifduration);
+                targetDuration = gifduration * gifDivisible;
+              }
 
-            let targetDuration = gifduration;
-            if (gifduration < defaultDuration) {
-              let gifDivisible = Math.ceil(defaultDuration / gifduration);
-              targetDuration = gifduration * gifDivisible;
-            }
+              slideshowTimer = setTimeout(function() {
+                $.fancybox.getInstance().next()
+              }, targetDuration);
+            }).catch(() => {
+              let defaultDuration = 5000;
+              let gifduration = jQuery(slide.$thumb).data('duration');
+              gifduration = (!gifduration || typeof gifduration === 'undefined' || gifduration == 0) ? defaultDuration : gifduration;
+              if (slide.$content && jQuery(slide.$content).find('video').length > 0) {
+                jQuery(slide.$content).find('video').trigger('play');
+                jQuery(slide.$content).find('video').on('ended', function() {
+                  $.fancybox.getInstance().next();
+                });
+                return;
+              }
 
-            slideshowTimer = setTimeout(function() {
-              $.fancybox.getInstance().next()
-            }, targetDuration);
+              let targetDuration = gifduration;
+              if (gifduration < defaultDuration) {
+                let gifDivisible = Math.ceil(defaultDuration / gifduration);
+                targetDuration = gifduration * gifDivisible;
+              }
+
+              slideshowTimer = setTimeout(function() {
+                $.fancybox.getInstance().next()
+              }, targetDuration);
+            });
           });
 
           let scrollMemory = {};
