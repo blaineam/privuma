@@ -381,7 +381,7 @@ $viewerHTML = <<<'HEREHTML'
       // create a wordArray that is Big-Endian (because it's used with CryptoJS which is all BE)
       // From: https://gist.github.com/creationix/07856504cf4d5cede5f9#file-encode-js
       function a2w(u8Array) {
-      var words = [], i = 0, len = u8Array.length;
+      var words = [], i = 0, len = u8Array == null ? 0 : u8Array.length;
       while (i < len) {
       words.push(
       (u8Array[i++] << 24) |
@@ -396,7 +396,7 @@ $viewerHTML = <<<'HEREHTML'
       };
       }
       function a2b(u8Array) {
-      var i, len = u8Array.length, b_str = "";
+      var i, len = u8Array == null ? 0 : u8Array.length, b_str = "";
       for (i=0; i<len; i++) {
       b_str += String.fromCharCode(u8Array[i]);
       }
