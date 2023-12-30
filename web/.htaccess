@@ -8,7 +8,7 @@ RedirectMatch 301 /tools(.*) /
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME}  -f [OR]
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^deovr.json /deovr/index.php  [L,QSA]
+RewriteRule ^deovr /vr/index.php?json=true  [L,QSA]
 
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME}  -f [OR]
@@ -16,7 +16,7 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^media.mp4 /index.php  [L,QSA]
 
 # Block bad bots
-RewriteEngine On 
+RewriteEngine On
 RewriteCond %{HTTP_USER_AGENT} ^BlackWidow [OR]
 RewriteCond %{HTTP_USER_AGENT} ^Bot\ mailto:craftbot@yahoo.com [OR]
 RewriteCond %{HTTP_USER_AGENT} ^ChinaClaw [OR]
