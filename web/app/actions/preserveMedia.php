@@ -15,8 +15,10 @@ class preserveMedia {
     function __construct(array $data = [], ?cloudFS $operator = null) {
         $qm = new QueueManager();
         $this->ops = is_null($operator) ? privuma::getCloudFS() : $operator;
-        $ext = pathinfo($data['filename'], PATHINFO_EXTENSION);
-        $correctedFilename = basename($data['filename'], "." . $ext) . "." . strtolower($ext);
+        if(isset($data['filename'])) {
+            $ext = pathinfo($data['filename'], PATHINFO_EXTENSION);
+            $correctedFilename = basename($data['filename'], "." . $ext) . "." . strtolower($ext);
+        }
         if(isset($data['album']) && isset($data['filename'])) {
             $hash =  md5_file($data['path']);
             echo PHP_EOL."creating media file with: " . json_encode([
