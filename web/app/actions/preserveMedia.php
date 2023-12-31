@@ -176,7 +176,7 @@ class preserveMedia {
             if($binNotFound !== 0){
                 $path = '/usr/bin/convert';
             }
-            exec("nice " . $path . " '".$ext.':'.$tempFile."' -resize 1920x1920 -quality 60 -fuzz 7% '".$newFileTemp."'", $void, $response);
+            exec("nice " . $path . " '".$tempFile."' -resize 1920x1920 -quality 60 -fuzz 7% '".$newFileTemp."'", $void, $response);
             $is = getimagesize($newFileTemp);
             if($response == 0 ) {
                 echo PHP_EOL."convert was successful";
