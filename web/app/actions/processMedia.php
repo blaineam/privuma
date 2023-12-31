@@ -35,7 +35,11 @@ class processMedia {
                         $isGif = strtoupper($dlExt) === "GIF";
                         $gifThumbnailPath = str_replace(['.gif', '.GIF'], '.jpg', $mediaPreservationPath);
                         $gifThumbnailExists = $downloadOps->is_file($gifThumbnailPath);
-                        if(($isGif && $gifThumbnailExists) || !$isGif && $downloadOps->is_file($mediaPreservationPath)) {
+                        if($isGif && $gifThumbnailExists && $downloadOps->is_file($mediaPreservationPath)) {
+                            echo PHP_EOL."Skip Existing Media already downloaded to: $mediaPreservationPath";
+                            return;
+                        }
+                        if(!$isGif && $downloadOps->is_file($mediaPreservationPath)) {
                             echo PHP_EOL."Skip Existing Media already downloaded to: $mediaPreservationPath";
                             return;
                         }
@@ -57,6 +61,7 @@ class processMedia {
                             // Empty File
                             'd41d8cd98f00b204e9800998ecf8427e',
                         ]) || !in_array(explode('/', strtolower(mime_content_type($mediaPath)))[0], ['image', 'video'])) {
+                            echo PHP_EOL."Invalid file found: " . $data['url'];
                             return;
                         }
                         $passphrase = (new dotenv())->get('DOWNLOAD_PASSWORD') ?? "";
@@ -74,7 +79,7 @@ class processMedia {
                             $downloadOps->rename($dlThumbDest, $dlThumbPreservationPath, false);
                         }
 
-                        echo PHP_EOL."Attempting to Compress Media: $mediaPath";
+                        echo PHP_EOL."Attempting to Compress Media: $mediaPath | " . $data['url'];
                         if(
                             (new preserveMedia([], $downloadOps))->compress($mediaPath, $mediaPreservationPath, $passphrase)
                         ) {
@@ -89,7 +94,7 @@ class processMedia {
                                 }
                                 $downloadOps->rename($mediaPath, $mediaPreservationPath, false);
                             } else {
-                                echo PHP_EOL."Download failed";
+                                echo PHP_EOL."Download failed: " . $data['url'];
                             }
                         }
 
