@@ -864,10 +864,12 @@ $viewerHTML = <<<'HEREHTML'
         jQuery.fancybox.defaults = {
           ...jQuery.fancybox.defaults,
           hash: false,
-          loop: !0,
+          loop: true,
           buttons: [
+            "zoom",
             "slideShow",
             "fullScreen",
+            "download",
             "close"
           ],
           wheel: false,
@@ -1207,17 +1209,7 @@ $viewerHTML = <<<'HEREHTML'
             currentFolder = album;
             showAllAlbums();
             $(document).ready(function() {
-              $('[data-fancybox="gallery"]').fancybox({
-                loop: true,
-                buttons: [
-                  "slideShow",
-                  "fullScreen",
-                  "close"
-                ],
-                video: {
-                  format: "video/mp4"
-                },
-              });
+              $('[data-fancybox="gallery"]').fancybox({});
             });
           }
 
@@ -1242,76 +1234,90 @@ $viewerHTML = <<<'HEREHTML'
                   .trigger("load")
           });
 
-          $(document).on('afterShow.fb', function(e, instance, slide) {
-            if ($('video').length == 0) {
+          $(document).on('beforeLoad.fb', function( e, instance, slide) {
+            if (slide.type === 'image') {
               let element = $('.gallerypicture[href="' + slide.src + '"]');
               let targetsrc = slide.src.length > 0 ? slide.src : element.data('src');
               medcrypt.getSrc(targetsrc, (uri) => {
                   element.attr("href", uri);
                   slide.src = uri;
-                  $.fancybox.getInstance().current.$slide.trigger("onReset");
-                  $(".fancybox-content").removeClass('fancybox-error').html('<img style="max-width:100%; max-height:100%;" onLoad="imgLoad(this)" src="' + uri + '" alt="" />');
-                  if ($.fancybox.getInstance().SlideShow.isActive) {
-                    $.fancybox.getInstance().SlideShow.stop();
-                    slideshowStarted = true;
+                  if ( slide.hasError ) {
+                    $(".fancybox-content.fancybox-error").remove();
+                    $.fancybox.getInstance().current.$slide.trigger("onReset");
+                    slide.hasError = false;
+                    slide.isLoading = false;
+                    slide.isLoaded = false;
+                    instance.loadSlide(slide);
                   }
+              });
+            } else {
 
-                  if (!slideshowStarted) {
-                    return;
-                  }
+            }
+          });
+          $(document).on('afterShow.fb', function(e, instance, slide) {
+            if ($('video').length == 0) {
+              let element = $('.gallerypicture[href="' + slide.src + '"]');
+              let targetsrc = slide.src.length > 0 ? slide.src : element.data('src');
+              if ($.fancybox.getInstance().SlideShow.isActive) {
+                $.fancybox.getInstance().SlideShow.stop();
+                slideshowStarted = true;
+              }
 
-                  if (slideshowTimer) {
-                    clearTimeout(slideshowTimer);
-                  }
+              if (!slideshowStarted) {
+                return;
+              }
 
-                  window.getGifDuration(slide.src)
-                    .then(duration => {
-                      jQuery(`img[src="${slide.src}"]`)
-                        .attr("data-duration", duration)
-                    let defaultDuration = 5000;
-                    let gifduration = duration; //jQuery(slide.$thumb).data('duration');
-                    gifduration = (!gifduration || typeof gifduration === 'undefined' || gifduration == 0) ? defaultDuration : gifduration;
-                    if (slide.$content && jQuery(slide.$content).find('video').length > 0) {
-                      jQuery(slide.$content).find('video').trigger('play');
-                      jQuery(slide.$content).find('video').on('ended', function() {
-                        $.fancybox.getInstance().next();
-                      });
-                      return;
-                    }
+              if (slideshowTimer) {
+                clearTimeout(slideshowTimer);
+              }
 
-                    let targetDuration = gifduration;
-                    if (gifduration < defaultDuration) {
-                      let gifDivisible = Math.ceil(defaultDuration / gifduration);
-                      targetDuration = gifduration * gifDivisible;
-                    }
-
-                    slideshowTimer = setTimeout(function() {
-                      $.fancybox.getInstance().next()
-                    }, targetDuration);
-
-                  }).catch(() => {
-                    let defaultDuration = 5000;
-                    let gifduration = jQuery(slide.$thumb).data('duration');
-                    gifduration = (!gifduration || typeof gifduration === 'undefined' || gifduration == 0) ? defaultDuration : gifduration;
-                    if (slide.$content && jQuery(slide.$content).find('video').length > 0) {
-                      jQuery(slide.$content).find('video').trigger('play');
-                      jQuery(slide.$content).find('video').on('ended', function() {
-                        $.fancybox.getInstance().next();
-                      });
-                      return;
-                    }
-
-                    let targetDuration = gifduration;
-                    if (gifduration < defaultDuration) {
-                      let gifDivisible = Math.ceil(defaultDuration / gifduration);
-                      targetDuration = gifduration * gifDivisible;
-                    }
-
-                    slideshowTimer = setTimeout(function() {
-                      $.fancybox.getInstance().next()
-                    }, targetDuration);
+              window.getGifDuration(slide.src)
+                .then(duration => {
+                  jQuery(`img[src="${slide.src}"]`)
+                    .attr("data-duration", duration)
+                let defaultDuration = 5000;
+                let gifduration = duration; //jQuery(slide.$thumb).data('duration');
+                gifduration = (!gifduration || typeof gifduration === 'undefined' || gifduration == 0) ? defaultDuration : gifduration;
+                if (slide.$content && jQuery(slide.$content).find('video').length > 0) {
+                  jQuery(slide.$content).find('video').trigger('play');
+                  jQuery(slide.$content).find('video').on('ended', function() {
+                    $.fancybox.getInstance().next();
                   });
-                });
+                  return;
+                }
+
+                let targetDuration = gifduration;
+                if (gifduration < defaultDuration) {
+                  let gifDivisible = Math.ceil(defaultDuration / gifduration);
+                  targetDuration = gifduration * gifDivisible;
+                }
+
+                slideshowTimer = setTimeout(function() {
+                  $.fancybox.getInstance().next()
+                }, targetDuration);
+
+              }).catch(() => {
+                let defaultDuration = 5000;
+                let gifduration = jQuery(slide.$thumb).data('duration');
+                gifduration = (!gifduration || typeof gifduration === 'undefined' || gifduration == 0) ? defaultDuration : gifduration;
+                if (slide.$content && jQuery(slide.$content).find('video').length > 0) {
+                  jQuery(slide.$content).find('video').trigger('play');
+                  jQuery(slide.$content).find('video').on('ended', function() {
+                    $.fancybox.getInstance().next();
+                  });
+                  return;
+                }
+
+                let targetDuration = gifduration;
+                if (gifduration < defaultDuration) {
+                  let gifDivisible = Math.ceil(defaultDuration / gifduration);
+                  targetDuration = gifduration * gifDivisible;
+                }
+
+                slideshowTimer = setTimeout(function() {
+                  $.fancybox.getInstance().next()
+                }, targetDuration);
+              });
               return;
             }
 
@@ -1386,7 +1392,7 @@ $viewerHTML = <<<'HEREHTML'
                       jQuery(`img[src="${slide.src}"]`)
                         .attr("data-duration", duration)
               let defaultDuration = 5000;
-              let gifduration = duration; //jQuery(slide.$thumb).data('duration');
+              let gifduration = duration;
               gifduration = (!gifduration || typeof gifduration === 'undefined' || gifduration == 0) ? defaultDuration : gifduration;
               if (slide.$content && jQuery(slide.$content).find('video').length > 0) {
                 jQuery(slide.$content).find('video').trigger('play');
