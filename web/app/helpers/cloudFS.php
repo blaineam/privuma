@@ -20,10 +20,10 @@ class cloudFS {
         ?string $rCloneConfigPath = null,
         bool $segmented = false
     ) {
-        exec($rCloneBinaryPath . ' version 2>&1 > /dev/null', $void, $code);
+        exec("cpulimit -f -l 1 -- " . $rCloneBinaryPath . ' version 2>&1 > /dev/null', $void, $code);
         if($code !== 0) {
             $rCloneBinaryPath = '/usr/local/bin/rclone';
-            exec($rCloneBinaryPath . ' version 2>&1 > /dev/null', $void, $code);
+            exec("cpulimit -f -l 1 -- " . $rCloneBinaryPath . ' version 2>&1 > /dev/null', $void, $code);
             if($code !== 0) {
                 $rCloneBinaryPath = __DIR__ . '/../bin/rclone';
             }
@@ -538,6 +538,7 @@ class cloudFS {
             [
                 'export GOGC=20;',
                 'nice',
+                'cpulimit -f -l 5 --',
                 is_null($timeout) ? '': 'timeout ' . $timeout . ' ',
                 $this->rCloneBinaryPath,
                 '--config',

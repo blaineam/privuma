@@ -94,6 +94,7 @@ $cmd = implode(' ', [
             // use php to script each cron job
             '"',
             'nice',
+            'cpulimit -f -l 5 --',
             $phpPath,
             // path to normal cron job definition
             $command,
