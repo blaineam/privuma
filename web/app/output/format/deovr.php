@@ -69,7 +69,7 @@ function findMedia($path) {
                     }
 
                     $output[$dir]['list'][] = [
-                        "video_url" => $ENDPOINT . 'deovr/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path .'/' . $dir . '/' .$filename.'.'.$ext)),
+                        "video_url" => $ENDPOINT . ($responseTypeJson ? 'deo' : '') .  'vr/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path .'/' . $dir . '/' .$filename.'.'.$ext)),
                         "thumbnailUrl" => getProtectedUrlForMediaPath($path .'/' . $dir . '/' . $filename . '.jpg'),
                         "title" => $filename, "videoSrc" => getProtectedUrlForMediaPath($path .'/' . $dir . '/' . $filename . '.' . $ext, false, true),
                     ];
