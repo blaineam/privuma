@@ -108407,12 +108407,22 @@
     if ( projection.length < 1) {
         projection = '180';
     }
+    var useHalf = false;
+    if ( projection === 'SBS') {
+      projection = 'NONE';
+      useHalf = true;
+    }
     var player = window.player = videojs('videojs-vr-player');
     player.mediainfo = player.mediainfo || {};
     player.mediainfo.projection = projection;
 
     // AUTO is the default and looks at mediainfo
     var vr = window.vr = player.vr({projection: projection, debug: false, forceCardboard: false});
+
+    if (useHalf) {
+      var element = document.getElementById("videojs-vr-player");
+      element.classList.add("sbs-player");
+    }
 
   }(window, window.videojs));
 
