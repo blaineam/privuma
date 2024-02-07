@@ -438,6 +438,7 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                                             <option value="180">180</option>
                                             <option value="180_LR">180_LR</option>
                                             <option value="180_MONO">180_MONO</option>
+                                            <option value="SBS">Side By Side</option>
                                             <option value="360">360</option>
                                             <option value="Cube">Cube</option>
                                             <option value="NONE">NONE</option>
@@ -518,6 +519,7 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                         <option value="180">180</option>
                         <option value="180_LR">180_LR</option>
                         <option value="180_MONO">180_MONO</option>
+                        <option value="SBS">Side By Side</option>
                         <option value="360">360</option>
                         <option value="Cube">Cube</option>
                         <option value="NONE">NONE</option>
