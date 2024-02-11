@@ -20,16 +20,16 @@ class cloudFS {
         ?string $rCloneConfigPath = null,
         bool $segmented = false
     ) {
-        exec("cpulimit -f -l 1 -- " . $rCloneBinaryPath . ' version 2>&1 > /dev/null', $void, $code);
+        $this->env = new dotenv();
+        exec("cpulimit -f -l " . privuma::getEnv('MAX_CPU_PERCENTAGE') . " -- " . $rCloneBinaryPath . ' version 2>&1 > /dev/null', $void, $code);
         if($code !== 0) {
             $rCloneBinaryPath = '/usr/local/bin/rclone';
-            exec("cpulimit -f -l 1 -- " . $rCloneBinaryPath . ' version 2>&1 > /dev/null', $void, $code);
+            exec("cpulimit -f -l " . privuma::getEnv('MAX_CPU_PERCENTAGE') . " -- " . $rCloneBinaryPath . ' version 2>&1 > /dev/null', $void, $code);
             if($code !== 0) {
                 $rCloneBinaryPath = __DIR__ . '/../bin/rclone';
             }
         }
 
-        $this->env = new dotenv();
 
         $this->rCloneBinaryPath = $rCloneBinaryPath;
         $this->rCloneConfigPath =  $rCloneConfigPath ?? privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'rclone' . DIRECTORY_SEPARATOR . 'rclone.conf';
@@ -538,7 +538,7 @@ class cloudFS {
             [
                 'export GOGC=20;',
                 'nice',
-                'cpulimit -f -l 5 --',
+                'cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . ' --',
                 is_null($timeout) ? '': 'timeout ' . $timeout . ' ',
                 $this->rCloneBinaryPath,
                 '--config',

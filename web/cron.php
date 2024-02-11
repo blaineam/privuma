@@ -94,7 +94,7 @@ $cmd = implode(' ', [
             // use php to script each cron job
             '"',
             'nice',
-            'cpulimit -f -l 5 --',
+            'cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . ' --',
             $phpPath,
             // path to normal cron job definition
             $command,

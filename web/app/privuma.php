@@ -165,6 +165,9 @@ class privuma {
     }
 
     public static function getEnv(?string $key = null) {
+        if(!isset(self::$env)) {
+            return (new dotenv())->get($key);
+        }
         return self::$env->get($key);
     }
 
