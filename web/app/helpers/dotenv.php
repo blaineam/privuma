@@ -42,11 +42,11 @@ class dotenv
                 if (is_numeric($value)) {
                     $value = $value + 0;
                 }
-    
+
                 if (strtolower($value) == 'true') {
                     $value = true;
                 }
-    
+
                 if (strtolower($value) == 'false') {
                     $value = false;
                 }
@@ -60,11 +60,11 @@ class dotenv
                 if (is_numeric($value)) {
                     $value = $value + 0;
                 }
-    
+
                 if (strtolower($value) == 'true') {
                     $value = true;
                 }
-    
+
                 if (strtolower($value) == 'false') {
                     $value = false;
                 }
@@ -73,7 +73,6 @@ class dotenv
             $output[$name] = $value;
         }
 
-
-        return $key ? $output[$key] : $output;
+        return $key ? (array_key_exists($key, $output) ? $output[$key] : null) : $output;
     }
 }

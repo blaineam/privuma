@@ -469,6 +469,43 @@ function run()
         $stmt->execute([$albumName]);
         $data = $stmt->fetchAll();
 
+				    usort($data, function($a, $b) use ($albumName) {
+							$aext = pathinfo($a['filename'], PATHINFO_EXTENSION);
+							
+							$bext = pathinfo($b['filename'], PATHINFO_EXTENSION);
+              $atime = $a["time"];
+              $btime = $b["time"];
+              if(strpos(strtolower($albumName), "comic") !== false &&  strpos(strtolower($albumName), "-comic") === false) {
+                return strnatcmp($a["filename"], $b["filename"]);
+              }
+
+              if ($aext == "gif" && $bext != "gif") {
+                return -1;
+              }
+
+              if ($bext == "gif" && $aext != "gif") {
+                return 1;
+              }
+
+              if ($aext == "mp4" && $bext != "mp4") {
+                return -1;
+              }
+
+              if ($bext == "mp4" && $aext != "mp4") {
+                return 1;
+              }
+
+              if ($aext == "webm" && $bext != "webm") {
+                return -1;
+              }
+
+              if ($bext == "webm" && $aext != "webm") {
+                return 1;
+              }
+
+              return strnatcmp($b["time"], $a["time"]);
+            });
+				
         $media = [];
         foreach($data as $item) {
             if (!isset($item["filename"])) {
