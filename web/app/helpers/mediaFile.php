@@ -206,7 +206,8 @@ class mediaFile {
     }
 
     public static function load(string $hash = '', string $url = '', string $filename = '', string $album = ''): mediaFile|null {
-        $stmt = privuma::getInstance()->getPDO()->prepare('SELECT * FROM media WHERE (hash = ? OR (filename = ? AND album = ?) OR url = ? OR thumbnail = ?) ORDER BY dupe LIMIT 1');
+        $stmt = privuma::getInstance()->getPDO()->prepare(
+            'SELECT * FROM media WHERE hash != \'\' AND (hash = ? OR (filename = ? AND album = ?) OR url = ? OR thumbnail = ?) ORDER BY dupe LIMIT 1');
         $stmt->execute([
             $hash,
             $filename,
@@ -249,6 +250,10 @@ class mediaFile {
             $this->hash = $hash;
         }
 
+        if (empty($this->hash)) {
+            echo PHP_EOL."could not determine media hash not saving to database";
+            return false;
+        }
         if ($this->preserved() === false) {
             echo PHP_EOL."persisting media".PHP_EOL;
             $date = date('Y-m-d H:i:s');
