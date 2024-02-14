@@ -970,19 +970,11 @@ $viewerHTML = <<<'HEREHTML'
                 return 1;
               }
 
-              if (aext == "mp4" && bext != "mp4") {
+              if (["webm", "mp4"].includes(aext) && !["webm", "mp4"].includes(bext)) {
                 return -1;
               }
 
-              if (bext == "mp4" && aext != "mp4") {
-                return 1;
-              }
-
-              if (aext == "webm" && bext != "webm") {
-                return -1;
-              }
-
-              if (bext == "webm" && aext != "webm") {
+              if (["webm", "mp4"].includes(bext) && !["webm", "mp4"].includes(aext)) {
                 return 1;
               }
 
