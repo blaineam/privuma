@@ -11,6 +11,7 @@ date_default_timezone_set('America/Los_Angeles');
 
 session_start();
 
+use DateTime;
 use privuma\privuma;
 use privuma\helpers\cloudFS;
 use privuma\helpers\tokenizer;
@@ -439,7 +440,7 @@ function run()
 
         $conn = $privuma->getPDO();
 
-        $favoritesStmt = $conn->prepare("select filename, hash
+        $favoritesStmt = $conn->prepare("select filename, hash, time
             from media
             where album = 'Favorites'
         ");
@@ -448,6 +449,7 @@ function run()
         foreach($favoritesStmt->fetchAll() as $favorite) {
             $favorites[$favorite['hash']] = [];
             $favorites[$favorite['hash']]['hash'] = $favorite['hash'];
+            $favorites[$favorite['hash']]['time'] = $favorite['time'];
             $favorites[$favorite['hash']]['album'] = explode('-----', $favorite['filename'])[0];
             $favorites[$favorite['hash']]['filename'] = explode('-----', $favorite['filename'])[1];
         }
@@ -469,42 +471,33 @@ function run()
         $stmt->execute([$albumName]);
         $data = $stmt->fetchAll();
 
-				    usort($data, function($a, $b) use ($albumName) {
-							$aext = pathinfo($a['filename'], PATHINFO_EXTENSION);
-
-							$bext = pathinfo($b['filename'], PATHINFO_EXTENSION);
-              $atime = $a["time"];
-              $btime = $b["time"];
-              if(strpos(strtolower($albumName), "comic") !== false &&  strpos(strtolower($albumName), "-comic") === false) {
+        usort($data, function($a, $b) use ($albumName, $favorites) {
+            $aext = pathinfo($a['filename'], PATHINFO_EXTENSION);
+            $bext = pathinfo($b['filename'], PATHINFO_EXTENSION);
+            if(strpos(strtolower($albumName), "comic") !== false &&  strpos(strtolower($albumName), "-comic") === false) {
                 return strnatcmp($a["filename"], $b["filename"]);
-              }
+            }
 
-              if ($aext == "gif" && $bext != "gif") {
+            if ($aext == "gif" && $bext != "gif") {
                 return -1;
-              }
+            }
 
-              if ($bext == "gif" && $aext != "gif") {
+            if ($bext == "gif" && $aext != "gif") {
                 return 1;
-              }
+            }
 
-              if ($aext == "mp4" && $bext != "mp4") {
+            if (in_array($aext, ["webm", "mp4"]) && !in_array($bext, ["webm", "mp4"])) {
                 return -1;
-              }
+            }
 
-              if ($bext == "mp4" && $aext != "mp4") {
+            if (in_array($bext, ["webm", "mp4"]) && !in_array($aext, ["webm", "mp4"])) {
                 return 1;
-              }
+            }
 
-              if ($aext == "webm" && $bext != "webm") {
-                return -1;
-              }
-
-              if ($bext == "webm" && $aext != "webm") {
-                return 1;
-              }
-
-              return strnatcmp($b["time"], $a["time"]);
-            });
+            $adate = strtotime($albumName === "Favorites" ? $favorites[$a['hash']]['time'] : $a["time"]);
+            $bdate = strtotime($albumName === "Favorites" ? $favorites[$b['hash']]['time'] : $b["time"]);
+            return $bdate <=> $adate;
+        });
 
         $media = [];
         foreach($data as $item) {
