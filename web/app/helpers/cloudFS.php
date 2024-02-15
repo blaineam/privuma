@@ -538,7 +538,6 @@ class cloudFS {
             [
                 'export GOGC=20;',
                 'nice',
-                'cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . ' --',
                 is_null($timeout) ? '': 'timeout ' . $timeout . ' ',
                 $this->rCloneBinaryPath,
                 '--config',
