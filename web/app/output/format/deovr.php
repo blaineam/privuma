@@ -528,7 +528,7 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
             "thumbnailUrl" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg', false, true, true),
             "thumbnailImage" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg', false, true, true),
 
-        ], $attrs));
+        ], (!$isDeoVR && $responseTypeJson) ? [] : $attrs));
 
         die();
     } else {

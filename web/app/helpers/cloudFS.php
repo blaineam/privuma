@@ -635,7 +635,7 @@ class cloudFS {
         if($result_code !== 0){
             throw new Exception(PHP_EOL.'RClone cmd: "' .$cmd . '" exited with an error code: '. (!empty($response) ? PHP_EOL . implode(PHP_EOL, $response) : 'No Response'));
         }
-        return implode(PHP_EOL, $response);
+        return implode(PHP_EOL, $response ?? []);
     }
 
 }

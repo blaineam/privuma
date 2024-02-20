@@ -1664,7 +1664,7 @@ if (isset($_GET['edit'])) {
 
     $ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
     $mime_type = fm_get_mime_type($file_path);
-    $filesize = filesize($file_path);
+    $filesize = $ops->filesize($file_path);
     $is_text = false;
     $content = ''; // for text
 
@@ -1950,13 +1950,13 @@ $tableTheme = (FM_THEME == "dark") ? "text-white bg-dark table-dark" : "bg-white
                     <td class="inline-actions">
                         <a title="<?php echo lng('Preview') ?>" href="<?php echo $filelink.'&quickView=1'; ?>" data-toggle="lightbox" data-gallery="tiny-gallery" data-title="<?php echo fm_convert_win(fm_enc($f)) ?>" data-max-width="100%" data-width="100%"><i class="fa fa-eye"></i></a>
                         <?php if (!FM_READONLY): ?>
-                            <a title="<?php echo lng('Delete') ?>" href="?p=<?php echo urlencode(base64_encode(FM_PATH)) ?>&amp;del=<?php echo urlencode(base64_encode($file)) ?>" onclick="return confirm('<?php echo lng('Delete').' '.lng('File').'?'; ?>\n \n ( <?php echo urlencode($file) ?> )');"> <i class="fa fa-trash-o"></i></a>
+                            <a title="<?php echo lng('Delete') ?>" href="?p=<?php echo urlencode(base64_encode(FM_PATH)) ?>&amp;del=<?php echo urlencode(base64_encode($f)) ?>" onclick="return confirm('<?php echo lng('Delete').' '.lng('File').'?'; ?>\n \n ( <?php echo urlencode($f) ?> )');"> <i class="fa fa-trash-o"></i></a>
                             <a title="<?php echo lng('Rename') ?>" href="#" onclick="rename('<?php echo fm_enc(addslashes(FM_PATH)) ?>', '<?php echo fm_enc(addslashes($f)) ?>');return false;"><i class="fa fa-pencil-square-o"></i></a>
                             <a title="<?php echo lng('CopyTo') ?>..."
                                href="?p=<?php echo urlencode(base64_encode(FM_PATH)) ?>&amp;copy=<?php echo urlencode(base64_encode(trim(FM_PATH . '/' . $f, '/'))) ?>"><i class="fa fa-files-o"></i></a>
                         <?php endif; ?>
                         <a title="<?php echo lng('DirectLink') ?>" href="?p=<?php echo urlencode(base64_encode(FM_PATH)) ?>&amp;st=<?php echo urlencode(base64_encode($f)) ?>" target="_blank"><i class="fa fa-link"></i></a>
-                        <a title="<?php echo lng('Download') ?>" href="?p=<?php echo urlencode(base64_encode(FM_PATH)) ?>&amp;dl=<?php echo urlencode(base64_encode($file)) ?>"><i class="fa fa-download"></i></a>
+                        <a title="<?php echo lng('Download') ?>" href="?p=<?php echo urlencode(base64_encode(FM_PATH)) ?>&amp;dl=<?php echo urlencode(base64_encode($f)) ?>"><i class="fa fa-download"></i></a>
                     </td>
                 </tr>
                 <?php
@@ -2375,7 +2375,7 @@ function fm_get_size($file)
     }
 
     // if all else fails
-    return filesize($file);
+    return $ops->filesize($file);
 }
 
 /**
@@ -2858,6 +2858,13 @@ function fm_download_file($fileLocation, $fileName, $chunkSize  = 1024)
         exit();
     }
 
+    header('Content-Type: ' . $ops->mime_content_type($fileLocation));
+    $contentDisposition = 'attachment';
+    header("Accept-Ranges: bytes");
+    header("Content-Disposition: $contentDisposition;filename=\"$fileName\"");
+    $ops->readfile($fileLocation);
+    exit;
+
     if (connection_status() != 0)
         return (false);
     $extension = pathinfo($fileName, PATHINFO_EXTENSION);
@@ -2879,7 +2886,7 @@ function fm_download_file($fileLocation, $fileName, $chunkSize  = 1024)
 
     header("Accept-Ranges: bytes");
     $range = 0;
-    $size = filesize($fileLocation);
+    $size = $ops->filesize($fileLocation);
 
     if (isset($_SERVER['HTTP_RANGE'])) {
         list($a, $range) = explode("=", $_SERVER['HTTP_RANGE']);
