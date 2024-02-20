@@ -14,10 +14,12 @@ $tokenizer = new tokenizer();
 $FALLBACK_ENDPOINT = privuma::getEnv('FALLBACK_ENDPOINT');
 $ENDPOINT = privuma::getEnv('ENDPOINT');
 $AUTHTOKEN = privuma::getEnv('AUTHTOKEN');
+$DEOVR_HOST = privuma::getEnv('DEOVR_HOST');
 $DEOVR_LOGIN = privuma::getEnv('DEOVR_LOGIN');
 $DEOVR_PASSWORD = privuma::getEnv('DEOVR_PASSWORD');
 $DEOVR_DATA_DIRECTORY = privuma::getEnv('DEOVR_DATA_DIRECTORY');
 $isDeoVR = isset($_GET['deovr']) && $_GET['deovr'] == "true";
+$ENDPOINT = ($isDeoVR && !is_null($DEOVR_HOST)) ? 'https://' . $DEOVR_HOST . '/' : $ENDPOINT;
 
 function getProtectedUrlForMediaPath($path, $use_fallback = false, $useMediaFile = false, $isImage = false) {
     global $ENDPOINT;
@@ -70,13 +72,16 @@ function findMedia($path) {
                     }
 
                 $output[$dir]['list'][] = (!$isDeoVR && $responseTypeJson)
-                    ? $ENDPOINT . ($responseTypeJson ? 'heresphere' : 'vr') .  '/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path .'/' . $dir . '/' .$filename.'.'.$ext))
-                    : [
-                        "video_url" => $ENDPOINT . ($responseTypeJson ? 'heresphere' : 'vr') .  '/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path .'/' . $dir . '/' .$filename.'.'.$ext)),
+                    ? $ENDPOINT . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr') .  '/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path .'/' . $dir . '/' .$filename.'.'.$ext))
+                    : array_merge([
+                        "video_url" => $ENDPOINT . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr') .  '/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path .'/' . $dir . '/' .$filename.'.'.$ext)),
                         "thumbnailUrl" => getProtectedUrlForMediaPath($path .'/' . $dir . '/' . $filename . '.jpg'),
                         "thumbnailImage" => getProtectedUrlForMediaPath($path .'/' . $dir . '/' . $filename . '.jpg'),
-                        "title" => $filename, "videoSrc" => getProtectedUrlForMediaPath($path .'/' . $dir . '/' . $filename . '.' . $ext, false, true),
-                    ];
+                        "title" => $filename,
+                        "videoSrc" => getProtectedUrlForMediaPath($path .'/' . $dir . '/' . $filename . '.' . $ext, false, true),
+                    ],
+                    get3dAttrs($filename),
+                    );
                 //}
             }
         }
@@ -288,7 +293,7 @@ if(!isset($_SESSION['deoAuthozied'])){
     } else {
         if ($responseTypeJson) {
             header('Content-Type: application/json');
-            $unauthorizedJson['access'] = 0;
+            $unauthorizedJson[($isDeoVR ? "authorized" : "access")] = 0;
             echo json_encode($unauthorizedJson);
             die();
         } else {
@@ -302,7 +307,7 @@ if ((isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] >
     // last request was more than 30 minutes ago
     session_unset();     // unset $_SESSION variable for the run-time
     session_destroy();   // destroy session data in storage
-    header("Location: /". ($responseTypeJson ? 'heresphere' : 'vr'));
+    header("Location: /". ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr'));
     die();
 }
 $_SESSION['LAST_ACTIVITY'] = time(); // update last activity time stamp
@@ -317,51 +322,59 @@ if (!isset($_SESSION['CREATED'])) {
 
 function get3dAttrs($filename) {
     $output = [];
-    if(strpos(strtoupper($filename), "MONO_360") !== false ) {
-        $output['is3d'] = false;
-        $output['viewAngle'] = 360;
-        $output['stereomode'] = "mono";
-        $output['projection'] = "unset";
-        $output['projectID'] = 1;
+    $upperFilename = strtoupper($filename);
+    $filenameParts = array_map('trim', explode("_", $upperFilename));
+    if(!(bool)array_intersect($filenameParts, [
+        "180",
+        "360",
+        "FISHEYE",
+        "FISHEYE190",
+        "RF52",
+        "MKX200",
+        "VRCA220",
+        "LR",
+        "3DH",
+        "SBS",
+        "TB",
+        "3DV",
+        "OVERUNDER",
+    ])) {
         return $output;
-    } else if(strpos($filename, "180_180x180_3dh_LR") !== false || strpos($filename, "LR_180") !== false) {
-        $output['is3d'] = true;
-        $output['screenType'] = "dome";
-        $output['stereoMode'] = "sbs";
-    } else {
-        $output['is3d'] = true;
-        $output['screenType'] = "flat";
-        $output['stereoMode'] = "sbs";
     }
 
-    if (strpos(strtoupper($filename), "SBS") !== false || strpos(strtoupper($filename), "LR_180") !== false ) {
+    $output["is3d"] = !(bool)array_intersect($filenameParts, ["MONO"]);
+    $output["stereoMode"] = "mono";
+    $output['screenType'] = "flat";
+    if((bool)array_intersect($filenameParts, [
+        "LR",
+        "3DH",
+        "SBS",
+    ])) {
         $output["stereoMode"] = "sbs";
-    } else if (strpos(strtoupper($filename), "TB") !== false) {
+    }
+
+    if((bool)array_intersect($filenameParts, [
+        "TB",
+        "3DV",
+        "OVERUNDER",
+    ])) {
         $output["stereoMode"] = "tb";
-    } else if(!isset($output['stereoMode'])) {
-        $output["stereoMode"] = "off";
     }
 
-    if (strpos(strtoupper($filename), "FLAT") !== false) {
-        $output['is3d'] = false;
-        $output['screenType'] = "flat";
-        $output['stereoMode'] = "off";
-    } else if (strpos(strtoupper($filename), "DOME") !== false) {
-        $output['is3d'] = true;
+    if((bool)array_intersect($filenameParts, [
+        "180",
+        "FISHEYE",
+        "FISHEYE190",
+        "RF52",
+        "MKX200",
+        "VRCA220",
+    ])) {
         $output['screenType'] = "dome";
-    } else if (strpos(strtoupper($filename), "SPHERE") !== false) {
-        $output['is3d'] = true;
-        $output['screenType'] = "sphere";
-    } else if (strpos(strtoupper($filename), "FISHEYE") !== false) {
-        $output['is3d'] = true;
-        $output['screenType'] = "fisheye";
-    } else if (strpos(strtoupper($filename), "MKX200") !== false) {
-        $output['is3d'] = true;
-        $output['screenType'] = "mkx200";
-        $output["stereoMode"] = "sbs";
     }
-    else if (strpos(strtoupper($filename), "360") !== false) {
-        $output['is3d'] = true;
+
+    if((bool)array_intersect($filenameParts, [
+        "360",
+    ])) {
         $output['screenType'] = "sphere";
     }
 
@@ -369,7 +382,6 @@ function get3dAttrs($filename) {
 }
 
 function getResolution($filename) {
-
     if (strpos($filename, "1080") !== false) {
         return 1080;
     } else if (strpos($filename, "1920") !== false) {
@@ -480,7 +492,7 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
     $mediaPath = str_replace('/../', '/', str_replace('-----', DIRECTORY_SEPARATOR, base64_decode($_GET['media'])));
     $ext = pathinfo($mediaPath, PATHINFO_EXTENSION);
     $filename = basename($mediaPath, '.' . $ext);
-    $attrs = []; //get3dAttrs($filename);
+    $attrs = get3dAttrs($filename);
 
     if($responseTypeJson) {
         header('Content-Type: application/json');
@@ -576,9 +588,10 @@ foreach($json as $site => $search){
         foreach($scenes['list'] as $k => $scene) {
             $originalUrl = $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"];
             $scenes['list'][$k] = (!$isDeoVR && $responseTypeJson)
-            ? $ENDPOINT . ($responseTypeJson ? 'heresphere' : 'vr') . '/?id=' . $scenes['list'][$k]['id'] . '&media=cached'
+            ? $ENDPOINT . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr') . '/?id=' . $scenes['list'][$k]['id'] . '&media=cached'
             : [
-                "video_url" => $ENDPOINT . ($responseTypeJson ? 'heresphere' : 'vr') . '/?id=' . $scenes['list'][$k]['id'] . '&media=cached',
+                ...get3dAttrs($scenes['list'][$k]["title"]),
+                "video_url" => $ENDPOINT . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr') . '/?id=' . $scenes['list'][$k]['id'] . '&media=cached',
                 "videoPreview" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['videoPreview'])[0], '.mp4') . "_videoPreview.mp4"),
                 "thumbnailUrl" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . "_thumbnail.jpg"),
                 "thumbnailImage" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . "_thumbnail.jpg"),
@@ -672,7 +685,23 @@ if($responseTypeJson) {
 if(stripos($ua,'x11') !== false) {
 	echo ' <a data-gallery-link="true" href="' . $item['videoSrc'] . '"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
 } else {
-	echo ' <a data-gallery-link="true" data-fancybox="gallery"  data-type="iframe" href="#" data-src="' . $item['video_url'] . '&html=1"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
+    $hash = "NONE";
+    if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'dome') {
+        $hash = "180_LR";
+    }
+    if($item['stereoMode'] === 'tb') {
+        $hash = '360_TB';
+    }
+    if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'flat') {
+        $hash = 'SBS';
+    }
+    if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'dome' && $item['is3d'] === false) {
+        $hash = 'SBS';
+    }
+    if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'sphere') {
+        $hash = '360_LR';
+    }
+	echo ' <a data-gallery-link="true" data-fancybox="gallery"  data-type="iframe" href="#" data-src="' . $item['video_url'] . '&html=1#' . $hash . '"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
 }
 
         }

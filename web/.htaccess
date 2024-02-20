@@ -6,6 +6,10 @@ RedirectMatch 301 /syncs(.*) /
 RedirectMatch 301 /tools(.*) /
 
 RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)/$ /$1 [L,R]
+
+RewriteEngine On
 RewriteCond %{REQUEST_FILENAME}  -f [OR]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^deovr /vr/index.php?json=true&deovr=true  [L,QSA]
