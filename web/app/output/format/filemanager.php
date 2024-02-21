@@ -2858,10 +2858,11 @@ function fm_download_file($fileLocation, $fileName, $chunkSize  = 1024)
         exit();
     }
 
-    header('Content-Type: ' . $ops->mime_content_type($fileLocation));
-    $contentDisposition = 'attachment';
+    header('Content-Type: application/octet-stream; charset=UTF-8');
     header("Accept-Ranges: bytes");
-    header("Content-Disposition: $contentDisposition;filename=\"$fileName\"");
+    $downloadFileName = preg_replace("/[^\w\-. ]/", '', $fileName);
+    header("Content-Disposition: attachment;filename=\"$downloadFileName\"");
+    ob_clean();
     $ops->readfile($fileLocation);
     exit;
 
