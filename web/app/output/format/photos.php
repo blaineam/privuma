@@ -696,6 +696,9 @@ function run()
         if ($pos !== false) {
             $mediaPath = substr_replace($mediaPath, '', $pos, strlen('data' . DIRECTORY_SEPARATOR));
         }
+        if(empty(trim($mediaPath, DIRECTORY_SEPARATOR . '.'))){
+            die('Invalid Media Path');
+        }
 
         if (count(explode(DIRECTORY_SEPARATOR, $mediaPath)) == 2) {
             $file =   DIRECTORY_SEPARATOR . privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . ltrim($mediaPath, DIRECTORY_SEPARATOR);
