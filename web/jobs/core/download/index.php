@@ -745,6 +745,45 @@ $viewerHTML = <<<'HEREHTML'
           {}
         );
 
+      let audio = document.createElement("audio");
+      let globalWakeLock = null;
+      function preventSleep() {
+        try {
+          navigator.wakeLock.request("screen").then((wakeLock) => {globalWakeLock = wakeLock;}).catch((err) => { throw err; });
+        } catch (err) {
+          try {
+            let ctx = new AudioContext()
+            let bufferSize = 2 * ctx.sampleRate,
+                emptyBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate),
+                output = emptyBuffer.getChannelData(0);
+            for(let i = 0; i < bufferSize; i++)
+                output[i] = 0;
+
+            let source = ctx.createBufferSource();
+            source.buffer = emptyBuffer;
+            source.loop = true;
+            let node = ctx.createMediaStreamDestination();
+            source.connect(node);
+            audio.style.display = "none";
+            document.body.appendChild(audio);
+            audio.srcObject = node.stream;
+            audio.play();
+          } catch (ierr) {
+          }
+        }
+      }
+
+      function allowSleep() {
+        if(globalWakeLock != null) {
+          globalWakeLock.release();
+        }
+        try {
+          audio.pause();
+          document.body.removeChild(audio);
+        } catch( err ) {
+        }
+      }
+
       function runApp() {
         var delim = "1--57--2";
         var alldata = window.mobileCheck()
@@ -982,6 +1021,7 @@ $viewerHTML = <<<'HEREHTML'
             });
             console.log(res);
 
+            preventSleep();
             Promise.allSettled(
               res.map(function (item) {
                 let filename = item.filename ?? "";
@@ -1094,6 +1134,7 @@ $viewerHTML = <<<'HEREHTML'
           let search = "";
 
           function showAllAlbums() {
+            allowSleep();
             res = allAlbums;
             if (!res) {
               alert(
