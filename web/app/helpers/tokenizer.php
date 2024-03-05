@@ -28,17 +28,19 @@ class tokenizer {
         return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
     }
 
-    public function rollingTokens($seed, $noIp = false) {
+    public function rollingTokens($seed, $noIp = false, $noUserAgent = true) {
         date_default_timezone_set('America/Los_Angeles');
         if (isset($_SERVER["HTTP_CF_CONNECTING_IP"])) {
             $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_CF_CONNECTING_IP"];
         }
-        if (isset($_SERVER["HTTP_PVMA_IP"])) {
-            $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_PVMA_IP"];
+        if (isset($_SERVER["HTTP_PVMAIP"])) {
+            $_SERVER['REMOTE_ADDR'] = $_SERVER["HTTP_PVMAIP"];
         }
         if(!isset($_SERVER['REMOTE_ADDR'])) {
             $_SERVER['REMOTE_ADDR'] = file_get_contents("http://ipecho.net/plain");
         }
+
+        $userAgent = $noUserAgent ? "" : ($_SERVER['HTTP_USER_AGENT'] ?? "Unknown_User_Agent");
 
         $interval = 30;
         $count = 2;
@@ -51,17 +53,28 @@ class tokenizer {
             $modifiedMinutes = $iteration*$interval;
             $date = new \DateTime("-$modifiedMinutes minutes", new \DateTimeZone("America/Los_Angeles"));
             $date = $date->setTime($date->format('H'), round($date->format('i') / $interval) * $interval);
-            $tokens[] = sha1(md5($date->format('Y-m-d H:i:s'))."-".$seed . "-" .
-            ($noIp ? "" : $_SERVER['REMOTE_ADDR'] )) ;
-
+            $tokens[] = sha1(
+                md5($date->format('Y-m-d H:i:s'))
+                . "-"
+                . $seed
+                . "-"
+                . ($noIp ? "" : $_SERVER['REMOTE_ADDR'])
+                . $userAgent
+            );
         }
 
         for($iteration=1;$iteration<=$count;$iteration++) {
             $modifiedMinutes = $iteration*$interval;
             $date = new \DateTime("+$modifiedMinutes minutes", new \DateTimeZone("America/Los_Angeles"));
             $date = $date->setTime($date->format('H'), round($date->format('i') / $interval) * $interval);
-            $tokens[] = sha1(md5($date->format('Y-m-d H:i:s'))."-".$seed . "-" .
-            ($noIp ? "" : $_SERVER['REMOTE_ADDR'] )) ;
+            $tokens[] = sha1(
+                md5($date->format('Y-m-d H:i:s'))
+                . "-"
+                . $seed
+                . "-"
+                . ($noIp ? "" : $_SERVER['REMOTE_ADDR'])
+                . $userAgent
+            );
         }
         return $tokens;
     }
