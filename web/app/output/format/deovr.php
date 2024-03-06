@@ -400,8 +400,8 @@ function getResolution($filename) {
         return 1440;
     }
 }
-
-$json = json_decode(file_get_contents(privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'deovr.json'), true) ?? [];
+$deovrJsonPath = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'deovr.json';
+$json = file_exists($deovrJsonPath) ? json_decode(file_get_contents($deovrJsonPath), true) ?? [] : [];
 if(isset($_GET['media']) && isset($_GET['id'])) {
     if($_GET['media'] === 'cached'){
         foreach($json as $site => $search){
