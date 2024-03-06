@@ -5,8 +5,8 @@ namespace privuma\output\format;
 //uncomment to allow app to reauth
 //echo "[]";
 //die();
-ini_set('session.cookie_lifetime', 60 * 60 * 24 * 30);
-ini_set('session.gc_maxlifetime', 60 * 60 * 24 * 30);
+/* ini_set('session.cookie_lifetime', 60 * 60 * 24 * 30); */
+/* ini_set('session.gc_maxlifetime', 60 * 60 * 24 * 30); */
 date_default_timezone_set('America/Los_Angeles');
 
 session_start();
@@ -760,31 +760,31 @@ function run()
         streamMedia($file, true);
     } else {
         $realbums = [];
+        $mediaDirsPath = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . "mediadirs.json";
+        if(file_exists($mediaDirsPath)) {
+            foreach(json_decode(file_get_contents($mediaDirsPath), true) as $folderObj) {
+                if(isset($folderObj['HasThumbnailJpg']) && $folderObj['HasThumbnailJpg']) {
+                    $ext = pathinfo($folderObj["Name"], PATHINFO_EXTENSION);
+                    $hash = md5(dirname($folderObj['Path']) . DIRECTORY_SEPARATOR . basename($folderObj['Path'], "." . $ext));
 
+                    $dest = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path'] . DIRECTORY_SEPARATOR . "1.jpg";
+                    $media = urlencode(base64_encode($dest));
+                    if(strlen($media) > $MAX_URL_CHARACTERS) {
+                        mediaFile::sanitize($hash, $dest);
+                        $media = "t-".$hash;
+                    }
+                    $photoPath = getProtectedUrlForMedia($media);
 
-
-        foreach(json_decode(file_get_contents(privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . "mediadirs.json"), true) as $folderObj) {
-            if(isset($folderObj['HasThumbnailJpg']) && $folderObj['HasThumbnailJpg']) {
-                $ext = pathinfo($folderObj["Name"], PATHINFO_EXTENSION);
-                $hash = md5(dirname($folderObj['Path']) . DIRECTORY_SEPARATOR . basename($folderObj['Path'], "." . $ext));
-
-                $dest = dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path'] . DIRECTORY_SEPARATOR . "1.jpg";
-                $media = urlencode(base64_encode($dest));
-                if(strlen($media) > $MAX_URL_CHARACTERS) {
-                    mediaFile::sanitize($hash, $dest);
-                    $media = "t-".$hash;
+                    //$photoPath = $ENDPOINT . "?token=" . $tokenizer->rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=".urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path']) . "-----" . "1.jpg"));
+                } else {
+                    $photoPath = $ENDPOINT . "?token=" . $tokenizer->rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=blank.gif";;
+                    $hash = "checkCache";
                 }
-                $photoPath = getProtectedUrlForMedia($media);
+                if(!in_array(explode(DIRECTORY_SEPARATOR, $folderObj['Path'])[0], ['SCRATCH'])) {
 
-                //$photoPath = $ENDPOINT . "?token=" . $tokenizer->rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=".urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', dirname($SYNC_FOLDER) . DIRECTORY_SEPARATOR . $folderObj['Path']) . "-----" . "1.jpg"));
-            } else {
-                $photoPath = $ENDPOINT . "?token=" . $tokenizer->rollingTokens($_SESSION['SessionAuth'])[1]  . "&media=blank.gif";;
-                $hash = "checkCache";
-            }
-            if(!in_array(explode(DIRECTORY_SEPARATOR, $folderObj['Path'])[0], ['SCRATCH'])) {
+                    $realbums[] = array("id" => (string)urlencode(base64_encode(implode('-----', explode(DIRECTORY_SEPARATOR, $folderObj['Path'])))), "updated" => (string)(strtotime(explode('.', $folderObj['ModTime'])[0])*1000), "title" => (string)implode('---', explode(DIRECTORY_SEPARATOR, $folderObj['Path'])), "img" => (string)$photoPath , "mediaId" => (string)$hash);
 
-                $realbums[] = array("id" => (string)urlencode(base64_encode(implode('-----', explode(DIRECTORY_SEPARATOR, $folderObj['Path'])))), "updated" => (string)(strtotime(explode('.', $folderObj['ModTime'])[0])*1000), "title" => (string)implode('---', explode(DIRECTORY_SEPARATOR, $folderObj['Path'])), "img" => (string)$photoPath , "mediaId" => (string)$hash);
-
+                }
             }
         }
 
