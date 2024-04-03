@@ -11,7 +11,6 @@ date_default_timezone_set('America/Los_Angeles');
 
 session_start();
 
-use DateTime;
 use privuma\privuma;
 use privuma\helpers\cloudFS;
 use privuma\helpers\tokenizer;
@@ -789,7 +788,8 @@ function run()
         }
 
         $conn = $privuma->getPDO();
-        $stmt = $conn->prepare('select filename, album, url, thumbnail, max(time) as time, hash FROM media GROUP by album order by time DESC;');
+        $stmt = $conn->prepare('select filename, album, url, thumbnail, time, hash FROM media
+        inner join (select max(id) as id FROM media GROUP by album) as sorted on sorted.id = media.id order by time DESC;');
         $stmt->execute([]);
         $data = $stmt->fetchAll();
 
