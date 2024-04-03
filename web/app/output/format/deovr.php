@@ -275,8 +275,9 @@ if (isset($_GET['json'])) {
 if(!isset($_SESSION['deoAuthozied'])){
     $json = file_get_contents('php://input');
     $data = json_decode($json, true);
-    $username = $_POST['login'] ?? $data['username'];
-    $password = $_POST['password'] ?? $data['password'];
+    $allowGetLogin = false;
+    $username = $_POST['login'] ?? ($allowGetLogin ? $_GET['login'] : null) ?? $data['username'];
+    $password = $_POST['password'] ?? ($allowGetLogin ? $_GET['password'] : null) ?? $data['password'];
     if(isset($username) && isset($password)) {
         if($username === $DEOVR_LOGIN && $password === $DEOVR_PASSWORD) {
             $_SESSION['deoAuthozied'] = true;
