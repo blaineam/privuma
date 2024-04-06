@@ -49,9 +49,9 @@ echo PHP_EOL."Building web app payload of media to download";
 /* $stmt = $conn->prepare("SELECT json_group_array( json_object('filename', substr(filename,-10), 'album',album, 'dupe',dupe,'time',time,'hash',hash, 'metadata', metadata)    ) AS json_result FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed' ORDER BY time desc)"); */
 /* $stmt->execute(); */
 /* $mobiledata = str_replace('`', '', $stmt->fetchAll()[0]["json_result"]); */
-$stmt = $conn->prepare("SELECT json_group_array( json_object('filename', substr(filename,-10), 'album',album, 'dupe',dupe,'time',time,'hash',hash, 'metadata', metadata)    ) AS json_result FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed' ORDER BY time desc)");
+$stmt = $conn->prepare(" SELECT substr(filename,-10) as filename, album, dupe, time, hash, metadata FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;");
 $stmt->execute();
-$data = str_replace('`', '', $stmt->fetchAll()[0]["json_result"]);
+$data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
 function sanitizeLine($line) {
     return trim(preg_replace("/[^A-Za-z0-9 ]/", '', $line), "\r\n");
 }
