@@ -2,7 +2,7 @@
 
 //exec('pkill -f privuma');
 
-$dir_iterator = new RecursiveDirectoryIterator(__DIR__ .'/../jobs');
+$dir_iterator = new RecursiveDirectoryIterator(__DIR__ . '/../jobs');
 $iterator = new RecursiveIteratorIterator($dir_iterator, RecursiveIteratorIterator::SELF_FIRST);
 foreach ($iterator as $file) {
     if($file->getBasename() === 'cron.json') {
@@ -10,4 +10,4 @@ foreach ($iterator as $file) {
     }
 }
 
-echo "Done";
+echo 'Done';

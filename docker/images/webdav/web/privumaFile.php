@@ -1,64 +1,70 @@
 <?php
 use Sabre\DAV;
 
-class PrivumaFile extends DAV\File {
+class PrivumaFile extends DAV\File
+{
 
-  private $path;
+    private $path;
 
-
-    public function encode(string $path) : string {
+    public function encode(string $path): string
+    {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
-        return implode(DIRECTORY_SEPARATOR, array_map(function($part) use ($ext) {
-            return implode('*', array_map(function($p) use ($ext) {
-                if(strpos($p, '.') !== 0){
+        return implode(DIRECTORY_SEPARATOR, array_map(function ($part) use ($ext) {
+            return implode('*', array_map(function ($p) use ($ext) {
+                if(strpos($p, '.') !== 0) {
                     return base64_encode(basename($p, '.' . $ext));
                 }
-                return "";
+                return '';
             }, explode('*', $part)));
         }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
     }
 
-    public function decode(string $path) : string {
+    public function decode(string $path): string
+    {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
-        return implode(DIRECTORY_SEPARATOR, array_map(function($part) use ($ext) {
-            return implode('*', array_map(function($p) use ($ext) {
-                if(strpos($p, '.') !== 0){
+        return implode(DIRECTORY_SEPARATOR, array_map(function ($part) use ($ext) {
+            return implode('*', array_map(function ($p) use ($ext) {
+                if(strpos($p, '.') !== 0) {
                     return base64_decode(basename($p, '.' . $ext));
                 }
-                return "";
-            }, explode('*',$part)));
+                return '';
+            }, explode('*', $part)));
         }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
     }
 
+    public function __construct($path)
+    {
 
-  function __construct($path) {
+        $this->path = $path;
 
-    $this->path = $path;
+    }
 
-  }
+    public function getName()
+    {
 
-  function getName() {
+        return $this->decode(basename($this->path));
 
-    return $this->decode(basename($this->path));
+    }
 
-  }
+    public function get()
+    {
 
-  function get() {
+        return fopen($this->path, 'r');
 
-    return fopen($this->path,'r');
+    }
 
-  }
+    public function getSize()
+    {
 
-  function getSize() {
+        return filesize($this->path);
 
-    return filesize($this->path);
+    }
 
-  }
+    public function getETag()
+    {
 
-  function getETag() {
+        return '"' . md5_file($this->path) . '"';
 
-    return '"' . md5_file($this->path) . '"';
-
-  }
+    }
 
 }

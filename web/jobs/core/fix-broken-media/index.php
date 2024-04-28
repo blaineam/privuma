@@ -1,7 +1,6 @@
 <?php
 
 use privuma\privuma;
-use privuma\helpers\cloudFS;
 use privuma\helpers\mediaFile;
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
@@ -9,20 +8,22 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' .
 $privuma = privuma::getInstance();
 $ops = $privuma->getCloudFS();
 
-if ($argc > 1) parse_str(implode('&', array_slice($argv, 1)), $_GET);
+if ($argc > 1) {
+    parse_str(implode('&', array_slice($argv, 1)), $_GET);
+}
 
 $conn = $privuma->getPDO();
 
 $album = '';
-if(isset($_GET['album'])){
+if(isset($_GET['album'])) {
     $album = $conn->quote($_GET['album']);
-    echo PHP_EOL."checking broken media in album: {$album}";
-	$album = " and album = {$album} ";
+    echo PHP_EOL . "checking broken media in album: {$album}";
+    $album = " and album = {$album} ";
 }
 
 $select_results = $conn->query("SELECT id, album, filename FROM media where url is null and album != 'Favorites' {$album} order by id desc");
 $results = $select_results->fetchAll(PDO::FETCH_ASSOC);
-echo PHP_EOL."Checking ". count($results) . " database records";
+echo PHP_EOL . 'Checking ' . count($results) . ' database records';
 foreach(array_chunk($results, 2000) as $key => $chunk) {
     foreach($chunk as $key => $row) {
         $album = $row['album'];
@@ -34,9 +35,9 @@ foreach(array_chunk($results, 2000) as $key => $chunk) {
             if (
                 $fileMissing && $connectionOk
             ) {
-                $delete_stmt = $conn->prepare("delete FROM media WHERE id = ?");
+                $delete_stmt = $conn->prepare('delete FROM media WHERE id = ?');
                 $delete_stmt->execute([$row['id']]);
-                echo PHP_EOL.$delete_stmt->rowCount() . " - Deleted missing remote media: " . $album . "/" . $filename;
+                echo PHP_EOL . $delete_stmt->rowCount() . ' - Deleted missing remote media: ' . $album . '/' . $filename;
             }
         }
     }

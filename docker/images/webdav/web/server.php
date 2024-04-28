@@ -1,38 +1,37 @@
 <?php
-    require("vendor/autoload.php");
+require('vendor/autoload.php');
 
-    /**
-     * This is a simple implementation of SabreDAV.
-     * @author xama (https://www.xama.us)
-     * @version 1.0
-     * @license MIT
-     */
+/**
+ * This is a simple implementation of SabreDAV.
+ * @author xama (https://www.xama.us)
+ * @version 1.0
+ * @license MIT
+ */
 
-    use Sabre\DAV;
-    use Sabre\DAV\Auth;
-    include(__DIR__.'/privumaDir.php');
+use Sabre\DAV;
+use Sabre\DAV\Auth;
 
+include(__DIR__ . '/privumaDir.php');
 
-    $rootDirectory = new PrivumaDir('public');
+$rootDirectory = new PrivumaDir('public');
 
-    /* Configure Server */
-    $server = new DAV\Server($rootDirectory);
-    $server->setBaseUri('/');
+/* Configure Server */
+$server = new DAV\Server($rootDirectory);
+$server->setBaseUri('/');
 
-    /* Configure lock plugin */
-    $lockBackend = new DAV\Locks\Backend\File('data/locks');
-    $lockPlugin = new DAV\Locks\Plugin($lockBackend);
-    $server->addPlugin($lockPlugin);
+/* Configure lock plugin */
+$lockBackend = new DAV\Locks\Backend\File('data/locks');
+$lockPlugin = new DAV\Locks\Plugin($lockBackend);
+$server->addPlugin($lockPlugin);
 
-    /* Configure digest auth */
-    $authBackend = new Auth\Backend\File(__DIR__ . DIRECTORY_SEPARATOR . ".htdigest");
-    $authBackend->setRealm('SabreDAV');
-    $authPlugin = new Auth\Plugin($authBackend);
+/* Configure digest auth */
+$authBackend = new Auth\Backend\File(__DIR__ . DIRECTORY_SEPARATOR . '.htdigest');
+$authBackend->setRealm('SabreDAV');
+$authPlugin = new Auth\Plugin($authBackend);
 
-    /* Load plugins */
-    $server->addPlugin(new DAV\Browser\Plugin());
-    $server->addPlugin($authPlugin);
+/* Load plugins */
+$server->addPlugin(new DAV\Browser\Plugin());
+$server->addPlugin($authPlugin);
 
-    /* Run the server */
-    $server->exec();
-
+/* Run the server */
+$server->exec();

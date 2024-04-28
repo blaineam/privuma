@@ -18,29 +18,31 @@ $DEOVR_HOST = privuma::getEnv('DEOVR_HOST');
 $DEOVR_LOGIN = privuma::getEnv('DEOVR_LOGIN');
 $DEOVR_PASSWORD = privuma::getEnv('DEOVR_PASSWORD');
 $DEOVR_DATA_DIRECTORY = privuma::getEnv('DEOVR_DATA_DIRECTORY');
-$isDeoVR = isset($_GET['deovr']) && $_GET['deovr'] == "true";
+$isDeoVR = isset($_GET['deovr']) && $_GET['deovr'] == 'true';
 $ENDPOINT = ($isDeoVR && !is_null($DEOVR_HOST)) ? 'https://' . $DEOVR_HOST . '/' : $ENDPOINT;
 
-function getProtectedUrlForMediaPath($path, $use_fallback = false, $useMediaFile = false, $isImage = false) {
+function getProtectedUrlForMediaPath($path, $use_fallback = false, $useMediaFile = false, $isImage = false)
+{
     global $ENDPOINT;
     global $FALLBACK_ENDPOINT;
     global $AUTHTOKEN;
     global $tokenizer;
     $mediaFile = $useMediaFile ? ($isImage ? 'media.jpg': 'media.mp4') : '';
-    $uri = $mediaFile . "?token=" . $tokenizer->rollingTokens($AUTHTOKEN)[1]  . "&deovr=1&&media=" . urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path)));
+    $uri = $mediaFile . '?token=' . $tokenizer->rollingTokens($AUTHTOKEN)[1] . '&deovr=1&&media=' . urlencode(base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path)));
     return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
 }
 
-function findMedia($path) {
+function findMedia($path)
+{
     global $ops;
     global $ENDPOINT;
     global $responseTypeJson;
     global $isDeoVR;
-    $cachePath = __DIR__.DIRECTORY_SEPARATOR."..".DIRECTORY_SEPARATOR."cache".DIRECTORY_SEPARATOR."deovr-fs.json";
+    $cachePath = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'deovr-fs.json';
     $currentTime = time();
     $lastRan = filemtime($cachePath) ?? $currentTime - 90 * 24 * 60 * 60;
     $cacheStillRecent = $currentTime - $lastRan < 90 * 24 * 60 * 60;
-    $scan = ['.','..'];
+    $scan = ['.', '..'];
 
     if(is_file($cachePath) && $cacheStillRecent) {
         $scan = json_decode(file_get_contents($cachePath), true);
@@ -49,7 +51,7 @@ function findMedia($path) {
         if($scan === false) {
             $scan = [];
         } else {
-            file_put_contents($cachePath, json_encode($scan, JSON_INVALID_UTF8_IGNORE+JSON_THROW_ON_ERROR));
+            file_put_contents($cachePath, json_encode($scan, JSON_INVALID_UTF8_IGNORE + JSON_THROW_ON_ERROR));
         }
     }
 
@@ -59,28 +61,28 @@ function findMedia($path) {
             /* $output = [...$output, findMedia($path .'/'.$obj['Name'])]; */
         } else {
             $ext = pathinfo($obj['Name'], PATHINFO_EXTENSION);
-            if(in_array(strtolower($ext),  ["mp4"])){
+            if(in_array(strtolower($ext),  ['mp4'])) {
                 $dir = dirname($obj['Path']);
                 $filename = basename($obj['Name'], '.' . $ext);
-                $thumbnailPath = $path .'/' . $filename . '.jpg';
+                $thumbnailPath = $path . '/' . $filename . '.jpg';
                 //if($ops->is_file($thumbnailPath)) {
-                    if (!is_array($output[$dir])) {
-                        $output[$dir] = [
-                            "name" => $dir === '.' ? 'Privuma' : $dir,
-                            "list" => [],
-                        ];
-                    }
+                if (!is_array($output[$dir])) {
+                    $output[$dir] = [
+                        'name' => $dir === '.' ? 'Privuma' : $dir,
+                        'list' => [],
+                    ];
+                }
 
                 $output[$dir]['list'][] = (!$isDeoVR && $responseTypeJson)
-                    ? $ENDPOINT . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr') .  '/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path .'/' . $dir . '/' .$filename.'.'.$ext))
+                    ? $ENDPOINT . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr') . '/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path . '/' . $dir . '/' . $filename . '.' . $ext))
                     : array_merge([
-                        "video_url" => $ENDPOINT . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr') .  '/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path .'/' . $dir . '/' .$filename.'.'.$ext)),
-                        "thumbnailUrl" => getProtectedUrlForMediaPath($path .'/' . $dir . '/' . $filename . '.jpg'),
-                        "thumbnailImage" => getProtectedUrlForMediaPath($path .'/' . $dir . '/' . $filename . '.jpg'),
-                        "title" => $filename,
-                        "videoSrc" => getProtectedUrlForMediaPath($path .'/' . $dir . '/' . $filename . '.' . $ext, false, true),
+                        'video_url' => $ENDPOINT . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr') . '/?id=' . ($id + 1) . '&media=' . base64_encode(str_replace(DIRECTORY_SEPARATOR, '-----', $path . '/' . $dir . '/' . $filename . '.' . $ext)),
+                        'thumbnailUrl' => getProtectedUrlForMediaPath($path . '/' . $dir . '/' . $filename . '.jpg'),
+                        'thumbnailImage' => getProtectedUrlForMediaPath($path . '/' . $dir . '/' . $filename . '.jpg'),
+                        'title' => $filename,
+                        'videoSrc' => getProtectedUrlForMediaPath($path . '/' . $dir . '/' . $filename . '.' . $ext, false, true),
                     ],
-                    get3dAttrs($filename),
+                        get3dAttrs($filename),
                     );
                 //}
             }
@@ -91,13 +93,13 @@ function findMedia($path) {
 }
 
 $unauthorizedJson = [
-    ($isDeoVR ? "scenes" : "library") => [
+    ($isDeoVR ? 'scenes' : 'library') => [
         [
-            "name" => "Privuma",
-            "list" => []
+            'name' => 'Privuma',
+            'list' => []
         ]
         ],
-        ($isDeoVR ? "authorized" : "access") => -1,
+        ($isDeoVR ? 'authorized' : 'access') => -1,
         ];
 
 $htmlStyle = '
@@ -272,7 +274,7 @@ if (isset($_GET['json'])) {
     echo '<!DOCTYPE html>';
 }
 
-if(!isset($_SESSION['deoAuthozied'])){
+if(!isset($_SESSION['deoAuthozied'])) {
     $json = file_get_contents('php://input');
     $data = json_decode($json, true);
     $allowGetLogin = false;
@@ -294,7 +296,7 @@ if(!isset($_SESSION['deoAuthozied'])){
     } else {
         if ($responseTypeJson) {
             header('Content-Type: application/json');
-            $unauthorizedJson[($isDeoVR ? "authorized" : "access")] = 0;
+            $unauthorizedJson[($isDeoVR ? 'authorized' : 'access')] = 0;
             echo json_encode($unauthorizedJson);
             die();
         } else {
@@ -308,94 +310,96 @@ if ((isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] >
     // last request was more than 30 minutes ago
     session_unset();     // unset $_SESSION variable for the run-time
     session_destroy();   // destroy session data in storage
-    header("Location: /". ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr'));
+    header('Location: /' . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr'));
     die();
 }
 $_SESSION['LAST_ACTIVITY'] = time(); // update last activity time stamp
 
 if (!isset($_SESSION['CREATED'])) {
     $_SESSION['CREATED'] = time();
-} else if (time() - $_SESSION['CREATED'] > 60 * 15) {
+} elseif (time() - $_SESSION['CREATED'] > 60 * 15) {
     // session started more than 30 minutes ago
     session_regenerate_id(true);    // change session ID for the current session and invalidate old session ID
     $_SESSION['CREATED'] = time();  // update creation time
 }
 
-function get3dAttrs($filename) {
+function get3dAttrs($filename)
+{
     $output = [];
     $upperFilename = strtoupper($filename);
-    $filenameParts = array_map('trim', explode("_", $upperFilename));
-    if(!(bool)array_intersect($filenameParts, [
-        "180",
-        "360",
-        "FISHEYE",
-        "FISHEYE190",
-        "RF52",
-        "MKX200",
-        "VRCA220",
-        "LR",
-        "3DH",
-        "SBS",
-        "TB",
-        "3DV",
-        "OVERUNDER",
+    $filenameParts = array_map('trim', explode('_', $upperFilename));
+    if(!(bool) array_intersect($filenameParts, [
+        '180',
+        '360',
+        'FISHEYE',
+        'FISHEYE190',
+        'RF52',
+        'MKX200',
+        'VRCA220',
+        'LR',
+        '3DH',
+        'SBS',
+        'TB',
+        '3DV',
+        'OVERUNDER',
     ])) {
         return $output;
     }
 
-    $output["is3d"] = !(bool)array_intersect($filenameParts, ["MONO"]);
-    $output["stereoMode"] = "mono";
-    $output['screenType'] = "flat";
-    if((bool)array_intersect($filenameParts, [
-        "LR",
-        "3DH",
-        "SBS",
+    $output['is3d'] = !(bool) array_intersect($filenameParts, ['MONO']);
+    $output['stereoMode'] = 'mono';
+    $output['screenType'] = 'flat';
+    if((bool) array_intersect($filenameParts, [
+        'LR',
+        '3DH',
+        'SBS',
     ])) {
-        $output["stereoMode"] = "sbs";
+        $output['stereoMode'] = 'sbs';
     }
 
-    if((bool)array_intersect($filenameParts, [
-        "TB",
-        "3DV",
-        "OVERUNDER",
+    if((bool) array_intersect($filenameParts, [
+        'TB',
+        '3DV',
+        'OVERUNDER',
     ])) {
-        $output["stereoMode"] = "tb";
+        $output['stereoMode'] = 'tb';
     }
 
-    if((bool)array_intersect($filenameParts, [
-        "180",
-        "FISHEYE",
-        "FISHEYE190",
-        "RF52",
-        "MKX200",
-        "VRCA220",
+    if((bool) array_intersect($filenameParts, [
+        '180',
+        'FISHEYE',
+        'FISHEYE190',
+        'RF52',
+        'MKX200',
+        'VRCA220',
     ])) {
-        $output['screenType'] = "dome";
+        $output['screenType'] = 'dome';
     }
 
-    if((bool)array_intersect($filenameParts, [
-        "360",
+    if((bool) array_intersect($filenameParts, [
+        '360',
     ])) {
-        $output['screenType'] = "sphere";
+        $output['screenType'] = 'sphere';
     }
 
     return $output;
 }
 
-function getResolution($filename) {
-    if (strpos($filename, "1080") !== false) {
+function getResolution($filename)
+{
+    if (strpos($filename, '1080') !== false) {
         return 1080;
-    } else if (strpos($filename, "1920") !== false) {
+    } elseif (strpos($filename, '1920') !== false) {
         return 1920;
-    } else if (strpos($filename, "1440") !== false) {
+    } elseif (strpos($filename, '1440') !== false) {
         return 1440;
-    } else if (strpos($filename, "2160") !== false) {
+    } elseif (strpos($filename, '2160') !== false) {
         return 2160;
-    } else if (strpos($filename, "2880") !== false) {
+    } elseif (strpos($filename, '2880') !== false) {
         return 2880;
-    } else if (strpos($filename, "3360") !== false) {
+    } elseif (strpos($filename, '3360') !== false) {
         return 3360;
-    } else if (strpos($filename, "3840") !== false) {
+    } elseif (strpos($filename, '3840') !== false) {
         return 3840;
     } else {
         return 1440;
@@ -404,40 +408,40 @@ function getResolution($filename) {
 $deovrJsonPath = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'deovr.json';
 $json = file_exists($deovrJsonPath) ? json_decode(file_get_contents($deovrJsonPath), true) ?? [] : [];
 if(isset($_GET['media']) && isset($_GET['id'])) {
-    if($_GET['media'] === 'cached'){
-        foreach($json as $site => $search){
+    if($_GET['media'] === 'cached') {
+        foreach($json as $site => $search) {
             foreach($search as $s => $scenes) {
                 foreach($scenes['list'] as $k => $scene) {
                     if($_GET['id'] == $scenes['list'][$k]['id']) {
-                        $originalUrl = $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"];
-                        $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] = getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"])[0]), false, true, false);
-                        $thumbnailUrl = getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . "_thumbnail.jpg", false, true, true);
+                        $originalUrl = $scenes['list'][$k]['encodings'][0]['videoSources'][0]['url'];
+                        $scenes['list'][$k]['encodings'][0]['videoSources'][0]['url'] = getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode('?', $scenes['list'][$k]['encodings'][0]['videoSources'][0]['url'])[0]), false, true, false);
+                        $thumbnailUrl = getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode('?', $scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . '_thumbnail.jpg', false, true, true);
                         if ($responseTypeJson) {
                             header('Content-Type: application/json');
                             echo json_encode(array_filter([
-                            "encodings" => [
-                                $scenes['list'][$k]["encodings"][0]
+                            'encodings' => [
+                                $scenes['list'][$k]['encodings'][0]
                             ],
-                            "media" => [
+                            'media' => [
                                 [
-                                    "name" => "h265",
-                                    "sources" => $scenes['list'][$k]["encodings"][0]["videoSources"],
+                                    'name' => 'h265',
+                                    'sources' => $scenes['list'][$k]['encodings'][0]['videoSources'],
                                 ]
                             ],
-                            "title" => $scenes['list'][$k]["title"],
-                            "description" => $scenes['list'][$k]["description"],
-                            "id" => $scenes['list'][$k]["id"],
-                            "skipIntro" => 0,
-                            "videoPreview" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['videoPreview'])[0], '.mp4') . "_videoPreview.mp4", false, true, false),
-                            "thumbnailUrl" => $thumbnailUrl,
-                            "thumbnailImage" => $thumbnailUrl,
-                            "is3d" => $scenes['list'][$k]['is3d'],
-                            "viewAngle" => $scenes['list'][$k]['viewAngle'],
-                            "stereomode" => $scenes['list'][$k]['stereomode'],
-                            "projection" => $scenes['list'][$k]['projection'],
-                            "projectID" => $scenes['list'][$k]['projectID'],
-                            "screenType" => isset($scenes['list'][$k]['screenType']) ? $scenes['list'][$k]['screenType']: null,
-                            ], function($value) { return !is_null($value) && $value !== ''; }));
+                            'title' => $scenes['list'][$k]['title'],
+                            'description' => $scenes['list'][$k]['description'],
+                            'id' => $scenes['list'][$k]['id'],
+                            'skipIntro' => 0,
+                            'videoPreview' => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode('?', $scenes['list'][$k]['videoPreview'])[0], '.mp4') . '_videoPreview.mp4', false, true, false),
+                            'thumbnailUrl' => $thumbnailUrl,
+                            'thumbnailImage' => $thumbnailUrl,
+                            'is3d' => $scenes['list'][$k]['is3d'],
+                            'viewAngle' => $scenes['list'][$k]['viewAngle'],
+                            'stereomode' => $scenes['list'][$k]['stereomode'],
+                            'projection' => $scenes['list'][$k]['projection'],
+                            'projectID' => $scenes['list'][$k]['projectID'],
+                            'screenType' => isset($scenes['list'][$k]['screenType']) ? $scenes['list'][$k]['screenType']: null,
+                            ], function ($value) { return !is_null($value) && $value !== ''; }));
                             die();
                         } else {
                             echo '
@@ -447,19 +451,19 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                                     <meta charset="utf-8">
                                     ' . $htmlStyle . '
                                         <style>
-                                        ' . file_get_contents(__DIR__.DIRECTORY_SEPARATOR."360player.css") .'
+                                        ' . file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . '360player.css') . '
                                         </style>
                                     <head>
                                     <body>
 
 
   <div style="width:100%; height: calc( 100% - 25px ); display:block; position:absolute; margin:0; padding:0;top:0;left:0;"> <video poster="' . $thumbnailUrl . '" id="videojs-vr-player" class="video-js vjs-fill vjs-default-skin" playsinline controls>
-                                            <source type="video/mp4" src="' . $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] . '">
+                                            <source type="video/mp4" src="' . $scenes['list'][$k]['encodings'][0]['videoSources'][0]['url'] . '">
                                         </video>
 
     </div>
     <div style="position:absolute; height:25px; width:auto; display:block; bottom:0; left:0; padding:0; margin:0 auto; overflow:hidden;">
-                                        <a target="_parent" href="' . $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"] . '">
+                                        <a target="_parent" href="' . $scenes['list'][$k]['encodings'][0]['videoSources'][0]['url'] . '">
                                             Download Video
                                         </a>
                                         <select id="actionMenu" onchange="selectAction(this)">
@@ -477,7 +481,7 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                                             <option value="EAC_LR">EAC_LR</option>
                                         </select>
                                        </div> <script>
-                                        ' . file_get_contents(__DIR__.DIRECTORY_SEPARATOR."360player.js") .'
+                                        ' . file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . '360player.js') . '
                                         </script>
                                     </body>
                                 </html>
@@ -498,36 +502,36 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
     if($responseTypeJson) {
         header('Content-Type: application/json');
         echo json_encode(array_merge([
-            "encodings" =>
+            'encodings' =>
                 [
                     [
-                "name" => "h265",
-                "videoSources" => [
+                'name' => 'h265',
+                'videoSources' => [
                     [
-                    "resolution" => getResolution($filename),
-                    "url" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, true, false)
+                    'resolution' => getResolution($filename),
+                    'url' => getProtectedUrlForMediaPath(dirname($mediaPath) . '/' . $filename . '.' . $ext, false, true, false)
                     ]
                 ]
                 ]
             ],
-            "media" =>
+            'media' =>
                 [
                     [
-                "name" => "h265",
-                "sources" => [
+                'name' => 'h265',
+                'sources' => [
                     [
-                    "resolution" => getResolution($filename),
-                    "url" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, true, false)
+                    'resolution' => getResolution($filename),
+                    'url' => getProtectedUrlForMediaPath(dirname($mediaPath) . '/' . $filename . '.' . $ext, false, true, false)
                     ]
                 ]
                 ]
             ],
-            "title" => $filename,
-            "id" => $_GET['id'],
-            "skipIntro" => 0,
-            "is3d" => true,
-            "thumbnailUrl" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg', false, true, true),
-            "thumbnailImage" => getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg', false, true, true),
+            'title' => $filename,
+            'id' => $_GET['id'],
+            'skipIntro' => 0,
+            'is3d' => true,
+            'thumbnailUrl' => getProtectedUrlForMediaPath(dirname($mediaPath) . '/' . $filename . '.jpg', false, true, true),
+            'thumbnailImage' => getProtectedUrlForMediaPath(dirname($mediaPath) . '/' . $filename . '.jpg', false, true, true),
 
         ], (!$isDeoVR && $responseTypeJson) ? [] : $attrs));
 
@@ -540,19 +544,19 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 ' . $htmlStyle . '
                     <style>
-                    ' . file_get_contents(__DIR__.DIRECTORY_SEPARATOR."360player.css") .'
+                    ' . file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . '360player.css') . '
                     </style>
                 <head>
                 <body>
 
 
   <div style="width:100%; height: calc( 100% - 25px ); display:block; position:absolute; margin:0; padding:0;top:0;left:0;">
-                    <video poster="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.jpg') . '" id="videojs-vr-player" class="video-js vjs-fill vjs-default-skin" playsinline controls>
-                        <source type="video/mp4" src="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, false) . '">
+                    <video poster="' . getProtectedUrlForMediaPath(dirname($mediaPath) . '/' . $filename . '.jpg') . '" id="videojs-vr-player" class="video-js vjs-fill vjs-default-skin" playsinline controls>
+                        <source type="video/mp4" src="' . getProtectedUrlForMediaPath(dirname($mediaPath) . '/' . $filename . '.' . $ext, false, false) . '">
                     </video>
 																						</div>
 				  <div style="position:absolute; height:25px; width:auto; display:block; bottom:0; left:0; padding:0; margin:0 auto; overflow:hidden;">
-                    <a target="_parent" href="' . getProtectedUrlForMediaPath(dirname($mediaPath) .'/' . $filename . '.' . $ext, false, true) . '">
+                    <a target="_parent" href="' . getProtectedUrlForMediaPath(dirname($mediaPath) . '/' . $filename . '.' . $ext, false, true) . '">
                         Download Video
                     </a>
 
@@ -572,7 +576,7 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
                     </select>
 																																											</div>
                     <script>
-                    ' . file_get_contents(__DIR__.DIRECTORY_SEPARATOR."360player.js") .'
+                    ' . file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . '360player.js') . '
                     </script>
                 </body>
             </html>
@@ -584,19 +588,19 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
 $media = findMedia($DEOVR_DATA_DIRECTORY);
 
 $cached = [];
-foreach($json as $site => $search){
+foreach($json as $site => $search) {
     foreach($search as $s => $scenes) {
         foreach($scenes['list'] as $k => $scene) {
-            $originalUrl = $scenes['list'][$k]["encodings"][0]["videoSources"][0]["url"];
+            $originalUrl = $scenes['list'][$k]['encodings'][0]['videoSources'][0]['url'];
             $scenes['list'][$k] = (!$isDeoVR && $responseTypeJson)
             ? $ENDPOINT . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr') . '/?id=' . $scenes['list'][$k]['id'] . '&media=cached'
             : [
-                ...get3dAttrs($scenes['list'][$k]["title"]),
-                "video_url" => $ENDPOINT . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr') . '/?id=' . $scenes['list'][$k]['id'] . '&media=cached',
-                "videoPreview" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['videoPreview'])[0], '.mp4') . "_videoPreview.mp4"),
-                "thumbnailUrl" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . "_thumbnail.jpg"),
-                "thumbnailImage" => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode("?",$scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . "_thumbnail.jpg"),
-                "title" => $scenes['list'][$k]["title"],
+                ...get3dAttrs($scenes['list'][$k]['title']),
+                'video_url' => $ENDPOINT . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr') . '/?id=' . $scenes['list'][$k]['id'] . '&media=cached',
+                'videoPreview' => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode('?', $scenes['list'][$k]['videoPreview'])[0], '.mp4') . '_videoPreview.mp4'),
+                'thumbnailUrl' => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode('?', $scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . '_thumbnail.jpg'),
+                'thumbnailImage' => getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode('?', $scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . '_thumbnail.jpg'),
+                'title' => $scenes['list'][$k]['title'],
             ];
         }
         $cached[] = $scenes;
@@ -604,11 +608,11 @@ foreach($json as $site => $search){
 }
 if($responseTypeJson) {
     $deoJSON = [
-        ($isDeoVR ? "scenes" : "library") => [
+        ($isDeoVR ? 'scenes' : 'library') => [
             ...array_values($media),
             ...array_values($cached)
             ],
-            ($isDeoVR ? "authorized" : "access") => 1,
+            ($isDeoVR ? 'authorized' : 'access') => 1,
             ];
 
     header('Content-Type: application/json');
@@ -653,12 +657,12 @@ if($responseTypeJson) {
             ...array_values($media),
             ...array_values($cached)
             ];
-            ?>
+    ?>
 
             <ul class="tabs">
                 <?php
 
-    foreach( $scenes as $index => $scene) {
+    foreach($scenes as $index => $scene) {
         echo '<li data-tab-target="#' . urlencode($scene['name']) . '" class="' . ($index === 0 ? 'active' : '') . ' tab">' . $scene['name'] . '</li>';
     }
     ?>
@@ -679,31 +683,31 @@ if($responseTypeJson) {
 
 <div class="tab-content">
     <?php
-    foreach( $scenes as $index => $scene) {
+    foreach($scenes as $index => $scene) {
         echo '<div data-tab-content id="' . urlencode($scene['name']) . '" class="' . ($index === 0 ? 'active' : '') . '"><h2>' . $scene['name'] . '</h2>';
-        foreach($scene['list'] as $item){
-					$ua = strtolower($_SERVER['HTTP_USER_AGENT']);
-if(stripos($ua,'x11') !== false) {
-	echo ' <a data-gallery-link="true" href="' . $item['videoSrc'] . '"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
-} else {
-    $hash = "NONE";
-    if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'dome') {
-        $hash = "180_LR";
-    }
-    if($item['stereoMode'] === 'tb') {
-        $hash = '360_TB';
-    }
-    if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'flat') {
-        $hash = 'SBS';
-    }
-    if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'dome' && $item['is3d'] === false) {
-        $hash = 'SBS';
-    }
-    if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'sphere') {
-        $hash = '360_LR';
-    }
-	echo ' <a data-gallery-link="true" data-fancybox="gallery"  data-type="iframe" href="#" data-src="' . $item['video_url'] . '&html=1#' . $hash . '"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
-}
+        foreach($scene['list'] as $item) {
+            $ua = strtolower($_SERVER['HTTP_USER_AGENT']);
+            if(stripos($ua, 'x11') !== false) {
+                echo ' <a data-gallery-link="true" href="' . $item['videoSrc'] . '"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
+            } else {
+                $hash = 'NONE';
+                if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'dome') {
+                    $hash = '180_LR';
+                }
+                if($item['stereoMode'] === 'tb') {
+                    $hash = '360_TB';
+                }
+                if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'flat') {
+                    $hash = 'SBS';
+                }
+                if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'dome' && $item['is3d'] === false) {
+                    $hash = 'SBS';
+                }
+                if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'sphere') {
+                    $hash = '360_LR';
+                }
+                echo ' <a data-gallery-link="true" data-fancybox="gallery"  data-type="iframe" href="#" data-src="' . $item['video_url'] . '&html=1#' . $hash . '"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
+            }
 
         }
         echo '</div>';
@@ -730,7 +734,7 @@ tabs.forEach(tab => {
   })
 })
 </script>";
-echo '
+    echo '
 			<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 			<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 		</body>

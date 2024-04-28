@@ -1,17 +1,17 @@
 <?php
 namespace privuma\helpers;
-use privuma\helpers\dotenv;
+
 $env = new dotenv(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . '.env');
 
-$unrestrictedHostnames = array_map('trim', explode(',', $env->get('UNRESTRICTED_HOSTNAMES') ?? ""));
-$unrestrictedPaths = array_map('trim', explode(',', $env->get('UNRESTRICTED_PATHS') ?? ""));
-$unrestrictedSessionVariables = array_map('trim', explode(',', $env->get('UNRESTRICTED_SESSION_VARIABLES') ?? ""));
+$unrestrictedHostnames = array_map('trim', explode(',', $env->get('UNRESTRICTED_HOSTNAMES') ?? ''));
+$unrestrictedPaths = array_map('trim', explode(',', $env->get('UNRESTRICTED_PATHS') ?? ''));
+$unrestrictedSessionVariables = array_map('trim', explode(',', $env->get('UNRESTRICTED_SESSION_VARIABLES') ?? ''));
 
 if (
     isset($_SERVER['SERVER_NAME'])
     && !is_null($_SERVER['SERVER_NAME'])
     && !in_array($_SERVER['SERVER_NAME'], $unrestrictedHostnames)
-    && empty(array_filter($unrestrictedPaths, function($path) {
+    && empty(array_filter($unrestrictedPaths, function ($path) {
         return strpos($_SERVER['REQUEST_URI'], $path) !== false;
     }))
 ) {
@@ -27,4 +27,3 @@ if (
         die('Invalid Domain Requested');
     }
 }
-

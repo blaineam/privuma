@@ -4,39 +4,43 @@ namespace privuma\actions;
 
 use privuma\privuma;
 
-class cachePath {
-    function __construct(array $data) {
+class cachePath
+{
+    public function __construct(array $data)
+    {
         // default json cache;
-        $cache = "mediadirs";
+        $cache = 'mediadirs';
 
         if(isset($data['cacheName'])) {
             $cache = $data['cacheName'];
             unset($data['cacheName']);
-            echo PHP_EOL. "Using cache: " . $cache;
+            echo PHP_EOL . 'Using cache: ' . $cache;
         }
 
         if(isset($data['emptyCache'])) {
             $this->emptyCache($cache);
             unset($data['emptyCache']);
-            echo PHP_EOL."Emptied Cache";
+            echo PHP_EOL . 'Emptied Cache';
         }
 
         if(isset($data['key'])) {
             $this->appendCache($data['value'], $data['key'], $cache);
-            echo PHP_EOL."Saved Cache Key: ". $data['key'];
+            echo PHP_EOL . 'Saved Cache Key: ' . $data['key'];
         }
     }
 
-    public static function emptyCache(string $cache) {
+    public static function emptyCache(string $cache)
+    {
 
-        $file = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . "cache" . DIRECTORY_SEPARATOR . $cache . ".json";
+        $file = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . $cache . '.json';
         unlink($file);
 
     }
 
-    public static function appendCache($data, string $key, string $cache) {
+    public static function appendCache($data, string $key, string $cache)
+    {
 
-        $file = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . "cache" . DIRECTORY_SEPARATOR . $cache . ".json";
+        $file = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . $cache . '.json';
 
         /*
         if file exists, open in read+ plus mode so we can try to lock it
@@ -57,7 +61,7 @@ class cachePath {
         //open file
         if($handle = @fopen($file, $mode)) {
             //get write lock
-            flock($handle,LOCK_EX);
+            flock($handle, LOCK_EX);
 
             //get current data
             $json = file_exists($file) ? json_decode(file_get_contents($file), true) ?? [] : [];
@@ -70,7 +74,7 @@ class cachePath {
 
             //release write lock -- fclose does this automatically
             //but only in PHP <= 5.3.2
-            flock($handle,LOCK_UN);
+            flock($handle, LOCK_UN);
 
             //close file
             fclose($handle);

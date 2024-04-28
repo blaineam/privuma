@@ -2,7 +2,7 @@
 
 namespace privuma;
 
-$classes = glob(__DIR__. '/**/*.php');
+$classes = glob(__DIR__ . '/**/*.php');
 
 foreach ($classes as $class) {
     require_once($class);
@@ -15,7 +15,8 @@ use privuma\helpers\dotenv;
 use PDO;
 use privuma\queue\QueueManager;
 
-class privuma {
+class privuma
+{
 
     public static string $binDirectory;
 
@@ -37,11 +38,11 @@ class privuma {
 
     private static $instance;
 
-    function __construct(
+    public function __construct(
         string $configDirectory = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'config',
         string $binDirectory = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bin',
-        string $dataDirectory = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . "data",
-        string $outputDirectory = __DIR__ . DIRECTORY_SEPARATOR . "output"
+        string $dataDirectory = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data',
+        string $outputDirectory = __DIR__ . DIRECTORY_SEPARATOR . 'output'
     ) {
         self::$configDirectory = self::canonicalizePath($configDirectory);
         self::$binDirectory = self::canonicalizePath($binDirectory);
@@ -54,23 +55,23 @@ class privuma {
 
         self::$env = new dotenv();
 
-            $host = self::$env->get('MYSQL_HOST');
-            $db   = self::$env->get('MYSQL_DATABASE');
-            $user = self::$env->get('MYSQL_USER');
-            $pass =  self::$env->get('MYSQL_PASSWORD');
-            $charset = 'utf8mb4';
-            $port = 3306;
+        $host = self::$env->get('MYSQL_HOST');
+        $db = self::$env->get('MYSQL_DATABASE');
+        $user = self::$env->get('MYSQL_USER');
+        $pass = self::$env->get('MYSQL_PASSWORD');
+        $charset = 'utf8mb4';
+        $port = 3306;
 
-            $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
-            $options = [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,
+        $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
+        $options = [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
         ];
         try {
             $this->pdo = new PDO($dsn, $user, $pass, $options);
 
-            $this->pdo->exec("CREATE TABLE IF NOT EXISTS  `media` (
+            $this->pdo->exec('CREATE TABLE IF NOT EXISTS  `media` (
                 `id` bigint(20) NOT NULL AUTO_INCREMENT,
                 `dupe` int(11) DEFAULT 0,
                 `hash` varchar(512) DEFAULT NULL,
@@ -89,16 +90,16 @@ class privuma {
                 KEY `media_idx_album_dupe_hash` (`album`(255),`dupe`,`hash`(255)),
                 KEY `media_filename_time_IDX` (`filename`(512),`time`) USING BTREE,
                 FULLTEXT KEY `media_filename_FULL_TEXT_IDX` (`filename`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;');
         } catch (\PDOException $e) {
             try {
-                $this->pdo = new \PDO('sqlite:'.__DIR__.DIRECTORY_SEPARATOR.'db.sqlite3', '', '', array(
+                $this->pdo = new \PDO('sqlite:' . __DIR__ . DIRECTORY_SEPARATOR . 'db.sqlite3', '', '', array(
                     \PDO::ATTR_EMULATE_PREPARES => false,
                     \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
                     \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC
                 ));
 
-                $this->pdo->exec("CREATE TABLE IF NOT EXISTS  `media` (
+                $this->pdo->exec('CREATE TABLE IF NOT EXISTS  `media` (
                     `id` INTEGER PRIMARY KEY AUTOINCREMENT,
                     `dupe` INTEGER DEFAULT 0,
                     `hash` TEXT DEFAULT NULL,
@@ -108,27 +109,26 @@ class privuma {
                     `thumbnail` TEXT DEFAULT NULL,
                     `time` datetime DEFAULT CURRENT_TIMESTAMP,
                     `metadata` TEXT DEFAULT NULL
-                    );");
+                    );');
 
-
-                $this->pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS `media_media_id_IDX` ON `media` (`id`);");
-                $this->pdo->exec("CREATE INDEX IF NOT EXISTS `media_media_hash_IDX` ON `media` (`hash`);");
-                $this->pdo->exec("CREATE INDEX IF NOT EXISTS `media_media_album_IDX` ON `media` (`album`);");
-                $this->pdo->exec("CREATE INDEX IF NOT EXISTS `media_media_filename_IDX` ON `media` (`filename`);");
-                $this->pdo->exec("CREATE INDEX IF NOT EXISTS `media_media_time_IDX` ON `media` (`time`);");
-                $this->pdo->exec("CREATE INDEX IF NOT EXISTS `media_media_idx_album_dupe_hash` ON `media` (`album`);");
-                $this->pdo->exec("CREATE INDEX IF NOT EXISTS `media_media_filename_time_IDX` ON `media` (`filename`);");
+                $this->pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS `media_media_id_IDX` ON `media` (`id`);');
+                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_hash_IDX` ON `media` (`hash`);');
+                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_album_IDX` ON `media` (`album`);');
+                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_filename_IDX` ON `media` (`filename`);');
+                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_time_IDX` ON `media` (`time`);');
+                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_idx_album_dupe_hash` ON `media` (`album`);');
+                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_filename_time_IDX` ON `media` (`filename`);');
             } catch(\PDOException $e2) {
-                throw new \PDOException($e->getMessage().PHP_EOL.$e2->getMessage(), (int)$e2->getCode());
+                throw new \PDOException($e->getMessage() . PHP_EOL . $e2->getMessage(), (int) $e2->getCode());
                 exit(1);
             }
         }
 
-
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING);
     }
 
-    public static function getInstance() {
+    public static function getInstance()
+    {
         if(!self::$instance) {
             self::$instance = new self();
         }
@@ -136,42 +136,51 @@ class privuma {
         return self::$instance;
     }
 
-    public static function getBinDirectory() {
+    public static function getBinDirectory()
+    {
         return self::$binDirectory;
     }
 
-    public static function getConfigDirectory() {
+    public static function getConfigDirectory()
+    {
         return self::$configDirectory;
     }
 
-    public static function getDataDirectory() {
+    public static function getDataDirectory()
+    {
         return self::$dataDirectory;
     }
 
-    public static function getDataFolder() {
+    public static function getDataFolder()
+    {
         return self::$dataFolder;
     }
 
-    public static function getOutputDirectory() {
+    public static function getOutputDirectory()
+    {
         return self::$outputDirectory;
     }
 
-    public static function getCloudFS() {
+    public static function getCloudFS()
+    {
         return self::$cloudFS;
     }
 
-    public static function getQueueManager() {
+    public static function getQueueManager()
+    {
         return self::$queueManager;
     }
 
-    public static function getEnv(?string $key = null) {
+    public static function getEnv(?string $key = null)
+    {
         if(!isset(self::$env)) {
             return (new dotenv())->get($key);
         }
         return self::$env->get($key);
     }
 
-    public function getPDO() {
+    public function getPDO()
+    {
         return $this->pdo;
     }
 
