@@ -1,7 +1,6 @@
 # Privuma
 
-Privuma is a multimedia deduplication, compression and access endpoint that works with gphotos.wemiller.com and the ios app Lux Shield. It is a simple setup with docker compose that is extendable with jobs that can download content from around the internet. It consists of a customer php-fpm image that includes multimedia processing dependencies available to php via an exec call. 
-
+Privuma is a multimedia deduplication, compression and access endpoint that works with gphotos.wemiller.com and the ios app Lux Shield. It is a simple setup with docker compose that is extendable with jobs that can download content from around the internet. It consists of a customer php-fpm image that includes multimedia processing dependencies available to php via an exec call.
 
 # Structure
 
@@ -15,15 +14,14 @@ Privuma is a multimedia deduplication, compression and access endpoint that work
 
 1. git clone the repo to a server with a lot of bandwidth and storage space, a NAS works great
 2. update the `dotenv-example.env` to have your values for your server and rename it to just `.env`
-	- you will have to copy that file to 2 locations `web/config/.env` and `.env`
+   - you will have to copy that file to 2 locations `web/config/.env` and `.env`
 3. ssh into your server and run `docker-compose --env-file ./web/config/.env up -d`
 4. add your folders and media to `web/data/privuma` with structures like this:
-	- .../privuma
-	- .../privuma/cats/cute001.png
-	- .../privuma/cats/adorbs002.jpg
-	- .../privuma/dogs/goof.mp4
-	- .../privuma/dogs/happy.gif
-
+   - .../privuma
+   - .../privuma/cats/cute001.png
+   - .../privuma/cats/adorbs002.jpg
+   - .../privuma/dogs/goof.mp4
+   - .../privuma/dogs/happy.gif
 
 ## Use gphotos.wemiller.com
 

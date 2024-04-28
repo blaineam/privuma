@@ -9,13 +9,13 @@ services:
       - WEBDAV_USERNAME=admin
       - WEBDAV_PASSWORD=admin
       - SKIP_PERMISSIONS_FIX=no
-  
+
   tester:
     build: test/
     networks: [sut]
     container_name: tester
     depends_on:
       - sut
-  
+
 networks:
   sut:
