@@ -2,7 +2,7 @@
 
 /*
 #################################################################################################################
-This is an OPTIONAL configuration file. rename this file into config.php to use this configuration 
+This is an OPTIONAL configuration file. rename this file into config.php to use this configuration
 The role of this file is to make updating of "tinyfilemanager.php" easier.
 So you can:
 -Feel free to remove completely this file and configure "tinyfilemanager.php" as a single file application.
@@ -65,7 +65,7 @@ $encoded_paths = true;
 $use_x_accel_redirect = true;
 
 // path to rclone config
-$rclone_config = __DIR__.'/rclone.conf';
+$rclone_config = __DIR__ . '/rclone.conf';
 
 // Server hostname. Can set manually if wrong
 $http_host = $_SERVER['HTTP_HOST'];
@@ -110,7 +110,6 @@ $online_viewer = false;
 // false => disable sticky header
 $sticky_navbar = true;
 
-
 // max upload file size
 $max_upload_size_bytes = 5000;
 
@@ -134,5 +133,3 @@ $ip_blacklist = array(
     '0.0.0.0',      // non-routable meta ipv4
     '::'            // non-routable meta ipv6
 );
-
-?>

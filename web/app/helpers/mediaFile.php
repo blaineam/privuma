@@ -1,12 +1,13 @@
 <?php
 
 namespace privuma\helpers;
+
 use DateTime;
 use PDO;
-use privuma\helpers\cloudFS;
 use privuma\privuma;
 
-class mediaFile {
+class mediaFile
+{
     public const MEDIA_FOLDER = 'privuma';
     private ?int $id;
     private ?string $hash;
@@ -23,7 +24,7 @@ class mediaFile {
     private PDO $pdo;
     public const SANITIZED_PATH = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'sanitizedFiles.json';
 
-    function __construct(string $filename, string $album, ?int $id = null, ?string $hash = null, ?DateTime $date = null, ?bool $dupe = null, ?string $url = null, ?string $thumbnail = null, ?string $metadata = null)
+    public function __construct(string $filename, string $album, ?int $id = null, ?string $hash = null, ?DateTime $date = null, ?bool $dupe = null, ?string $url = null, ?string $thumbnail = null, ?string $metadata = null)
     {
         $this->id = $id;
         $this->hash = $hash;
@@ -33,7 +34,8 @@ class mediaFile {
         $this->filename = $filename;
         $this->extension = pathinfo($filename, PATHINFO_EXTENSION);
         $this->date = $date ?? new DateTime();
-        $this->dupe = $dupe ?? strpos($filename, '---dupe') !== false ? 1 : 0;;
+        $this->dupe = $dupe ?? strpos($filename, '---dupe') !== false ? 1 : 0;
+        ;
         $this->metadata = $metadata ?? '';
         $this->cloudFS = privuma::getCloudFS();
         $downloadLocation = privuma::getEnv('DOWNLOAD_LOCATION');
@@ -43,24 +45,25 @@ class mediaFile {
         $this->pdo = $privuma->getPDO();
     }
 
-    public static function getAlbumPath(string $path): string {
+    public static function getAlbumPath(string $path): string
+    {
         return basename(dirname($path)) . DIRECTORY_SEPARATOR . basename($path);
     }
 
-    public function realPath() {
+    public function realPath()
+    {
         $filePath = $this->album . DIRECTORY_SEPARATOR . $this->filename;
 
         $ext = pathinfo($filePath, PATHINFO_EXTENSION);
 
-        $filename = basename($filePath, "." . $ext);
+        $filename = basename($filePath, '.' . $ext);
         $album = $this->sanitize(basename(dirname($filePath)));
 
-        $filePath = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename . "." . $ext;
+        $filePath = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename . '.' . $ext;
 
-        $compressedFile = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---compressed." . $ext;
+        $compressedFile = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename . '---compressed.' . $ext;
 
-        $dupe = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album  . DIRECTORY_SEPARATOR . $filename . "---dupe." . $ext;
-
+        $dupe = privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename . '---dupe.' . $ext;
 
         if ($this->cloudFS->is_file($filePath)) {
             return $filePath;
@@ -74,13 +77,13 @@ class mediaFile {
             return $dupe;
         }
 
-        $files = $this->cloudFS->glob(privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0]. ".*");
+        $files = $this->cloudFS->glob(privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0] . '.*');
         if($files === false) {
             $files = [];
         }
 
         if (count($files) > 0) {
-            if (strtolower($ext) == "mp4" || strtolower($ext) == "webm") {
+            if (strtolower($ext) == 'mp4' || strtolower($ext) == 'webm') {
                 foreach ($files as $file) {
                     $iext = pathinfo($file, PATHINFO_EXTENSION);
                     if (strtolower($ext) == strtolower($iext)) {
@@ -90,7 +93,7 @@ class mediaFile {
             } else {
                 foreach ($files as $file) {
                     $iext = pathinfo($file, PATHINFO_EXTENSION);
-                    if (strtolower($iext) !== "mp4" && strtolower($iext) !== "webm") {
+                    if (strtolower($iext) !== 'mp4' && strtolower($iext) !== 'webm') {
                         return $file;
                     }
                 }
@@ -100,11 +103,13 @@ class mediaFile {
         return false;
     }
 
-    public function path() {
+    public function path()
+    {
         return self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $this->album . DIRECTORY_SEPARATOR . $this->filename;
     }
 
-    public function hash() {
+    public function hash()
+    {
         if(!is_null($this->url)) {
             return md5($this->url);
         }
@@ -112,7 +117,8 @@ class mediaFile {
         return $this->cloudFS->md5_file($this->realPath());
     }
 
-    public function original() {
+    public function original()
+    {
         if(is_null($this->hash) && $hash = $this->hash()) {
             $this->hash = $hash;
         }
@@ -125,10 +131,11 @@ class mediaFile {
             return false;
         }
 
-        return self::MEDIA_FOLDER . DIRECTORY_SEPARATOR .$test['album'] . DIRECTORY_SEPARATOR . $test['filename'];
+        return self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $test['album'] . DIRECTORY_SEPARATOR . $test['filename'];
     }
 
-    public function source() {
+    public function source()
+    {
         $stmt = $this->pdo->prepare('SELECT * FROM media WHERE ((filename = ? AND album = ?) OR hash = ?) limit 1');
         $stmt->execute([$this->filename, $this->album, $this->hash]);
         $test = $stmt->fetch();
@@ -140,7 +147,8 @@ class mediaFile {
         return $test['url'] ?? false;
     }
 
-    public function record() {
+    public function record()
+    {
         $stmt = $this->pdo->prepare('SELECT * FROM media WHERE ((filename = ? AND album = ?) OR hash = ?) limit 1');
         $stmt->execute([$this->filename, $this->album, $this->hash]);
         $test = $stmt->fetch();
@@ -152,8 +160,9 @@ class mediaFile {
         return $test ?? false;
     }
 
-    public function setMetadata($metadata) {
-        echo PHP_EOL."Updating Metadata for: {$this->album}/{$this->filename}".PHP_EOL;
+    public function setMetadata($metadata)
+    {
+        echo PHP_EOL . "Updating Metadata for: {$this->album}/{$this->filename}" . PHP_EOL;
         $this->metadata = is_string($metadata) ? $metadata : json_encode($metadata, JSON_PRETTY_PRINT);
         $stmt = $this->pdo->prepare('UPDATE media SET metadata = ? WHERE ((filename = ? AND album = ?) OR hash = ?)');
         $stmt->execute([$this->metadata, $this->filename, $this->album, $this->hash]);
@@ -166,8 +175,8 @@ class mediaFile {
         return $test ?? false;
     }
 
-
-    public function hashConflict() {
+    public function hashConflict()
+    {
         if(is_null($this->hash) && $hash = $this->hash()) {
             $this->hash = $hash;
         }
@@ -183,7 +192,8 @@ class mediaFile {
         return true;
     }
 
-    public function duplicateHashes() {
+    public function duplicateHashes()
+    {
         if(is_null($this->hash) && $hash = $this->persistedHash()) {
             $this->hash = $hash;
         }
@@ -194,7 +204,8 @@ class mediaFile {
         return empty($data) ? false : $data;
     }
 
-    public function persistedHash() {
+    public function persistedHash()
+    {
         $stmt = $this->pdo->prepare('SELECT * FROM media WHERE filename = ? AND album = ? limit 1');
         $stmt->execute([$this->filename, $this->album]);
         $check = $stmt->fetch();
@@ -205,7 +216,8 @@ class mediaFile {
         return $check['hash'] ?? null;
     }
 
-    public static function load(string $hash = '', string $url = '', string $filename = '', string $album = ''): mediaFile|null {
+    public static function load(string $hash = '', string $url = '', string $filename = '', string $album = ''): mediaFile|null
+    {
         $stmt = privuma::getInstance()->getPDO()->prepare(
             'SELECT * FROM media WHERE hash != \'\' AND (hash = ? OR (filename = ? AND album = ?) OR url = ? OR thumbnail = ?) ORDER BY dupe LIMIT 1');
         $stmt->execute([
@@ -241,21 +253,23 @@ class mediaFile {
         );
     }
 
-    public function dupe() : bool {
+    public function dupe(): bool
+    {
         return $this->original() === false ? false : true;
     }
 
-    public function save(): bool {
+    public function save(): bool
+    {
         if(is_null($this->hash) && $hash = $this->hash()) {
             $this->hash = $hash;
         }
 
         if (empty($this->hash)) {
-            echo PHP_EOL."could not determine media hash not saving to database";
+            echo PHP_EOL . 'could not determine media hash not saving to database';
             return false;
         }
         if ($this->preserved() === false) {
-            echo PHP_EOL."persisting media".PHP_EOL;
+            echo PHP_EOL . 'persisting media' . PHP_EOL;
             $date = date('Y-m-d H:i:s');
             $stmt = $this->pdo->prepare('INSERT INTO media (dupe, album, hash, filename, url, thumbnail, time, metadata)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
@@ -273,7 +287,8 @@ class mediaFile {
         return true;
     }
 
-    public function favorited(): bool {
+    public function favorited(): bool
+    {
         if(is_null($this->hash) && $hash = $this->hash()) {
             $this->hash = $hash;
         }
@@ -288,7 +303,8 @@ class mediaFile {
         return true;
     }
 
-    public function favorite(): bool {
+    public function favorite(): bool
+    {
         if(is_null($this->hash) && $hash = $this->hash()) {
             $this->hash = $hash;
         }
@@ -321,7 +337,8 @@ class mediaFile {
         return false;
     }
 
-    public function getFieldValuesForAlbum($field): array {
+    public function getFieldValuesForAlbum($field): array
+    {
         $stmt = $this->pdo->prepare("select `{$field}`
         from media
         where album = ?
@@ -331,27 +348,29 @@ class mediaFile {
         return empty($data) ? [] : array_column($data, $field);
     }
 
-    public function preserved() {
+    public function preserved()
+    {
         return in_array($this->filename, $this->getFieldValuesForAlbum('filename'));
     }
 
-    public function delete(?string $hash = null) {
+    public function delete(?string $hash = null)
+    {
         $this->hash = $this->persistedHash();
         if(!$this->duplicateHashes()) {
             $dlPath = str_replace(
-                [".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4',
-                ($this->persistedHash() ?? $hash ?? $this->hash) . "." . pathinfo($this->path(), PATHINFO_EXTENSION)
+                ['.mpg', '.mod', '.mmv', '.tod', '.wmv', '.asf', '.avi', '.divx', '.mov', '.m4v', '.3gp', '.3g2', '.mp4', '.m2t', '.m2ts', '.mts', '.mkv', '.webm'], '.mp4',
+                ($this->persistedHash() ?? $hash ?? $this->hash) . '.' . pathinfo($this->path(), PATHINFO_EXTENSION)
             );
             $this->dlOps->unlink($dlPath);
         }
 
-        if(!is_null($hash)){
+        if(!is_null($hash)) {
             $stmt = $this->pdo->prepare('DELETE FROM media WHERE hash = ?');
             $stmt->execute([$hash]);
             return;
         }
 
-        if(!is_null($this->id)){
+        if(!is_null($this->id)) {
             $stmt = $this->pdo->prepare('DELETE FROM media WHERE id = ?');
             $stmt->execute([$this->id]);
             $this->cloudFS->unlink($this->path());
@@ -359,23 +378,27 @@ class mediaFile {
         }
 
         $fileParts = explode('---', $this->filename);
-        $stmt = $this->pdo->prepare('DELETE FROM media WHERE album = ? AND filename LIKE "' . trim($fileParts[0],'-') . '%"');
+        $stmt = $this->pdo->prepare('DELETE FROM media WHERE album = ? AND filename LIKE "' . trim($fileParts[0], '-') . '%"');
         $stmt->execute([$this->album]);
 
         $this->cloudFS->unlink($this->path());
     }
 
-    public static function titleCase(string $name): string {
-        $result = "";
+    public static function titleCase(string $name): string
+    {
+        $result = '';
         $pattern = '/([;:,-.\/ X])/';
         $array = preg_split($pattern, $name, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
 
-        foreach ($array as $v) $result .= ucwords(strtolower($v));
+        foreach ($array as $v) {
+            $result .= ucwords(strtolower($v));
+        }
 
         return $result;
     }
 
-    public static function sanitize(string $name, ?string $storedValue = null): string {
+    public static function sanitize(string $name, ?string $storedValue = null): string
+    {
         //remove accents
         $str = strtr(utf8_decode($name), utf8_decode('àáâãäçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiinooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
         //replace directory symbols
@@ -387,7 +410,7 @@ class mediaFile {
 
         $parts = explode(DIRECTORY_SEPARATOR, $name);
         if(count($parts) > 1) {
-            $sanitized =  implode(DIRECTORY_SEPARATOR, array_map('self::sanitize', $parts));
+            $sanitized = implode(DIRECTORY_SEPARATOR, array_map('self::sanitize', $parts));
         }
 
         if($sanitized !== $name || !is_null($storedValue)) {
@@ -400,7 +423,8 @@ class mediaFile {
 
     }
 
-    public static function desanitize(string $name) {
+    public static function desanitize(string $name)
+    {
         $sanitizedFiles = json_decode(file_get_contents(self::SANITIZED_PATH), true) ?? [];
         if (!empty($sanitizedFiles[$name])) {
             return $sanitizedFiles[$name];

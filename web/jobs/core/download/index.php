@@ -11,14 +11,14 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' .
 $privuma = privuma::getInstance();
 $tokenizer = new tokenizer();
 $downloadLocation = $privuma->getEnv('DOWNLOAD_LOCATION');
-if(!$downloadLocation){
+if(!$downloadLocation) {
     exit();
 }
 
 $conn = $privuma->getPDO();
 
 $ops = new cloudFS($downloadLocation, true, '/usr/bin/rclone', null, true);
-echo PHP_EOL."Building list of media to download";
+echo PHP_EOL . 'Building list of media to download';
 $stmt = $conn->prepare("select filename, album, time, hash, url, thumbnail
 from media
 where hash in
@@ -41,49 +41,53 @@ group by hash
 $stmtFavorites->execute();
 $favorites = $stmtFavorites->fetchAll();
 $dlData = array_merge(
-	$favorites,
-	$dlData,
+    $favorites,
+    $dlData,
 );
 
-echo PHP_EOL."Building web app payload of media to download";
+echo PHP_EOL . 'Building web app payload of media to download';
 /* $stmt = $conn->prepare("SELECT json_group_array( json_object('filename', substr(filename,-10), 'album',album, 'dupe',dupe,'time',time,'hash',hash, 'metadata', metadata)    ) AS json_result FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed' ORDER BY time desc)"); */
 /* $stmt->execute(); */
 /* $mobiledata = str_replace('`', '', $stmt->fetchAll()[0]["json_result"]); */
 $stmt = $conn->prepare(" SELECT substr(filename,-10) as filename, album, dupe, time, hash, metadata FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;");
 $stmt->execute();
 $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
-function sanitizeLine($line) {
-    return trim(preg_replace("/[^A-Za-z0-9 ]/", '', $line), "\r\n");
+function sanitizeLine($line)
+{
+    return trim(preg_replace('/[^A-Za-z0-9 ]/', '', $line), "\r\n");
 }
 
-function trimExtraNewLines($string) {
-	return trim(implode(PHP_EOL, array_map(function($line) {
-		return sanitizeLine($line);
-	}, explode(PHP_EOL, $string))), "\r\n");
+function trimExtraNewLines($string)
+{
+    return trim(implode(PHP_EOL, array_map(function ($line) {
+        return sanitizeLine($line);
+    }, explode(PHP_EOL, $string))), "\r\n");
 }
 
-function parseMetaData($item) {
-	return [
-		"title" => explode(PHP_EOL, explode("Title: ", $item)[1] ?? "")[0],
-		"author" => explode(PHP_EOL, explode("Author: ", $item)[1] ?? "")[0],
-		"date" => new DateTime(explode(PHP_EOL, explode("Date: ", $item)[1] ?? "")[0]),
-		"rating" => (Int)explode(PHP_EOL, explode("Rating: ", $item)[1] ?? "")[0],
-		"favorites" => (Int)explode(PHP_EOL, explode("Favorites: ", $item)[1] ?? "")[0],
-		"description" => explode("Tags:", explode("Description: ", $item)[1] ?? "")[0],
-		"tags" => explode(", ", explode(PHP_EOL, explode("Tags: ", $item)[1] ?? "")[0]) ?? [],
-		"comments" =>  explode("Comments: ", $item)[1] ?? "",
-		];
+function parseMetaData($item)
+{
+    return [
+        'title' => explode(PHP_EOL, explode('Title: ', $item)[1] ?? '')[0],
+        'author' => explode(PHP_EOL, explode('Author: ', $item)[1] ?? '')[0],
+        'date' => new DateTime(explode(PHP_EOL, explode('Date: ', $item)[1] ?? '')[0]),
+        'rating' => (Int) explode(PHP_EOL, explode('Rating: ', $item)[1] ?? '')[0],
+        'favorites' => (Int) explode(PHP_EOL, explode('Favorites: ', $item)[1] ?? '')[0],
+        'description' => explode('Tags:', explode('Description: ', $item)[1] ?? '')[0],
+        'tags' => explode(', ', explode(PHP_EOL, explode('Tags: ', $item)[1] ?? '')[0]) ?? [],
+        'comments' => explode('Comments: ', $item)[1] ?? '',
+        ];
 }
 
-function condenseMetaData($item) {
-	return str_replace(PHP_EOL, '\n', mb_convert_encoding(str_replace(PHP_EOL.PHP_EOL, PHP_EOL, implode(PHP_EOL, [
-	sanitizeLine($item['title'] ?: substr(trimExtraNewLines($item['description']), 0, 256)),
-	sanitizeLine($item['favorites']),
-	sanitizeLine(implode(", ", array_slice($item['tags'], 0, 5))),
-	substr(trimExtraNewLines($item['comments']), 0, 256),
+function condenseMetaData($item)
+{
+    return str_replace(PHP_EOL, '\n', mb_convert_encoding(str_replace(PHP_EOL . PHP_EOL, PHP_EOL, implode(PHP_EOL, [
+    sanitizeLine($item['title'] ?: substr(trimExtraNewLines($item['description']), 0, 256)),
+    sanitizeLine($item['favorites']),
+    sanitizeLine(implode(', ', array_slice($item['tags'], 0, 5))),
+    substr(trimExtraNewLines($item['comments']), 0, 256),
 ])), 'UTF-8', 'UTF-8'));
 }
-$mobiledata = json_encode(mb_convert_encoding(array_map(function($item) {
+$mobiledata = json_encode(mb_convert_encoding(array_map(function ($item) {
     $item['metadata'] = condenseMetaData(parseMetaData($item['metadata']));
     return $item;
 }, json_decode($data, true)), 'UTF-8', 'UTF-8'), JSON_THROW_ON_ERROR);
@@ -97,7 +101,7 @@ $mobiledata = json_encode(mb_convert_encoding(array_map(function($item) {
 //   $csv .= "\r\n";
 // }
 
-echo PHP_EOL."All Database Lookup Operations have been completed.";
+echo PHP_EOL . 'All Database Lookup Operations have been completed.';
 
 $viewerHTML = <<<'HEREHTML'
 <!DOCTYPE html>
@@ -1656,143 +1660,143 @@ HEREHTML;
 // $ops->file_put_contents("data.csv",$csv);
 // unset($csv);
 
-echo PHP_EOL."Downloading encrypted database offline website payload";
-$mobiledata = MediaCrypto::encryptString($privuma->getEnv('DOWNLOAD_PASSWORD'), "const encrypted_data = `".$mobiledata."`;", true);
-$ops->file_put_contents("encrypted_mobile_data.js-gz",$mobiledata);
+echo PHP_EOL . 'Downloading encrypted database offline website payload';
+$mobiledata = MediaCrypto::encryptString($privuma->getEnv('DOWNLOAD_PASSWORD'), 'const encrypted_data = `' . $mobiledata . '`;', true);
+$ops->file_put_contents('encrypted_mobile_data.js-gz', $mobiledata);
 unset($mobiledata);
 
-$data = MediaCrypto::encryptString($privuma->getEnv('DOWNLOAD_PASSWORD'), "const encrypted_data = ".$data.";", true);
-$ops->file_put_contents("encrypted_data.js-gz",$data);
+$data = MediaCrypto::encryptString($privuma->getEnv('DOWNLOAD_PASSWORD'), 'const encrypted_data = ' . $data . ';', true);
+$ops->file_put_contents('encrypted_data.js-gz', $data);
 unset($data);
 
 $key = MediaCrypto::encryptString($privuma->getEnv('DOWNLOAD_USER_PASSWORD'), $privuma->getEnv('DOWNLOAD_PASSWORD'));
-$ops->file_put_contents("key.txt",$key);
+$ops->file_put_contents('key.txt', $key);
 unset($key);
 
-echo PHP_EOL."Downloading Offline Web App Viewer HTML File";
-$ops->file_put_contents("index.html",$viewerHTML);
+echo PHP_EOL . 'Downloading Offline Web App Viewer HTML File';
+$ops->file_put_contents('index.html', $viewerHTML);
 unset($viewerHTML);
 
-echo PHP_EOL."Database Downloads have been completed";
-echo PHP_EOL."Starting Lookup of already downloaded media";
-$cachePath = __DIR__.DIRECTORY_SEPARATOR."downloaded.json";
-$rawCachePath = __DIR__.DIRECTORY_SEPARATOR."downloaded.raw.json";
+echo PHP_EOL . 'Database Downloads have been completed';
+echo PHP_EOL . 'Starting Lookup of already downloaded media';
+$cachePath = __DIR__ . DIRECTORY_SEPARATOR . 'downloaded.json';
+$rawCachePath = __DIR__ . DIRECTORY_SEPARATOR . 'downloaded.raw.json';
 
 $currentTime = time();
 
-$lastRan = (is_file($cachePath) ? filemtime($cachePath) : null ) ?? $currentTime - 14 * 24 * 60 * 60;
+$lastRan = (is_file($cachePath) ? filemtime($cachePath) : null) ?? $currentTime - 14 * 24 * 60 * 60;
 $cacheStillRecent = $currentTime - $lastRan < 14 * 24 * 60 * 60;
-$preservedFilenames = ['.','..','index.html','encrypted_data.js','data.csv'];
+$preservedFilenames = ['.', '..', 'index.html', 'encrypted_data.js', 'data.csv'];
 
 if((!is_file($cachePath) || !$cacheStillRecent) && !is_file($rawCachePath)) {
-  exec("nice cpulimit -f -l 5 -- rclone --config ../../../config/rclone/rclone.conf lsjson -R {$downloadLocation} --exclude=\"@eaDir/**\" > {$rawCachePath}");
+    exec("nice cpulimit -f -l 5 -- rclone --config ../../../config/rclone/rclone.conf lsjson -R {$downloadLocation} --exclude=\"@eaDir/**\" > {$rawCachePath}");
 }
 if(is_file($rawCachePath)) {
     $jsonObj = json_decode(file_get_contents($rawCachePath), true, 512, JSON_INVALID_UTF8_IGNORE);
     if (is_array($jsonObj)) {
-        $downloadedFiles = array_map(function($file) {
+        $downloadedFiles = array_map(function ($file) {
             $file['Name'] = cloudFS::decode($file['Name'], true);
             $file['Path'] = cloudFS::decode($file['Path'], true);
             return $file;
         }, $jsonObj);
-        file_put_contents($cachePath, json_encode($downloadedFiles, JSON_INVALID_UTF8_IGNORE+JSON_THROW_ON_ERROR));
+        file_put_contents($cachePath, json_encode($downloadedFiles, JSON_INVALID_UTF8_IGNORE + JSON_THROW_ON_ERROR));
         unset($downloadedFiles);
     }
-  unlink($rawCachePath);
+    unlink($rawCachePath);
 }
 if(is_file($cachePath)) {
-  $preservedFilenames = array_map(
-    function($name) {
-        return basename($name);
-    },
-    array_column(
-        json_decode(
-            file_get_contents($cachePath),
-            true
-        ),
-        'Name'
-    )
-  );
+    $preservedFilenames = array_map(
+        function ($name) {
+            return basename($name);
+        },
+        array_column(
+            json_decode(
+                file_get_contents($cachePath),
+                true
+            ),
+            'Name'
+        )
+    );
 }
 $countAlreadyDownloaded = count($preservedFilenames) - 5;
-$targetDownloadedCount = count($dlData) + count(array_filter($dlData, function($item) {
-  return strpos(str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', $item['filename']), '.mp4') !== false;
+$targetDownloadedCount = count($dlData) + count(array_filter($dlData, function ($item) {
+    return strpos(str_replace(['.mpg', '.mod', '.mmv', '.tod', '.wmv', '.asf', '.avi', '.divx', '.mov', '.m4v', '.3gp', '.3g2', '.mp4', '.m2t', '.m2ts', '.mts', '.mkv', '.webm'], '.mp4', $item['filename']), '.mp4') !== false;
 }));
 $percentage = round(($countAlreadyDownloaded / $targetDownloadedCount) * 100, 2);
-echo PHP_EOL."Found ". $countAlreadyDownloaded ."/" . $targetDownloadedCount . " ($percentage%) files downloaded";
+echo PHP_EOL . 'Found ' . $countAlreadyDownloaded . '/' . $targetDownloadedCount . " ($percentage%) files downloaded";
 $progress = 0;
 $total = count($dlData);
 $lastProgress = 0;
-$newDlData = array_filter($dlData, function($item) use($preservedFilenames, $total, &$lastProgress, &$progress){
-  $progress++;
-  $percentage = round(($progress/$total) * 100, 2);
-  if($percentage > $lastProgress + 5) {
-    echo "{$percentage}% ";
-    $lastProgress = $percentage;
-  }
-  $filename = str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', $item['filename']);
-  $preserve = $item['hash']. "." . pathinfo($filename, PATHINFO_EXTENSION);
-  $thumbnailPreserve = $item['hash']. ".jpg";
-  return !in_array($preserve, $preservedFilenames) || !in_array($thumbnailPreserve, $preservedFilenames);
+$newDlData = array_filter($dlData, function ($item) use ($preservedFilenames, $total, &$lastProgress, &$progress) {
+    $progress++;
+    $percentage = round(($progress / $total) * 100, 2);
+    if($percentage > $lastProgress + 5) {
+        echo "{$percentage}% ";
+        $lastProgress = $percentage;
+    }
+    $filename = str_replace(['.mpg', '.mod', '.mmv', '.tod', '.wmv', '.asf', '.avi', '.divx', '.mov', '.m4v', '.3gp', '.3g2', '.mp4', '.m2t', '.m2ts', '.mts', '.mkv', '.webm'], '.mp4', $item['filename']);
+    $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
+    $thumbnailPreserve = $item['hash'] . '.jpg';
+    return !in_array($preserve, $preservedFilenames) || !in_array($thumbnailPreserve, $preservedFilenames);
 });
 $newDlDataCount = count($newDlData);
-echo PHP_EOL."Preparing to download {$newDlDataCount} new items";
+echo PHP_EOL . "Preparing to download {$newDlDataCount} new items";
 
 foreach($newDlData as $item) {
-  $album = $item['album'];
-  $filename = str_replace([".mpg", ".mod", ".mmv", ".tod", ".wmv", ".asf", ".avi", ".divx", ".mov", ".m4v", ".3gp", ".3g2", ".mp4", ".m2t", ".m2ts", ".mts", ".mkv", ".webm"], '.mp4', $item['filename']);
+    $album = $item['album'];
+    $filename = str_replace(['.mpg', '.mod', '.mmv', '.tod', '.wmv', '.asf', '.avi', '.divx', '.mov', '.m4v', '.3gp', '.3g2', '.mp4', '.m2t', '.m2ts', '.mts', '.mkv', '.webm'], '.mp4', $item['filename']);
 
-  $preserve = $item['hash']. "." . pathinfo($filename, PATHINFO_EXTENSION);
-  $thumbnailPreserve = $item['hash']. ".jpg";
-  $path = privuma::getDataFolder() . DIRECTORY_SEPARATOR .(new mediaFile($item['filename'], $item['album']))->path();
-  $thumbnailPath = str_replace('.mp4', '.jpg', $path);
-  if(
-    !in_array($preserve, $preservedFilenames)
-    && !$ops->is_file($preserve)
-  ) {
-    if (!isset($item["url"])) {
-      if ($item["url"] = $privuma->getCloudFS()->public_link($path) ?: $tokenizer->mediaLink($path, false, false, true)) {
-        if (strpos($filename, '.mp4') !== false) {
-          $item["thumbnail"] = $privuma->getCloudFS()->public_link($thumbnailPath) ?: $tokenizer->mediaLink($thumbnailPath, false, false, true);
+    $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
+    $thumbnailPreserve = $item['hash'] . '.jpg';
+    $path = privuma::getDataFolder() . DIRECTORY_SEPARATOR . (new mediaFile($item['filename'], $item['album']))->path();
+    $thumbnailPath = str_replace('.mp4', '.jpg', $path);
+    if(
+        !in_array($preserve, $preservedFilenames)
+        && !$ops->is_file($preserve)
+    ) {
+        if (!isset($item['url'])) {
+            if ($item['url'] = $privuma->getCloudFS()->public_link($path) ?: $tokenizer->mediaLink($path, false, false, true)) {
+                if (strpos($filename, '.mp4') !== false) {
+                    $item['thumbnail'] = $privuma->getCloudFS()->public_link($thumbnailPath) ?: $tokenizer->mediaLink($thumbnailPath, false, false, true);
+                }
+            } else {
+                echo PHP_EOL . "Skipping unavailable media: $path";
+                continue;
+            }
         }
-      } else {
-        echo PHP_EOL."Skipping unavailable media: $path";
-        continue;
-      }
-    }
-    echo PHP_EOL."Queue Downloading of media file: " . $preserve . " from album: " . $item['album'] . " with potential thumbnail: " . ($item["thumbnail"] ?? "No thumbnail");
-    $privuma->getQueueManager()->enqueue(json_encode([
-        'type' => 'processMedia',
-        'data' => [
-            'album' => $album,
-            'filename' => $filename,
-            'url'=> $item['url'],
-            'thumbnail' => $item['thumbnail'],
-            'download' => $downloadLocation,
-            'hash' => $item['hash'],
-        ],
-    ]));
-  } else if (
-    strpos($filename, '.mp4') !== false
-    && is_null($item['thumbnail'])
-    && (
-      !in_array($thumbnailPreserve, $preservedFilenames)
-      && !$ops->is_file($thumbnailPreserve)
+        echo PHP_EOL . 'Queue Downloading of media file: ' . $preserve . ' from album: ' . $item['album'] . ' with potential thumbnail: ' . ($item['thumbnail'] ?? 'No thumbnail');
+        $privuma->getQueueManager()->enqueue(json_encode([
+            'type' => 'processMedia',
+            'data' => [
+                'album' => $album,
+                'filename' => $filename,
+                'url' => $item['url'],
+                'thumbnail' => $item['thumbnail'],
+                'download' => $downloadLocation,
+                'hash' => $item['hash'],
+            ],
+        ]));
+    } elseif (
+        strpos($filename, '.mp4') !== false
+        && is_null($item['thumbnail'])
+        && (
+            !in_array($thumbnailPreserve, $preservedFilenames)
+            && !$ops->is_file($thumbnailPreserve)
 
-    )
-    &&  $item["thumbnail"] = $privuma->getCloudFS()->public_link($thumbnailPath) ?: $tokenizer->mediaLink($thumbnailPath, false, false, true)
-  ) {
-    echo PHP_EOL."Queue Downloading of media file: " . $thumbnailPreserve . " from album: " . $item['album'];
-    $privuma->getQueueManager()->enqueue(json_encode([
-        'type' => 'processMedia',
-        'data' => [
-            'album' => $album,
-            'filename' => str_replace('.mp4','.jpg',$filename),
-            'url'=> $item['thumbnail'],
-            'download' => $downloadLocation,
-            'hash' => $item['hash'],
-        ],
-    ]));
-  }
+        )
+        && $item['thumbnail'] = $privuma->getCloudFS()->public_link($thumbnailPath) ?: $tokenizer->mediaLink($thumbnailPath, false, false, true)
+    ) {
+        echo PHP_EOL . 'Queue Downloading of media file: ' . $thumbnailPreserve . ' from album: ' . $item['album'];
+        $privuma->getQueueManager()->enqueue(json_encode([
+            'type' => 'processMedia',
+            'data' => [
+                'album' => $album,
+                'filename' => str_replace('.mp4', '.jpg', $filename),
+                'url' => $item['thumbnail'],
+                'download' => $downloadLocation,
+                'hash' => $item['hash'],
+            ],
+        ]));
+    }
 }
-echo PHP_EOL."Done queing Media to be downloaded";
+echo PHP_EOL . 'Done queing Media to be downloaded';
