@@ -1,12 +1,12 @@
 [
-    {
-        "path": "syncs/preserve",
-        "preserve": true,
-        "removeFromSource": true
-    },
-    {
-        "path": "syncs/media",
-        "preserve": false,
-        "removeFromSource": true
-    }
+  {
+    "path": "syncs/preserve",
+    "preserve": true,
+    "removeFromSource": true
+  },
+  {
+    "path": "syncs/media",
+    "preserve": false,
+    "removeFromSource": true
+  }
 ]
