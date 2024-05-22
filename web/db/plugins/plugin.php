@@ -12,9 +12,10 @@ class AdminerPlugin extends Adminer
     public $plugins;
 
     public function _findRootClass($class) // is_subclass_of(string, string) is available since PHP 5.0.3
-    {do {
-        $return = $class;
-    } while ($class = get_parent_class($class));
+    {
+        do {
+            $return = $class;
+        } while ($class = get_parent_class($class));
         return $return;
     }
 
