@@ -362,6 +362,9 @@ class mediaFile
                 ($this->persistedHash() ?? $hash ?? $this->hash) . '.' . pathinfo($this->path(), PATHINFO_EXTENSION)
             );
             $this->dlOps->unlink($dlPath);
+            if (strpos($dlPath, '.mp4') !== false) {
+                $this->dlOps->unlink(str_replace('.mp4', '.jpg', $dlPath));
+            }
         }
 
         if(!is_null($hash)) {
