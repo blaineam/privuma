@@ -667,18 +667,19 @@ $viewerHTML = <<<'HEREHTML'
       />
     </div>
     <script src="index.php?RapiServe=1"></script>
+    <script src="../../index.php?RapiServe=1"></script>
     <script>
       var usingRapiServe =
         typeof canrapiserve !== "undefined"
-          ? true
-          : window.location.hash.includes("rapiserve");
+          ? (canrapiserve === true ? "index.php" : canrapiserve)
+          : (window.location.hash.includes("rapiserve") ? "index.php" : "");
 
       function init() {
         medcrypt.getSrc(
           window.mobileCheck()
-            ? (usingRapiServe ? "" : "../") +
+            ? (usingRapiServe.length ? (usingRapiServe + "/") : "../") +
                 "ZW/ZW5jcnlwdGVkX21vYmlsZV9kYXRh.js-gz"
-            : (usingRapiServe ? "" : "../") + "ZW/ZW5jcnlwdGVkX2RhdGE=.js-gz",
+            : (usingRapiServe.length ? (usingRapiServe + "/") : "../") + "ZW/ZW5jcnlwdGVkX2RhdGE=.js-gz",
           (encrypted_data_file) => {
             loadScript(encrypted_data_file, runApp);
           }
@@ -687,10 +688,10 @@ $viewerHTML = <<<'HEREHTML'
 
       var passphrase = getWithExpiry("offline-viewer-pass") ?? "";
       if (passphrase.length > 0) {
-        if (usingRapiServe) {
+        if (usingRapiServe.length) {
           var formData = new FormData();
           formData.append("key", btoa(passphrase));
-          fetch("index.php", {
+          fetch(usingRapiServe, {
             method: "POST",
             body: formData,
             headers: {
@@ -708,17 +709,17 @@ $viewerHTML = <<<'HEREHTML'
       var unlock = function () {
         passphrase = $("#downloadPassword").val();
         medcrypt.getSrc(
-          (usingRapiServe ? "" : "../") + "a2/a2V5.txt",
+          (usingRapiServe === "index.php" ? "" : "../") + "a2/a2V5.txt",
           (keyUrl) => {
             fetch(keyUrl)
               .then((response) => response.text())
               .then((data) => {
                 passphrase = data;
 
-                if (usingRapiServe) {
+                if (usingRapiServe.length) {
                   var formData = new FormData();
                   formData.append("key", btoa(passphrase));
-                  fetch("index.php", {
+                  fetch(usingRapiServe, {
                     method: "POST",
                     body: formData,
                     headers: {
@@ -1062,10 +1063,10 @@ $viewerHTML = <<<'HEREHTML'
                     (extension.toLowerCase() == "gif" ? "gif" : "mp4");
                   let thumbnail = btoa(item.hash) + ".jpg";
                   let resource =
-                    (usingRapiServe ? "" : "../") +
+                  (usingRapiServe.length ? (usingRapiServe + "/") : "../")  +
                     `${thumbnail.substring(0, 2)}/${thumbnail}`;
                   let videoResource =
-                    (usingRapiServe ? "index.php/" : "../") +
+                    (usingRapiServe.length ? (usingRapiServe + "/") : "../") +
                     `${video.substring(0, 2)}/${video}`;
                   return Promise.resolve([
                     resource,
@@ -1080,7 +1081,7 @@ $viewerHTML = <<<'HEREHTML'
                 if (("photo" == kind || "all" == kind) && !isVideo) {
                   let photo = btoa(item.hash) + "." + extension;
                   let resource =
-                    (usingRapiServe ? "" : "../") +
+                  (usingRapiServe.length ? (usingRapiServe + "/") : "../") +
                     `${photo.substring(0, 2)}/${photo}`;
                   return Promise.resolve([
                     resource,
@@ -1189,7 +1190,7 @@ $viewerHTML = <<<'HEREHTML'
                 let image =
                   btoa(item.hash) + "." + (isVideo ? "jpg" : extension);
                 let resource =
-                  (usingRapiServe ? "" : "../") +
+                (usingRapiServe.length ? (usingRapiServe + "/") : "../")  +
                   `${image.substring(0, 2)}/${image}`;
                 return Promise.resolve([resource, displayName, album]);
               })
@@ -1287,14 +1288,11 @@ $viewerHTML = <<<'HEREHTML'
                   window.location.hash = btoa(backHash) + delim + "all";
                   return;
                 }
-
-                jQuery("#searchInput").hide();
+                search = jQuery("#searchInput").val() || "";
                 showAlbum(targetAlbum, kind);
                 return;
               }
             }
-
-            jQuery("#searchInput").show();
             search = jQuery("#searchInput").val() || "";
             currentFolder = album;
             showAllAlbums();
