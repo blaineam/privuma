@@ -19,9 +19,9 @@ $conn = $privuma->getPDO();
 
 $ops = new cloudFS($downloadLocation, true, '/usr/bin/rclone', null, true);
 
-$blocklist = array_map('strtoupper', json_decode(file_get_contents($privuma->getConfigDirectory() . DIRECTORY_SEPARATOR . "download-blocklist.json"), true) ?? []);
+$blocklist = array_map('strtoupper', json_decode(file_get_contents($privuma->getConfigDirectory() . DIRECTORY_SEPARATOR . 'download-blocklist.json'), true) ?? []);
 
-$sqlFilter = "album != 'Favorites' AND upper(concat(filename, metadata, album)) REGEXP '" . implode('|', $blocklist). "'";
+$sqlFilter = "album != 'Favorites' AND upper(concat(filename, metadata, album)) REGEXP '" . implode('|', $blocklist) . "'";
 
 echo PHP_EOL . 'Building list of media to download';
 $stmt = $conn->prepare("select filename, album, time, hash, url, thumbnail
