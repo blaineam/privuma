@@ -18,11 +18,16 @@ if(!$downloadLocation) {
 $conn = $privuma->getPDO();
 
 $ops = new cloudFS($downloadLocation, true, '/usr/bin/rclone', null, true);
+
+$blocklist = array_map('strtoupper', json_decode(file_get_contents($privuma->getConfigDirectory() . DIRECTORY_SEPARATOR . "download-blocklist.json"), true) ?? []);
+
+$sqlFilter = "album != 'Favorites' AND upper(concat(filename, metadata, album)) REGEXP '" . implode('|', $blocklist). "'";
+
 echo PHP_EOL . 'Building list of media to download';
 $stmt = $conn->prepare("select filename, album, time, hash, url, thumbnail
 from media
 where hash in
-(select hash from media where hash is not null and hash != '' and hash != 'compressed')
+(select hash from media where $sqlFilter and hash is not null and hash != '' and hash != 'compressed')
 and dupe = 0
 group by hash
  order by
@@ -32,7 +37,7 @@ $dlData = $stmt->fetchAll();
 $stmtFavorites = $conn->prepare("select filename, album, time, hash, url, thumbnail
 from media
 where hash in
-(select hash from media where hash is not null and hash != '' and hash != 'compressed')
+(select hash from media where $sqlFilter and hash is not null and hash != '' and hash != 'compressed')
 and album = 'Favorites'
 group by hash
  order by
@@ -49,7 +54,7 @@ echo PHP_EOL . 'Building web app payload of media to download';
 /* $stmt = $conn->prepare("SELECT json_group_array( json_object('filename', substr(filename,-10), 'album',album, 'dupe',dupe,'time',time,'hash',hash, 'metadata', metadata)    ) AS json_result FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed' ORDER BY time desc)"); */
 /* $stmt->execute(); */
 /* $mobiledata = str_replace('`', '', $stmt->fetchAll()[0]["json_result"]); */
-$stmt = $conn->prepare("SELECT CASE WHEN length(filename) >= 10 THEN substr(filename,-10) ELSE filename END filename, album, dupe, time, hash, metadata FROM (SELECT * FROM media WHERE hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;");
+$stmt = $conn->prepare("SELECT CASE WHEN length(filename) >= 10 THEN substr(filename,-10) ELSE filename END filename, album, dupe, time, hash, metadata FROM (SELECT * FROM media WHERE $sqlFilter and hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;");
 $stmt->execute();
 $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
 function sanitizeLine($line)
