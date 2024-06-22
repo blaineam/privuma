@@ -55,7 +55,12 @@ foreach(array_diff(array_merge(scandir($coreJobsDir), scandir($pluginsJobsDir)),
         continue;
     }
 
-    $cronConfig = json_decode(file_get_contents($cron), true) ?? [ 'interval' => 24 * 60 * 60];
+    $cronConfig = json_decode(file_get_contents($cron), true);
+
+    if (!$cronConfig) {
+        $cronConfig = [ 'interval' => 24 * 60 * 60];
+        file_put_contents($cron, trim(json_encode($cronConfig, JSON_PRETTY_PRINT)));
+    }
 
     $lastRan = filemtime($cron) ?? $currentTime - 24 * 60 * 60;
 
@@ -77,8 +82,6 @@ foreach(array_diff(array_merge(scandir($coreJobsDir), scandir($pluginsJobsDir)),
         echo PHP_EOL . "Cron file's modification date cannot be set, please check the cron.json permissions";
         continue;
     };
-
-    file_put_contents($cron, json_encode($cronConfig, JSON_PRETTY_PRINT));
 
     // Truncate logs to last 3k lines;
     exec('echo "$(tail -3000 \'' . $log . '\')" > "' . $log . '"');
