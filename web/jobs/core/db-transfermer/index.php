@@ -8,7 +8,7 @@ $privuma = privuma::getInstance();
 $conn = $privuma->getPDO();
 
 $blocklist = array_map('strtoupper', json_decode(file_get_contents($privuma->getConfigDirectory() . DIRECTORY_SEPARATOR . 'global-blocklist.json'), true) ?? []);
-if (count($blocklist) > 0 ) {
+if (count($blocklist) > 0) {
     $blockedComicAlbums = array_column(
         $conn->query(
             "
@@ -36,10 +36,10 @@ if (count($blocklist) > 0 ) {
                 group by album;
             "
         )->fetchAll(),
-        "album"
+        'album'
     );
     echo PHP_EOL
-        . "Set Blocked column for: "
+        . 'Set Blocked column for: '
         . $conn->query(
             "
                 update media
@@ -68,5 +68,5 @@ if (count($blocklist) > 0 ) {
                 end;
             "
         )->rowCount()
-        . " rows";
+        . ' rows';
 }
