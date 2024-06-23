@@ -39,7 +39,7 @@ $STREAM_MEDIA_FROM_FALLBACK_ENDPOINT = privuma::getEnv('STREAM_MEDIA_FROM_FALLBA
 $rcloneConfig = parse_ini_file(privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'rclone' . DIRECTORY_SEPARATOR . 'rclone.conf', true);
 
 $blocklist = array_map('strtoupper', json_decode(file_get_contents(privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'photos-output-blocklist.json'), true) ?? []);
-$sqlFilter = "(album = 'Favorites' or not (upper(filename) REGEXP '" . implode('|', $blocklist) . "' or upper(album) REGEXP '" . implode('|', $blocklist) . "' or upper(metadata) REGEXP '(^|\n)(TAGS|TITLE|DESCRIPTION):[^:]*(" . implode('|', $blocklist) . ")[^:]*'))";
+$sqlFilter = "(album = 'Favorites' or blocked = 0)";
 $sqlFilter = !isset($_GET['unfiltered']) ? $sqlFilter : '';
 
 function isUrl($path): bool
@@ -629,7 +629,7 @@ function run()
 
         $media = array_values($media);
 
-        $photos = array('gtoken' => urlencode($ENDPOINT . '...' . $AUTHTOKEN), 'gdata' => $media);
+        $photos = array('gtoken' => urlencode($ENDPOINT . (isset($_GET['unfiltered']) ? 'unfiltered/' : '') . '...' . $AUTHTOKEN), 'gdata' => $media);
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
         header('Cache-Control: post-check=0, pre-check=0', false);
         header('Pragma: no-cache');
@@ -794,7 +794,7 @@ function run()
 
         $conn = $privuma->getPDO();
         $stmt = $conn->prepare('select filename, album, url, thumbnail, time, hash FROM media
-        inner join (select max(id) as id FROM media GROUP by album) as sorted on sorted.id = media.id  order by time DESC;');
+        inner join (select max(id) as id FROM media ' . (!empty($sqlFilter) ? 'where blocked = 0 ' : '') . ' GROUP by album) as sorted on sorted.id = media.id  order by time DESC;');
         $stmt->execute([]);
         $data = $stmt->fetchAll();
 
@@ -843,7 +843,7 @@ function run()
             return $a2['updated'] <=> $a1['updated'];
         });
 
-        $realbums = array('gtoken' => urlencode($ENDPOINT . '...' . $AUTHTOKEN), 'gdata' => $realbums);
+        $realbums = array('gtoken' => urlencode($ENDPOINT . (isset($_GET['unfiltered']) ? 'unfiltered/' : '') . '...' . $AUTHTOKEN), 'gdata' => $realbums);
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
         header('Cache-Control: post-check=0, pre-check=0', false);
         header('Pragma: no-cache');
