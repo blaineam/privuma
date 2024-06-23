@@ -41,7 +41,7 @@ foreach(array_chunk($results, 2000) as $key => $chunk) {
             if (
                 $videoExists && $fileMissing && $connectionOk
             ) {
-                echo PHP_EOL."Queuing thumbnail generation for {$album}/{$filename}";
+                echo PHP_EOL . "Queuing thumbnail generation for {$album}/{$filename}";
                 $qm->enqueue(json_encode(['type' => 'generateThumbnail', 'data' => ['path' => $videoPath]]));
             }
         }
