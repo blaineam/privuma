@@ -19,7 +19,7 @@ $conn = $privuma->getPDO();
 
 $ops = new cloudFS($downloadLocation, true, '/usr/bin/rclone', null, true);
 
-$blocklist = array_map('strtoupper', json_decode(file_get_contents($privuma->getConfigDirectory() . DIRECTORY_SEPARATOR . "download-blocklist.json"), true) ?? []);
+$blocklist = array_map('strtoupper', json_decode(file_get_contents($privuma->getConfigDirectory() . DIRECTORY_SEPARATOR . 'download-blocklist.json'), true) ?? []);
 
 $sqlFilter = "(album = 'Favorites' or not (upper(filename) REGEXP '" . implode('|', $blocklist) . "' or upper(album) REGEXP '". implode('|', $blocklist) ."' or upper(metadata) REGEXP '(^|\n)(TAGS|TITLE|DESCRIPTION):[^:]*(" . implode('|', $blocklist) . ")[^:]*'))";
 
