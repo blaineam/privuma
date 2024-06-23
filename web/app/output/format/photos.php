@@ -38,9 +38,9 @@ $STREAM_MEDIA_FROM_FALLBACK_ENDPOINT = privuma::getEnv('STREAM_MEDIA_FROM_FALLBA
 
 $rcloneConfig = parse_ini_file(privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'rclone' . DIRECTORY_SEPARATOR . 'rclone.conf', true);
 
-$blocklist = array_map('strtoupper', json_decode(file_get_contents(privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . "photos-output-blocklist.json"), true) ?? []);
-$sqlFilter = "(album = 'Favorites' or not (upper(filename) REGEXP '" . implode('|', $blocklist) . "' or upper(album) REGEXP '". implode('|', $blocklist) ."' or upper(metadata) REGEXP '(^|\n)(TAGS|TITLE|DESCRIPTION):[^:]*(" . implode('|', $blocklist) . ")[^:]*'))";
-$sqlFilter = !isset($_GET['unfiltered']) ? $sqlFilter : "";
+$blocklist = array_map('strtoupper', json_decode(file_get_contents(privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'photos-output-blocklist.json'), true) ?? []);
+$sqlFilter = "(album = 'Favorites' or not (upper(filename) REGEXP '" . implode('|', $blocklist) . "' or upper(album) REGEXP '" . implode('|', $blocklist) . "' or upper(metadata) REGEXP '(^|\n)(TAGS|TITLE|DESCRIPTION):[^:]*(" . implode('|', $blocklist) . ")[^:]*'))";
+$sqlFilter = !isset($_GET['unfiltered']) ? $sqlFilter : '';
 
 function isUrl($path): bool
 {
@@ -461,7 +461,7 @@ function run()
         $stmt = $conn->prepare("select filename, album, time, hash, url, thumbnail, metadata
         from media
         where hash in
-        (select hash from media where {$sqlFilter} " . (!empty($sqlFilter) ? " and " : "") . " album = ? and hash != 'compressed')
+        (select hash from media where {$sqlFilter} " . (!empty($sqlFilter) ? ' and ' : '') . " album = ? and hash != 'compressed')
         group by hash
          order by
          " . ((strpos(strtolower($albumName), 'comic') !== false && strpos(strtolower($albumName), '-comic') === false) ? 'filename asc' : "
@@ -793,8 +793,8 @@ function run()
         }
 
         $conn = $privuma->getPDO();
-        $stmt = $conn->prepare("select filename, album, url, thumbnail, time, hash FROM media
-        inner join (select max(id) as id FROM media GROUP by album) as sorted on sorted.id = media.id  order by time DESC;");
+        $stmt = $conn->prepare('select filename, album, url, thumbnail, time, hash FROM media
+        inner join (select max(id) as id FROM media GROUP by album) as sorted on sorted.id = media.id  order by time DESC;');
         $stmt->execute([]);
         $data = $stmt->fetchAll();
 
