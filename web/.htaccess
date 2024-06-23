@@ -18,6 +18,11 @@ RewriteRule ^heresphere /vr/index.php?json=true  [L,QSA]
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME}  -f [OR]
 RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^unfiltered /index.php?unfiltered=true  [L,QSA]
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME}  -f [OR]
+RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^media.mp4 /index.php  [L,QSA]
 
 RewriteEngine On
