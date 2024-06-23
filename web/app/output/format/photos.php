@@ -38,7 +38,6 @@ $STREAM_MEDIA_FROM_FALLBACK_ENDPOINT = privuma::getEnv('STREAM_MEDIA_FROM_FALLBA
 
 $rcloneConfig = parse_ini_file(privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'rclone' . DIRECTORY_SEPARATOR . 'rclone.conf', true);
 
-$blocklist = array_map('strtoupper', json_decode(file_get_contents(privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'photos-output-blocklist.json'), true) ?? []);
 $sqlFilter = "(album = 'Favorites' or blocked = 0)";
 $sqlFilter = !isset($_GET['unfiltered']) ? $sqlFilter : '';
 
