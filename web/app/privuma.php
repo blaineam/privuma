@@ -81,6 +81,7 @@ class privuma
                 `thumbnail` varchar(9512) DEFAULT NULL,
                 `time` datetime DEFAULT NULL,
                 `metadata` varchar(9512) DEFAULT NULL,
+                `blocked` int(1) DEFAULT 1,
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `media_id_IDX` (`id`) USING BTREE,
                 KEY `media_hash_IDX` (`hash`) USING BTREE,
@@ -89,9 +90,11 @@ class privuma
                 KEY `media_time_IDX` (`time`) USING BTREE,
                 KEY `media_idx_album_dupe_hash` (`album`(255),`dupe`,`hash`(255)),
                 KEY `media_filename_time_IDX` (`filename`(512),`time`) USING BTREE,
+                KEY `media_blocked_IDX` (`blocked`) USING BTREE,
                 FULLTEXT KEY `media_filename_FULL_TEXT_IDX` (`filename`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;');
         } catch (\PDOException $e) {
+            var_dump($e);
             try {
                 $this->pdo = new \PDO('sqlite:' . __DIR__ . DIRECTORY_SEPARATOR . 'db.sqlite3', '', '', array(
                     \PDO::ATTR_EMULATE_PREPARES => false,
@@ -108,7 +111,8 @@ class privuma
                     `url` TEXT DEFAULT NULL,
                     `thumbnail` TEXT DEFAULT NULL,
                     `time` datetime DEFAULT CURRENT_TIMESTAMP,
-                    `metadata` TEXT DEFAULT NULL
+                    `metadata` TEXT DEFAULT NULL,
+                    `blocked` INTEGER DEFAULT 1
                     );');
 
                 $this->pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS `media_media_id_IDX` ON `media` (`id`);');
@@ -118,6 +122,7 @@ class privuma
                 $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_time_IDX` ON `media` (`time`);');
                 $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_idx_album_dupe_hash` ON `media` (`album`);');
                 $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_filename_time_IDX` ON `media` (`filename`);');
+                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_blocked_IDX` ON `media` (`blocked`);');
             } catch(\PDOException $e2) {
                 throw new \PDOException($e->getMessage() . PHP_EOL . $e2->getMessage(), (int) $e2->getCode());
                 exit(1);
