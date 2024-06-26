@@ -1694,7 +1694,7 @@ $cacheStillRecent = $currentTime - $lastRan < 14 * 24 * 60 * 60;
 $preservedFilenames = ['.', '..', 'index.html', 'encrypted_data.js', 'data.csv'];
 
 if((!is_file($cachePath) || !$cacheStillRecent) && !is_file($rawCachePath)) {
-    exec("nice cpulimit -f -l 5 -- rclone --config ../../../config/rclone/rclone.conf lsjson -R {$downloadLocation} --exclude=\"@eaDir/**\" > {$rawCachePath}");
+    exec("nice cpulimit -f -l 5 -- rclone --config ../../../config/rclone/rclone.conf --exclude=\"@eaDir/**\" lsjson -R {$downloadLocation} > {$rawCachePath}");
 }
 if(is_file($rawCachePath)) {
     $jsonObj = json_decode(file_get_contents($rawCachePath), true, 512, JSON_INVALID_UTF8_IGNORE);
