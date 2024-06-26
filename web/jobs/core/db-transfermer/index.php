@@ -16,6 +16,15 @@ if (count($blocklist) > 0) {
                 from media
                 where
                     album like 'Comics---%'
+                    and album not in (
+                        select album
+                        from media
+                        where hash in (
+                            select hash
+                            from media
+                            where album = 'Favorites'
+                        )
+                    )
                     and upper(
                         concat(
                             'Album: ',
@@ -44,7 +53,12 @@ if (count($blocklist) > 0) {
             "
                 update media
                 set blocked = case
-                    when upper(
+                    when hash not in (select hash from media where album = 'Favorites')
+                        and (
+                            album not like 'Comics---%'
+                            or album in ('" . implode("', '", $blockedComicAlbums) . "')
+                        )
+                        and upper(
                         concat(
                             'Album: ',
                             album,
