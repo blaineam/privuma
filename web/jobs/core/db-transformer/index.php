@@ -9,13 +9,11 @@ $conn = $privuma->getPDO();
 
 $blocklist = array_map('strtoupper', json_decode(file_get_contents($privuma->getConfigDirectory() . DIRECTORY_SEPARATOR . 'global-blocklist.json'), true) ?? []);
 if (count($blocklist) > 0) {
-    $blockedComicAlbums = array_column(
-        $conn->query(
-            "
+        $comicQuery = "
                 select album
                 from media
                 where
-                    album like 'Comics---%'
+                    album like 'comics---%'
                     and album not in (
                         select album
                         from media
@@ -27,11 +25,8 @@ if (count($blocklist) > 0) {
                     )
                     and upper(
                         concat(
-                            'Album: ',
                             album,
-                            '\nFilename: ',
                             filename,
-                            '\n',
                             substring_index(
                                 coalesce(
                                     metadata,
@@ -43,44 +38,43 @@ if (count($blocklist) > 0) {
                         )
                     ) regexp '" . implode('|', $blocklist) . "'
                 group by album;
-            "
+            ";
+    $blockedComicAlbums = array_column(
+        $conn->query(
+            $comicQuery
         )->fetchAll(),
         'album'
     );
-    echo PHP_EOL
-        . 'Set Blocked column for: '
-        . $conn->query(
-            "
+    $blockingQuery = "
                 update media
                 set blocked = case
                     when hash not in (select hash from media where album = 'Favorites')
-                        and (
-                            album not like 'Comics---%'
-                            or album in ('" . implode("', '", $blockedComicAlbums) . "')
-                        )
-                        and upper(
-                        concat(
-                            'Album: ',
-                            album,
-                            '\nFilename: ',
-                            filename,
-                            '\n',
-                            substring_index(
-                                coalesce(
-                                    metadata,
-                                    ''
-                                ),
-                                '\nComments: ',
-                                1
+                        and
+                        (
+                            album in ('" . implode("', '", $blockedComicAlbums) . "')
+                            or upper(
+                            concat(
+                                album,
+                                filename,
+                                substring_index(
+                                    coalesce(
+                                        metadata,
+                                        ''
+                                    ),
+                                    '\nComments: ',
+                                    1
+                                )
                             )
-                        )
-                    ) regexp '" . implode('|', $blocklist) . "'
-                    then 1
-                    when album in ('" . implode("', '", $blockedComicAlbums) . "')
+                        ) regexp '" . implode('|', $blocklist) . "'
+                    )
                     then 1
                     else 0
                 end;
-            "
+            ";
+    echo PHP_EOL
+        . 'Set Blocked column for: '
+        . $conn->query(
+            $blockingQuery
         )->rowCount()
         . ' rows';
 }
