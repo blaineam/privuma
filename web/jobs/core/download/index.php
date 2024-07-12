@@ -1650,22 +1650,22 @@ $ops->file_put_contents('index.html', $viewerHTML);
 unset($viewerHTML);
 
 echo PHP_EOL . 'Database Downloads have been completed';
-echo PHP_EOL."Checking ".count($dlData). " media items have been downloaded";
+echo PHP_EOL . 'Checking ' . count($dlData) . ' media items have been downloaded';
 
 $previouslyDownloadedMedia = array_flip(array_map(
-	fn($item) => trim($item, '\/'),
-	array_column($ops->scandir('', true, true, null, false, true, true, true), 'Name')));
+    fn ($item) => trim($item, '\/'),
+    array_column($ops->scandir('', true, true, null, false, true, true, true), 'Name')));
 
-echo PHP_EOL."Filtering ".count($previouslyDownloadedMedia). " media items already downloaded";
+echo PHP_EOL . 'Filtering ' . count($previouslyDownloadedMedia) . ' media items already downloaded';
 
-$dlData = array_filter($dlData, function($item) use ($previouslyDownloadedMedia) {
+$dlData = array_filter($dlData, function ($item) use ($previouslyDownloadedMedia) {
     $filename = str_replace(['.mpg', '.mod', '.mmv', '.tod', '.wmv', '.asf', '.avi', '.divx', '.mov', '.m4v', '.3gp', '.3g2', '.mp4', '.m2t', '.m2ts', '.mts', '.mkv', '.webm'], '.mp4', $item['filename']);
     $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
     $thumbnailPreserve = $item['hash'] . '.jpg';
     return !array_key_exists($preserve, $previouslyDownloadedMedia) && !array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia);
 });
 
-echo PHP_EOL."Found ".count($dlData). " new media items to be downloaded";
+echo PHP_EOL . 'Found ' . count($dlData) . ' new media items to be downloaded';
 
 $progress = 0;
 $total = count($dlData);
@@ -1675,7 +1675,7 @@ foreach($dlData as $item) {
     $progress++;
     $percentage = round(($progress / $total) * 100, 2);
     if($percentage > $lastProgress + 5) {
-        echo PHP_EOL."Overall Progress: {$percentage}% ";
+        echo PHP_EOL . "Overall Progress: {$percentage}% ";
         $lastProgress = $percentage;
     }
     $album = $item['album'];

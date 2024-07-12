@@ -9,7 +9,7 @@ $conn = $privuma->getPDO();
 
 $blocklist = array_map('strtoupper', json_decode(file_get_contents($privuma->getConfigDirectory() . DIRECTORY_SEPARATOR . 'global-blocklist.json'), true) ?? []);
 if (count($blocklist) > 0) {
-        $comicQuery = "
+    $comicQuery = "
                 select album
                 from media
                 where
