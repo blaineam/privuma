@@ -38,6 +38,9 @@ class tokenizer
         if (isset($_SERVER['HTTP_PVMAIP'])) {
             $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_PVMAIP'];
         }
+        if (isset($_SERVER['HTTP_X_ORIGINAL_ADDR'])) {
+            $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_ORIGINAL_ADDR'];
+        }
         if(!isset($_SERVER['REMOTE_ADDR'])) {
             $_SERVER['REMOTE_ADDR'] = file_get_contents('http://ipecho.net/plain');
         }
