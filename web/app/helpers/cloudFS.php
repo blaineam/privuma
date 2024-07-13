@@ -53,7 +53,7 @@ class cloudFS
                     $filter .= ' ' . $filterType . ($this->encoded ? $this->encode(ltrim($internal_filter, '+- ')) : ltrim($internal_filter, '+- ')) . "'";
                 }
             }
-            $files = json_decode($this->execute('lsjson', $directory, null, false, true, [ ($noMimeType ? '--no-mimetype' : ''), ($noModTime ? '--no-modtime' : ''),($dirsOnly ? '--dirs-only' : ''), ($filesOnly ? '--files-only' : ''), ($recursive !== false) ? '--recursive': '', (!is_null($filter)) ? $filter : '']), true);
+            $files = json_decode($this->execute('lsjson', $directory, null, false, true, [ ($noMimeType ? '--no-mimetype' : ''), ($noModTime ? '--no-modtime' : ''), ($dirsOnly ? '--dirs-only' : ''), ($filesOnly ? '--files-only' : ''), ($recursive !== false) ? '--recursive': '', (!is_null($filter)) ? $filter : '']), true);
             usort($files, function ($a, $b) {
                 return strtotime(explode('.', $b['ModTime'])[0]) <=> strtotime(explode('.', $a['ModTime'])[0]);
             });
