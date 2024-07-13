@@ -35,6 +35,7 @@ $AUTHTOKEN = privuma::getEnv('AUTHTOKEN');
 $RCLONE_DESTINATION = privuma::getEnv('RCLONE_DESTINATION');
 $USE_X_Accel_Redirect = privuma::getEnv('USE_X_Accel_Redirect');
 $STREAM_MEDIA_FROM_FALLBACK_ENDPOINT = privuma::getEnv('STREAM_MEDIA_FROM_FALLBACK_ENDPOINT');
+$USE_CLOUDFS_NGINX_AUTH_FOR_MEDIA = privuma::getEnv('USE_CLOUDFS_NGINX_AUTH_FOR_MEDIA');
 
 $rcloneConfig = parse_ini_file(privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'rclone' . DIRECTORY_SEPARATOR . 'rclone.conf', true);
 
@@ -104,8 +105,19 @@ function redirectToMedia($path)
     global $ops;
     global $USE_X_Accel_Redirect;
     global $STREAM_MEDIA_FROM_FALLBACK_ENDPOINT;
+    global $USE_CLOUDFS_NGINX_AUTH_FOR_MEDIA;
     global $USE_MIRROR;
+    global $tokenizer;
+    global $AUTHTOKEN;
+    global $ENDPOINT;
     $path = $ops->encode($path);
+
+    if($USE_CLOUDFS_NGINX_AUTH_FOR_MEDIA) {
+        $url = $ENDPOINT . "cloudfs" . $path . "?key=" . $tokenizer->rollingTokens($AUTHTOKEN)[1];
+        header("Location: {$url}");
+        die();
+    }
+
 
     if($STREAM_MEDIA_FROM_FALLBACK_ENDPOINT) {
         $url = getProtectedUrlForMediaPath($path, true, true);

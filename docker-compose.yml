@@ -135,7 +135,7 @@ services:
       - "8993:80"
     command: serve http --read-only --no-checksum --no-modtime --addr :80 ${CLOUDFS_HTTP_TERTIARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
   cloudfs-s3:
-    image: rclone/rclone:latest
+    image: rclone/rclone:beta
     container_name: privuma_cloudfs_s3
     restart: always
     volumes:
