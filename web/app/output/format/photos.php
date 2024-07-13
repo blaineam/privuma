@@ -113,11 +113,10 @@ function redirectToMedia($path)
     $path = $ops->encode($path);
 
     if($USE_CLOUDFS_NGINX_AUTH_FOR_MEDIA) {
-        $url = $ENDPOINT . "cloudfs" . $path . "?key=" . $tokenizer->rollingTokens($AUTHTOKEN)[1];
+        $url = $ENDPOINT . 'cloudfs' . $path . '?key=' . $tokenizer->rollingTokens($AUTHTOKEN)[1];
         header("Location: {$url}");
         die();
     }
-
 
     if($STREAM_MEDIA_FROM_FALLBACK_ENDPOINT) {
         $url = getProtectedUrlForMediaPath($path, true, true);
