@@ -2,10 +2,10 @@
 
 namespace privuma;
 
-$classes = glob(__DIR__ . '/**/*.php');
+$classes = glob(__DIR__ . "/**/*.php");
 
 foreach ($classes as $class) {
-    require_once($class);
+    require_once $class;
 }
 
 use privuma\helpers\cloudFS;
@@ -17,7 +17,6 @@ use privuma\queue\QueueManager;
 
 class privuma
 {
-
     public static string $binDirectory;
 
     public static string $configDirectory;
@@ -39,15 +38,25 @@ class privuma
     private static $instance;
 
     public function __construct(
-        string $configDirectory = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'config',
-        string $binDirectory = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bin',
-        string $dataDirectory = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data',
-        string $outputDirectory = __DIR__ . DIRECTORY_SEPARATOR . 'output'
+        string $configDirectory =
+            __DIR__ .
+                DIRECTORY_SEPARATOR .
+                ".." .
+                DIRECTORY_SEPARATOR .
+                "config",
+        string $binDirectory =
+            __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "bin",
+        string $dataDirectory =
+            __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data",
+        string $outputDirectory = __DIR__ . DIRECTORY_SEPARATOR . "output"
     ) {
         self::$configDirectory = self::canonicalizePath($configDirectory);
         self::$binDirectory = self::canonicalizePath($binDirectory);
         self::$dataFolder = basename($dataDirectory);
-        $dataDirectory = dirname($dataDirectory) . DIRECTORY_SEPARATOR . cloudFS::encode(basename($dataDirectory));
+        $dataDirectory =
+            dirname($dataDirectory) .
+            DIRECTORY_SEPARATOR .
+            cloudFS::encode(basename($dataDirectory));
         self::$dataDirectory = self::canonicalizePath($dataDirectory);
         self::$outputDirectory = self::canonicalizePath($outputDirectory);
         self::$cloudFS = new cloudFS();
@@ -55,18 +64,18 @@ class privuma
 
         self::$env = new dotenv();
 
-        $host = self::$env->get('MYSQL_HOST');
-        $db = self::$env->get('MYSQL_DATABASE');
-        $user = self::$env->get('MYSQL_USER');
-        $pass = self::$env->get('MYSQL_PASSWORD');
-        $charset = 'utf8mb4';
+        $host = self::$env->get("MYSQL_HOST");
+        $db = self::$env->get("MYSQL_DATABASE");
+        $user = self::$env->get("MYSQL_USER");
+        $pass = self::$env->get("MYSQL_PASSWORD");
+        $charset = "utf8mb4";
         $port = 3306;
 
         $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
         $options = [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
         ];
         try {
             $this->pdo = new PDO($dsn, $user, $pass, $options);
@@ -96,11 +105,16 @@ class privuma
         } catch (\PDOException $e) {
             var_dump($e);
             try {
-                $this->pdo = new \PDO('sqlite:' . __DIR__ . DIRECTORY_SEPARATOR . 'db.sqlite3', '', '', array(
-                    \PDO::ATTR_EMULATE_PREPARES => false,
-                    \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
-                    \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC
-                ));
+                $this->pdo = new \PDO(
+                    "sqlite:" . __DIR__ . DIRECTORY_SEPARATOR . "db.sqlite3",
+                    "",
+                    "",
+                    [
+                        \PDO::ATTR_EMULATE_PREPARES => false,
+                        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                        \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+                    ]
+                );
 
                 $this->pdo->exec('CREATE TABLE IF NOT EXISTS  `media` (
                     `id` INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -115,16 +129,35 @@ class privuma
                     `blocked` INTEGER DEFAULT 1
                     );');
 
-                $this->pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS `media_media_id_IDX` ON `media` (`id`);');
-                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_hash_IDX` ON `media` (`hash`);');
-                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_album_IDX` ON `media` (`album`);');
-                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_filename_IDX` ON `media` (`filename`);');
-                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_time_IDX` ON `media` (`time`);');
-                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_idx_album_dupe_hash` ON `media` (`album`);');
-                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_filename_time_IDX` ON `media` (`filename`);');
-                $this->pdo->exec('CREATE INDEX IF NOT EXISTS `media_media_blocked_IDX` ON `media` (`blocked`);');
-            } catch(\PDOException $e2) {
-                throw new \PDOException($e->getMessage() . PHP_EOL . $e2->getMessage(), (int) $e2->getCode());
+                $this->pdo->exec(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `media_media_id_IDX` ON `media` (`id`);"
+                );
+                $this->pdo->exec(
+                    "CREATE INDEX IF NOT EXISTS `media_media_hash_IDX` ON `media` (`hash`);"
+                );
+                $this->pdo->exec(
+                    "CREATE INDEX IF NOT EXISTS `media_media_album_IDX` ON `media` (`album`);"
+                );
+                $this->pdo->exec(
+                    "CREATE INDEX IF NOT EXISTS `media_media_filename_IDX` ON `media` (`filename`);"
+                );
+                $this->pdo->exec(
+                    "CREATE INDEX IF NOT EXISTS `media_media_time_IDX` ON `media` (`time`);"
+                );
+                $this->pdo->exec(
+                    "CREATE INDEX IF NOT EXISTS `media_media_idx_album_dupe_hash` ON `media` (`album`);"
+                );
+                $this->pdo->exec(
+                    "CREATE INDEX IF NOT EXISTS `media_media_filename_time_IDX` ON `media` (`filename`);"
+                );
+                $this->pdo->exec(
+                    "CREATE INDEX IF NOT EXISTS `media_media_blocked_IDX` ON `media` (`blocked`);"
+                );
+            } catch (\PDOException $e2) {
+                throw new \PDOException(
+                    $e->getMessage() . PHP_EOL . $e2->getMessage(),
+                    (int) $e2->getCode()
+                );
                 exit(1);
             }
         }
@@ -134,7 +167,7 @@ class privuma
 
     public static function getInstance()
     {
-        if(!self::$instance) {
+        if (!self::$instance) {
             self::$instance = new self();
         }
 
@@ -154,6 +187,26 @@ class privuma
     public static function getDataDirectory()
     {
         return self::$dataDirectory;
+    }
+
+    public static function getContent($url, $headers = [])
+    {
+        $ch = curl_init();
+
+        curl_setopt(
+            $ch,
+            CURLOPT_DOH_URL,
+            "https://cloudflare-dns.com/dns-query"
+        );
+        curl_setopt($ch, CURLOPT_AUTOREFERER, true);
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        $data = curl_exec($ch);
+        curl_close($ch);
+        return $data;
     }
 
     public static function getDataFolder()
@@ -178,7 +231,7 @@ class privuma
 
     public static function getEnv(?string $key = null)
     {
-        if(!isset(self::$env)) {
+        if (!isset(self::$env)) {
             return (new dotenv())->get($key);
         }
         return self::$env->get($key);
@@ -192,15 +245,15 @@ class privuma
     public static function canonicalizePath($path): string
     {
         $path = explode(DIRECTORY_SEPARATOR, $path);
-        $stack = array();
+        $stack = [];
         foreach ($path as $seg) {
-            if ($seg == '..') {
+            if ($seg == "..") {
                 // Ignore this segment, remove last segment from stack
                 array_pop($stack);
                 continue;
             }
 
-            if ($seg == '.') {
+            if ($seg == ".") {
                 // Ignore this segment
                 continue;
             }

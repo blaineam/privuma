@@ -149,3 +149,11 @@ services:
     restart: always
     ports:
       - 8080:8080
+  socks-proxy:
+    image: serjs/go-socks5-proxy
+    restart: always
+    ports:
+      - 1080:1080
+    env_file:
+      - "web/config/.env"
+
