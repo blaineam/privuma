@@ -2,7 +2,7 @@
 
 namespace privuma;
 
-$classes = glob(__DIR__ . "/**/*.php");
+$classes = glob(__DIR__ . '/**/*.php');
 
 foreach ($classes as $class) {
     require_once $class;
@@ -41,14 +41,14 @@ class privuma
         string $configDirectory =
             __DIR__ .
                 DIRECTORY_SEPARATOR .
-                ".." .
+                '..' .
                 DIRECTORY_SEPARATOR .
-                "config",
+                'config',
         string $binDirectory =
-            __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "bin",
+            __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'bin',
         string $dataDirectory =
-            __DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "data",
-        string $outputDirectory = __DIR__ . DIRECTORY_SEPARATOR . "output"
+            __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data',
+        string $outputDirectory = __DIR__ . DIRECTORY_SEPARATOR . 'output'
     ) {
         self::$configDirectory = self::canonicalizePath($configDirectory);
         self::$binDirectory = self::canonicalizePath($binDirectory);
@@ -64,11 +64,11 @@ class privuma
 
         self::$env = new dotenv();
 
-        $host = self::$env->get("MYSQL_HOST");
-        $db = self::$env->get("MYSQL_DATABASE");
-        $user = self::$env->get("MYSQL_USER");
-        $pass = self::$env->get("MYSQL_PASSWORD");
-        $charset = "utf8mb4";
+        $host = self::$env->get('MYSQL_HOST');
+        $db = self::$env->get('MYSQL_DATABASE');
+        $user = self::$env->get('MYSQL_USER');
+        $pass = self::$env->get('MYSQL_PASSWORD');
+        $charset = 'utf8mb4';
         $port = 3306;
 
         $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
@@ -106,9 +106,9 @@ class privuma
             var_dump($e);
             try {
                 $this->pdo = new \PDO(
-                    "sqlite:" . __DIR__ . DIRECTORY_SEPARATOR . "db.sqlite3",
-                    "",
-                    "",
+                    'sqlite:' . __DIR__ . DIRECTORY_SEPARATOR . 'db.sqlite3',
+                    '',
+                    '',
                     [
                         \PDO::ATTR_EMULATE_PREPARES => false,
                         \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
@@ -130,28 +130,28 @@ class privuma
                     );');
 
                 $this->pdo->exec(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS `media_media_id_IDX` ON `media` (`id`);"
+                    'CREATE UNIQUE INDEX IF NOT EXISTS `media_media_id_IDX` ON `media` (`id`);'
                 );
                 $this->pdo->exec(
-                    "CREATE INDEX IF NOT EXISTS `media_media_hash_IDX` ON `media` (`hash`);"
+                    'CREATE INDEX IF NOT EXISTS `media_media_hash_IDX` ON `media` (`hash`);'
                 );
                 $this->pdo->exec(
-                    "CREATE INDEX IF NOT EXISTS `media_media_album_IDX` ON `media` (`album`);"
+                    'CREATE INDEX IF NOT EXISTS `media_media_album_IDX` ON `media` (`album`);'
                 );
                 $this->pdo->exec(
-                    "CREATE INDEX IF NOT EXISTS `media_media_filename_IDX` ON `media` (`filename`);"
+                    'CREATE INDEX IF NOT EXISTS `media_media_filename_IDX` ON `media` (`filename`);'
                 );
                 $this->pdo->exec(
-                    "CREATE INDEX IF NOT EXISTS `media_media_time_IDX` ON `media` (`time`);"
+                    'CREATE INDEX IF NOT EXISTS `media_media_time_IDX` ON `media` (`time`);'
                 );
                 $this->pdo->exec(
-                    "CREATE INDEX IF NOT EXISTS `media_media_idx_album_dupe_hash` ON `media` (`album`);"
+                    'CREATE INDEX IF NOT EXISTS `media_media_idx_album_dupe_hash` ON `media` (`album`);'
                 );
                 $this->pdo->exec(
-                    "CREATE INDEX IF NOT EXISTS `media_media_filename_time_IDX` ON `media` (`filename`);"
+                    'CREATE INDEX IF NOT EXISTS `media_media_filename_time_IDX` ON `media` (`filename`);'
                 );
                 $this->pdo->exec(
-                    "CREATE INDEX IF NOT EXISTS `media_media_blocked_IDX` ON `media` (`blocked`);"
+                    'CREATE INDEX IF NOT EXISTS `media_media_blocked_IDX` ON `media` (`blocked`);'
                 );
             } catch (\PDOException $e2) {
                 throw new \PDOException(
@@ -196,7 +196,7 @@ class privuma
         curl_setopt(
             $ch,
             CURLOPT_DOH_URL,
-            "https://cloudflare-dns.com/dns-query"
+            'https://cloudflare-dns.com/dns-query'
         );
         curl_setopt($ch, CURLOPT_AUTOREFERER, true);
         curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -247,13 +247,13 @@ class privuma
         $path = explode(DIRECTORY_SEPARATOR, $path);
         $stack = [];
         foreach ($path as $seg) {
-            if ($seg == "..") {
+            if ($seg == '..') {
                 // Ignore this segment, remove last segment from stack
                 array_pop($stack);
                 continue;
             }
 
-            if ($seg == ".") {
+            if ($seg == '.') {
                 // Ignore this segment
                 continue;
             }
