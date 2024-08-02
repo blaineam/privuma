@@ -6,7 +6,6 @@ use privuma\helpers\mediaFile;
 use privuma\helpers\cloudFS;
 use privuma\helpers\dotenv;
 use privuma\queue\QueueManager;
-use MediaCrypto\MediaCrypto;
 use privuma\privuma;
 
 class processMedia
@@ -136,8 +135,6 @@ class processMedia
                                 $data['url'];
                             return;
                         }
-                        $passphrase =
-                            (new dotenv())->get('DOWNLOAD_PASSWORD') ?? '';
                         $dlExt = !empty(
                             pathinfo($mediaPath, PATHINFO_EXTENSION)
                         )
@@ -159,14 +156,6 @@ class processMedia
                             exec(
                                 "nice convert '{$mediaPath}[0]' -monitor -sampling-factor 4:2:0 -strip -interlace JPEG -colorspace sRGB -resize 1000 -compress JPEG -quality 70 '$dlThumbDest'"
                             );
-                            if (!empty($passphrase)) {
-                                MediaCrypto::encrypt(
-                                    $passphrase,
-                                    $dlThumbDest,
-                                    true
-                                );
-                            }
-
                             echo PHP_EOL .
                                 "Downloading media thumbnail to: $dlThumbPreservationPath";
                             $downloadOps->rename(
@@ -183,7 +172,6 @@ class processMedia
                             (new preserveMedia([], $downloadOps))->compress(
                                 $mediaPath,
                                 $mediaPreservationPath,
-                                $passphrase
                             )
                         ) {
                             is_file($mediaPath) && unlink($mediaPath);
@@ -194,13 +182,6 @@ class processMedia
                             if (is_file($mediaPath)) {
                                 echo PHP_EOL .
                                     "Downloading media to: $mediaPreservationPath";
-                                if (!empty($passphrase)) {
-                                    MediaCrypto::encrypt(
-                                        $passphrase,
-                                        $mediaPath,
-                                        true
-                                    );
-                                }
                                 $downloadOps->rename(
                                     $mediaPath,
                                     $mediaPreservationPath,
@@ -228,7 +209,6 @@ class processMedia
                                 (new preserveMedia([], $downloadOps))->compress(
                                     $thumbnailPath,
                                     $thumbnailPreservationPath,
-                                    $passphrase
                                 )
                             ) {
                                 is_file($thumbnailPath) &&
@@ -240,13 +220,6 @@ class processMedia
                                 if (is_file($thumbnailPath)) {
                                     echo PHP_EOL .
                                         "Downloading media to: $thumbnailPreservationPath";
-                                    if (!empty($passphrase)) {
-                                        MediaCrypto::encrypt(
-                                            $passphrase,
-                                            $thumbnailPath,
-                                            true
-                                        );
-                                    }
                                     $downloadOps->rename(
                                         $thumbnailPath,
                                         $thumbnailPreservationPath,
