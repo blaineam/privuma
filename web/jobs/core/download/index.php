@@ -426,8 +426,10 @@ $viewerHTML = <<<'HEREHTML'
                 );
             }
 
-            var passphrase = getWithExpiry("offline-viewer-pass") ?? "";
-            if (passphrase.length > 0) {
+            var unlock = function (setPassword = true) {
+                if (setPassword) {
+                    passphrase = $("#downloadPassword").val();
+                }
                 if (usingRapiServe.length) {
                     var formData = new FormData();
                     formData.append("key", btoa(passphrase));
@@ -445,10 +447,6 @@ $viewerHTML = <<<'HEREHTML'
                     $("#content").empty();
                     init();
                 }
-            }
-            var unlock = function () {
-                passphrase = $("#downloadPassword").val();
-                init();
             };
             $("#downloadPassword").on("keyup", function (e) {
                 if (e.key === "Enter" || e.keyCode === 13) {
@@ -456,6 +454,12 @@ $viewerHTML = <<<'HEREHTML'
                 }
             });
             $("#unlockBtn").on("click", unlock);
+
+            var passphrase = getWithExpiry("offline-viewer-pass") ?? "";
+            if (passphrase.length > 0) {
+                unlock(false);
+            }
+
             window.groupByKey = (list, key) =>
                 list.reduce(
                     (hash, obj) => ({
