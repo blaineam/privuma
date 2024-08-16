@@ -602,8 +602,7 @@ $viewerHTML = <<<'HEREHTML'
              
              $.fancybox.defaults.btnTpl.favorite = '<button data-fancybox-favorite class="fancybox-button fancybox-button--favorite">&hearts;</button>';
              $('body').on('click', '[data-fancybox-favorite]', function(e) {
-                  let src = $('a[href="' + $.fancybox.getInstance().current.src + '"] img').data('src');
-                  let hash = src.split('/').reverse()[0].split(".")[0];
+                  let hash = $.fancybox.getInstance().current.$thumb.data('src').split('/').reverse()[0].split(".")[0];
                   let tokens = rollingTokens(passphrase);
                   let token = tokens[Math.floor(tokens.length / 2)];
                   let call = `{{ENDPOINT}}?favorite=${hash}&token=${token}`;
