@@ -106,11 +106,13 @@ RUN apt-get install -y  libimage-exiftool-perl ocrmypdf wget
 #       sed -i 's% <policy domain="resource" name="area" value="128MP"/>% <policy domain="resource" name="area" value="512MP"/>%g' /etc/ImageMagick-6/policy.xml && \
 #       sed -i 's% <policy domain="resource" name="memory" value="256MiB"/>% <policy domain="resource" name="memory" value="1GiB"/>%g' /etc/ImageMagick-6/policy.xml
 
-ARG TARGETPLATFORM
-RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then ARCHITECTURE=amd64; elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then ARCHITECTURE=arm; elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then ARCHITECTURE=aarch64; else ARCHITECTURE=amd64; fi \
-    && wget https://mega.nz/linux/repo/xUbuntu_22.04/${ARCHITECTURE}/megacmd-xUbuntu_22.04_${ARCHITECTURE}.deb \
-    && (dpkg -i megacmd-xUbuntu_22.04_${ARCHITECTURE}.deb || true) \
-    && apt-get install -f -y
+# ARG TARGETPLATFORM
+# RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then ARCHITECTURE=amd64; elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then ARCHITECTURE=arm; elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then ARCHITECTURE=aarch64; else ARCHITECTURE=amd64; fi \
+#     && wget https://mega.nz/linux/repo/xUbuntu_22.04/${ARCHITECTURE}/megacmd-xUbuntu_22.04_${ARCHITECTURE}.deb \
+#     && (dpkg -i megacmd-xUbuntu_22.04_${ARCHITECTURE}.deb || true) \
+#     && apt-get install -f -y
+
+RUN apt-get install -y megatools
 
 RUN apt-get -y update \
     && apt-get install -y libicu-dev \
