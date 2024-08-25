@@ -437,7 +437,7 @@ function realFilePath($filePath, $dirnamed_sync_folder = false)
 function getProtectedUrlForMediaPath(
     $path,
     $use_fallback = false,
-    $noIp = false
+    $noIp = true
 ) {
     global $ENDPOINT;
     global $FALLBACK_ENDPOINT;

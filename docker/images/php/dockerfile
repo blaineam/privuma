@@ -1,11 +1,10 @@
-FROM php:7.4-fpm
+FROM php:8.1-fpm
 
 # Set working directory
 WORKDIR /var/www/html
 
 # Install dependencies
-RUN apt-get update && apt-get install -y \
-    cron \
+RUN apt-get update; apt-get upgrade -y ; apt-get install -y \
     build-essential \
     libpng-dev \
     libjpeg62-turbo-dev \
@@ -24,11 +23,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     supervisor \
     htop \
-    rsyslog \
-    percona-toolkit
-
-# Fix rsyslog
-RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf    
+    percona-toolkit \
+    cpulimit
 
 # Install ffmpeg
 RUN apt-get update && apt-get install -y ffmpeg
@@ -37,7 +33,7 @@ RUN apt-get update && \
     apt-get install -y libcurl4-openssl-dev
 
 # Install php extensions
-RUN docker-php-ext-install curl json fileinfo iconv gd mysqli mbstring pdo pdo_mysql zip exif pcntl
+RUN docker-php-ext-install gd mysqli pdo_mysql zip exif pcntl
 
 # Enable PHP Semaphores
 RUN docker-php-ext-configure sysvmsg --enable-sysvmsg; \
@@ -96,9 +92,30 @@ RUN pecl install imagick && \
 
 # Install python an dependencies
 RUN apt-get update && apt-get install -y python3 python3-pip && \
-pip3 install beautifulsoup4 && \
-pip3 install requests && \
-pip3 install tqdm
+pip3 install beautifulsoup4 --break-system-packages && \
+pip3 install requests --break-system-packages && \
+pip3 install tqdm --break-system-packages && \
+pip3 install --upgrade yt-dlp --break-system-packages && \
+pip3 install requests-doh --break-system-packages && \
+pip3 install 'gdown>=5.1.0' --break-system-packages
+
+RUN apt-get install -y  libimage-exiftool-perl ocrmypdf wget
+
+# RUN  sed -i 's%  <policy domain="coder" rights="none" pattern="PDF" />%  <policy domain="coder" rights="read|write" pattern="PDF" />%g' /etc/ImageMagick-6/policy.xml && \
+#       sed -i 's% <policy domain="resource" name="disk" value="1GiB"/>% <policy domain="resource" name="disk" value="8GiB"/>%g' /etc/ImageMagick-6/policy.xml && \
+#       sed -i 's% <policy domain="resource" name="area" value="128MP"/>% <policy domain="resource" name="area" value="512MP"/>%g' /etc/ImageMagick-6/policy.xml && \
+#       sed -i 's% <policy domain="resource" name="memory" value="256MiB"/>% <policy domain="resource" name="memory" value="1GiB"/>%g' /etc/ImageMagick-6/policy.xml
+
+ARG TARGETPLATFORM
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then ARCHITECTURE=amd64; elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then ARCHITECTURE=arm; elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then ARCHITECTURE=aarch64; else ARCHITECTURE=amd64; fi \
+    && wget https://mega.nz/linux/repo/xUbuntu_22.04/${ARCHITECTURE}/megacmd-xUbuntu_22.04_${ARCHITECTURE}.deb \
+    && (dpkg -i megacmd-xUbuntu_22.04_${ARCHITECTURE}.deb || true) \
+    && apt-get install -f -y
+
+RUN apt-get -y update \
+    && apt-get install -y libicu-dev \
+    && docker-php-ext-configure intl \
+    && docker-php-ext-install intl
 
 # Cleanup extra packages
 RUN apt-get remove --autoremove --purge -y gcc make cmake autoconf g++ yasm pkg-config libpng-dev libjpeg62-turbo-dev libde265-dev libx265-dev libxml2-dev libtiff-dev libfontconfig1-dev libfreetype6-dev
@@ -111,14 +128,16 @@ RUN usermod -u 1026 www-data
 
 RUN chsh -s /bin/bash www-data
 
-# Install Crontab Job
-RUN (echo "* * * * * www-data /usr/local/bin/php /var/www/html/cron.php > /var/log/cron.log 2>&1" > /etc/cron.d/privuma)
-RUN touch /var/log/cron.log && chown 1026 /var/log/cron.log
-
 RUN export PATH="$PATH:/usr/local/bin/" && ln -s /usr/local/bin/php /usr/bin/php
 
 RUN echo 'request_terminate_timeout = 10s' >> /usr/local/etc/php-fpm.d/zz-docker.conf
 
-EXPOSE 9000
+RUN curl https://rclone.org/install.sh | bash
 
-CMD bash -c "rsyslogd && cron -L 1 && php-fpm"
+ARG PHP_PORT=9701
+RUN sed -i "s/9000/${PHP_PORT}/g" /usr/local/etc/php-fpm.d/www.conf
+RUN sed -i "s/9000/${PHP_PORT}/g" /usr/local/etc/php-fpm.d/zz-docker.conf
+
+EXPOSE ${PHP_PORT}
+
+CMD bash -c "php-fpm"
