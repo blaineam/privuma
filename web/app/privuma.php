@@ -104,7 +104,7 @@ class privuma
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;');
         } catch (\PDOException $e) {
             var_dump($e);
-            die("skipping sqlite3");
+            die('skipping sqlite3');
             try {
                 $this->pdo = new \PDO(
                     'sqlite:' . __DIR__ . DIRECTORY_SEPARATOR . 'db.sqlite3',
