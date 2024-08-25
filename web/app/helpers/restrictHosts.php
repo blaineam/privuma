@@ -10,6 +10,7 @@ $unrestrictedSessionVariables = array_map('trim', explode(',', $env->get('UNREST
 if (
     isset($_SERVER['SERVER_NAME'])
     && !is_null($_SERVER['SERVER_NAME'])
+    && $_SERVER['SERVER_NAME'] !== '_'
     && !in_array($_SERVER['SERVER_NAME'], $unrestrictedHostnames)
     && empty(array_filter($unrestrictedPaths, function ($path) {
         return strpos($_SERVER['REQUEST_URI'], $path) !== false;

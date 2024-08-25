@@ -69,7 +69,7 @@ class privuma
         $user = self::$env->get('MYSQL_USER');
         $pass = self::$env->get('MYSQL_PASSWORD');
         $charset = 'utf8mb4';
-        $port = 3306;
+        $port = self::$env->get('MYSQL_PORT') ?? 3306;
 
         $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
         $options = [
@@ -104,6 +104,7 @@ class privuma
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;');
         } catch (\PDOException $e) {
             var_dump($e);
+            die("skipping sqlite3");
             try {
                 $this->pdo = new \PDO(
                     'sqlite:' . __DIR__ . DIRECTORY_SEPARATOR . 'db.sqlite3',

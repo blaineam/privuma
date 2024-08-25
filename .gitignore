@@ -1,6 +1,8 @@
 node_modules
 **/@eaDir
 @eaDir
+**/*.sql
+*.sql
 .env
 .auth
 web/.auth

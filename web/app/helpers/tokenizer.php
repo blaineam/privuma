@@ -14,7 +14,7 @@ class tokenizer
     public function mediaLink(
         $path,
         $use_fallback = false,
-        $noIp = false,
+        $noIp = true,
         $localOk = false
     ) {
         if (
@@ -46,7 +46,7 @@ class tokenizer
         return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
     }
 
-    public function rollingTokens($seed, $noIp = false, $noUserAgent = true)
+    public function rollingTokens($seed, $noIp = true, $noUserAgent = true)
     {
         date_default_timezone_set('UTC');
         if (isset($_SERVER['HTTP_CF_CONNECTING_IP'])) {
@@ -115,7 +115,7 @@ class tokenizer
         return $tokens;
     }
 
-    public function checkToken($token, $seed, $noIp = false, $noUserAgent = true)
+    public function checkToken($token, $seed, $noIp = true, $noUserAgent = true)
     {
         return in_array($token, $this->rollingTokens($seed, $noIp, $noUserAgent));
     }
