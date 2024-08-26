@@ -1,4 +1,3 @@
-version: "2.2"
 services:
   gluetun:
     image: qmcgaw/gluetun
@@ -10,6 +9,7 @@ services:
       - "3789:3789"
     env_file:
       - "web/config/.env"
+    restart: always
   web:
     build: ./docker/images/nginx
     container_name: privuma_nginx
@@ -26,8 +26,7 @@ services:
     restart: always
     depends_on:
       - php-web
-    cpu_shares: 256
-    mem_limit: 256M
+      - gluetun
     network_mode: "service:gluetun"
   php-web:
     build:
@@ -41,12 +40,11 @@ services:
     command: bash -c "echo "" > /etc/cron.d/privuma && php-fpm"
     volumes:
       - ./docker/etc/php/zz-overrides.ini:/usr/local/etc/php/conf.d/zz-overrides.ini:ro
-      - ./docker/etc/php/zzz-overrides.conf:/etc/php-fpm.d/zzz-overrides.conf:ro
+      - ./docker/etc/php/zzz-overrides.conf:/usr/local/etc/php-fpm.d/zzz-overrides.conf:ro
       - "./web/:/var/www/html/"
     depends_on:
       - db
-    cpu_shares: 256
-    mem_limit: 1G
+      - gluetun
     network_mode: "service:gluetun"
   php-cron:
     build:
@@ -64,8 +62,7 @@ services:
       - "./cron.log:/var/log/cron.log"
     depends_on:
       - db
-    cpu_shares: 64
-    mem_limit: 2G
+      - gluetun
     network_mode: "service:gluetun"
   db:
     image: mariadb
@@ -79,8 +76,8 @@ services:
       - MARIADB_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_TCP_PORT=3789
     network_mode: "service:gluetun"
-    cpu_shares: 256
-    mem_limit: 1G
+    depends_on:
+      - gluetun
     volumes:
       - ./docker/db:/var/lib/mysql
       - ./docker/images/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -91,6 +88,8 @@ services:
     volumes:
       - ./web/config/rclone:/config/rclone
     user: "${UID}:${GID}"
+    depends_on:
+      - gluetun
     network_mode: "service:gluetun"
     command: serve http --read-only --no-checksum --no-modtime --addr :8991 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
   cloudfs-http-secondary:
@@ -100,6 +99,8 @@ services:
     volumes:
       - ./web/config/rclone:/config/rclone
     user: "${UID}:${GID}"
+    depends_on:
+      - gluetun
     network_mode: "service:gluetun"
     command: serve http --read-only --no-checksum --no-modtime --addr :8992 ${CLOUDFS_HTTP_SECONDARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G  --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
   cloudfs-http-tertiary:
@@ -109,6 +110,8 @@ services:
     volumes:
       - ./web/config/rclone:/config/rclone
     user: "${UID}:${GID}"
+    depends_on:
+      - gluetun
     network_mode: "service:gluetun"
     command: serve http --read-only --no-checksum --no-modtime --addr :8993 ${CLOUDFS_HTTP_TERTIARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
   # cloudfs-s3:
