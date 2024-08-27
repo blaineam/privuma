@@ -43,7 +43,7 @@ services:
       - ./docker/etc/php/zzz-overrides.conf:/usr/local/etc/php-fpm.d/zzz-overrides.conf:ro
       - "./web/:/var/www/html/"
     depends_on:
-      - db
+      # - db
       - gluetun
     network_mode: "service:gluetun"
   php-cron:
@@ -61,26 +61,27 @@ services:
       - "./web/:/var/www/html/"
       - "./cron.log:/var/log/cron.log"
     depends_on:
-      - db
+      # - db
       - gluetun
     network_mode: "service:gluetun"
-  db:
-    image: mariadb
-    restart: always
-    container_name: privuma_db
-    environment:
-      - MARIADB_DATABASE=${MYSQL_DATABASE}
-      - MARIADB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MARIADB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MARIADB_USER=${MYSQL_USER}
-      - MARIADB_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_TCP_PORT=3789
-    network_mode: "service:gluetun"
-    depends_on:
-      - gluetun
-    volumes:
-      - ./docker/db:/var/lib/mysql
-      - ./docker/images/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
+  # db:
+  #   image: mariadb
+  #   restart: always
+  #   container_name: privuma_db
+  #   environment:
+  #     - MARIADB_DATABASE=${MYSQL_DATABASE}
+  #     - MARIADB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+  #     - MARIADB_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+  #     - MARIADB_USER=${MYSQL_USER}
+  #     - MARIADB_PASSWORD=${MYSQL_PASSWORD}
+  #     - MYSQL_TCP_PORT=3789
+  #   network_mode: "service:gluetun"
+  #   depends_on:
+  #     - gluetun
+  #   volumes:
+  #     - ./docker/db:/var/lib/mysql
+  #     - ./docker/etc/mariadb/custom.cnf:/etc/mysql/conf.d/custom.cnf
+  #     - ./docker/images/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
   cloudfs-http:
     image: rclone/rclone:latest
     container_name: privuma_cloudfs_http
