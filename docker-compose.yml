@@ -33,6 +33,7 @@ services:
       context: ./docker/images/php
       args:
         PHP_PORT: 9701
+    image: cenode/privuma-php
     restart: always
     container_name: privuma_php_web
     env_file:
@@ -51,6 +52,7 @@ services:
       context: ./docker/images/php
       args:
         PHP_PORT: 9702
+    image: cenode/privuma-php
     restart: always
     container_name: privuma_php_cron
     env_file:
