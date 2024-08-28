@@ -134,7 +134,7 @@ RUN curl https://rclone.org/install.sh | bash
 
 CMD bash -c "php-fpm"
 
-FROM cenode/privuma-php:latest AS prod
+FROM cenode/privuma-php AS prod
 
 ARG PHP_PORT=9701
 RUN sed -i "s/9000/${PHP_PORT}/g" /usr/local/etc/php-fpm.d/www.conf
