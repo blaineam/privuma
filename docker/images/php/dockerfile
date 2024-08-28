@@ -101,17 +101,6 @@ pip3 install 'gdown>=5.1.0' --break-system-packages
 
 RUN apt-get install -y  libimage-exiftool-perl ocrmypdf wget
 
-# RUN  sed -i 's%  <policy domain="coder" rights="none" pattern="PDF" />%  <policy domain="coder" rights="read|write" pattern="PDF" />%g' /etc/ImageMagick-6/policy.xml && \
-#       sed -i 's% <policy domain="resource" name="disk" value="1GiB"/>% <policy domain="resource" name="disk" value="8GiB"/>%g' /etc/ImageMagick-6/policy.xml && \
-#       sed -i 's% <policy domain="resource" name="area" value="128MP"/>% <policy domain="resource" name="area" value="512MP"/>%g' /etc/ImageMagick-6/policy.xml && \
-#       sed -i 's% <policy domain="resource" name="memory" value="256MiB"/>% <policy domain="resource" name="memory" value="1GiB"/>%g' /etc/ImageMagick-6/policy.xml
-
-# ARG TARGETPLATFORM
-# RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then ARCHITECTURE=amd64; elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then ARCHITECTURE=arm; elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then ARCHITECTURE=aarch64; else ARCHITECTURE=amd64; fi \
-#     && wget https://mega.nz/linux/repo/xUbuntu_22.04/${ARCHITECTURE}/megacmd-xUbuntu_22.04_${ARCHITECTURE}.deb \
-#     && (dpkg -i megacmd-xUbuntu_22.04_${ARCHITECTURE}.deb || true) \
-#     && apt-get install -f -y
-
 RUN apt-get install -y megatools
 
 RUN apt-get -y update \
@@ -119,7 +108,12 @@ RUN apt-get -y update \
     && docker-php-ext-configure intl \
     && docker-php-ext-install intl
 
-RUN apt-get install -y iproute2
+RUN  sed -i 's%  <policy domain="coder" rights="none" pattern="PDF" />%  <policy domain="coder" rights="read|write" pattern="PDF" />%g' /usr/local/etc/ImageMagick-7/policy.xml && \
+      sed -i 's% <policy domain="resource" name="disk" value="1GiB"/>% <policy domain="resource" name="disk" value="8GiB"/>%g' /usr/local/etc/ImageMagick-7/policy.xml && \
+      sed -i 's% <policy domain="resource" name="area" value="128MP"/>% <policy domain="resource" name="area" value="512MP"/>%g' /usr/local/etc/ImageMagick-7/policy.xml && \
+      sed -i 's% <policy domain="resource" name="memory" value="256MiB"/>% <policy domain="resource" name="memory" value="1GiB"/>%g' /usr/local/etc/ImageMagick-7/policy.xml
+
+
 
 # Cleanup extra packages
 RUN apt-get remove --autoremove --purge -y gcc make cmake autoconf g++ yasm pkg-config libpng-dev libjpeg62-turbo-dev libde265-dev libx265-dev libxml2-dev libtiff-dev libfontconfig1-dev libfreetype6-dev
