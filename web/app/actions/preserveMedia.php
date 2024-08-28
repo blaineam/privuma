@@ -166,10 +166,10 @@ class preserveMedia
                 $output = false;
             }
         } else {
-            $path = '/usr/local/bin/mogrify';
+            $path = '/usr/local/bin/magick';
             exec($path . ' -help 2>&1', $test, $binNotFound);
             if($binNotFound !== 0) {
-                $path = '/usr/bin/convert';
+                $path = '/usr/bin/magick';
             }
             exec('nice ' . $path . " '" . $tempFile . "' -resize 1920x1920 -quality 60 -fuzz 7% '" . $newFileTemp . "'", $void, $response);
             $is = getimagesize($newFileTemp);
