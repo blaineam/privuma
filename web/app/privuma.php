@@ -206,11 +206,11 @@ class privuma
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        
+
         if (!is_null($userAgent)) {
             curl_setopt($ch, CURLOPT_USERAGENT, $userAgent);
         }
-        
+
         if (
             !is_null($cookies) &&
             file_exists($cookies)
@@ -226,14 +226,14 @@ class privuma
                 $cookies
             );
         }
-        
+
         $return = curl_exec($ch);
         curl_close($ch);
-        if ($getTempPath) { 
+        if ($getTempPath) {
             $tmpPath = tempnam(sys_get_temp_dir(), 'PVMA-');
             $tmpPath .= '.' . pathinfo(explode('?', $url)[0], PATHINFO_EXTENSION);
             if (!file_put_contents($tmpPath, $return)) {
-                return false;   
+                return false;
             }
             $return = $tmpPath;
         }

@@ -394,7 +394,7 @@ class processMedia
 
     private function downloadUrl(string $url): ?string
     {
-        return privuma::getContent($url, [], null, privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'cookies' . DIRECTORY_SEPARATOR . "curl.txt", true);
+        return privuma::getContent($url, [], null, privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'cookies' . DIRECTORY_SEPARATOR . 'curl.txt', true);
     }
 
     private function loadPath(string $path, bool $directPath = false): ?string
