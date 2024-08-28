@@ -132,10 +132,12 @@ RUN echo 'request_terminate_timeout = 10s' >> /usr/local/etc/php-fpm.d/zz-docker
 
 RUN curl https://rclone.org/install.sh | bash
 
+CMD bash -c "php-fpm"
+
+FROM cenode/privuma-php:latest AS prod
+
 ARG PHP_PORT=9701
 RUN sed -i "s/9000/${PHP_PORT}/g" /usr/local/etc/php-fpm.d/www.conf
 RUN sed -i "s/9000/${PHP_PORT}/g" /usr/local/etc/php-fpm.d/zz-docker.conf
 
 EXPOSE ${PHP_PORT}
-
-CMD bash -c "php-fpm"
