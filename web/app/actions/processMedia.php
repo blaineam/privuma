@@ -394,7 +394,7 @@ class processMedia
 
     private function downloadUrl(string $url): ?string
     {
-        return (new curlDL($url))->getResult();
+        return privuma::getContent($url, [], null, privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'cookies' . DIRECTORY_SEPARATOR . "curl.txt", true);
     }
 
     private function loadPath(string $path, bool $directPath = false): ?string
@@ -436,105 +436,5 @@ class processMedia
         pclose($io);
 
         return $size;
-    }
-}
-
-class curlDL
-{
-    public $result;
-
-    private string $cookiePath;
-
-    public function __construct($url)
-    {
-        $this->cookiePath =
-            privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'cookies';
-        $this->curl_rev_fgc($url);
-    }
-
-    public function __toString()
-    {
-        return $this->result;
-    }
-
-    public function getResult()
-    {
-        return $this->result;
-    }
-
-    private function curl_rev_fgc($url)
-    {
-        if (!file_exists($this->cookiePath)) {
-            mkdir($this->cookiePath . DIRECTORY_SEPARATOR, 0755, true);
-        }
-
-        $usragent =
-            'Mozilla/5.0 (compatible; privumabot/0.1; +https://privuma/bot.html)';
-
-        $this->result = tempnam(sys_get_temp_dir(), 'PVMA-');
-        $this->result .=
-            '.' . pathinfo(explode('?', $url)[0], PATHINFO_EXTENSION);
-
-        $fp = fopen($this->result, 'w');
-
-        if ($fp === false) {
-            echo PHP_EOL . 'Could not open temp file at path: ' . $this->result;
-            $this->result = null;
-            return;
-        }
-
-        $curl = curl_init();
-        curl_setopt(
-            $curl,
-            CURLOPT_DOH_URL,
-            'https://cloudflare-dns.com/dns-query'
-        );
-        curl_setopt($curl, CURLOPT_URL, $url);
-        curl_setopt($curl, CURLOPT_FILE, $fp);
-        curl_setopt($curl, CURLOPT_USERAGENT, $usragent);
-
-        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($curl, CURLOPT_HEADER, 0);
-        curl_setopt($curl, CURLOPT_ENCODING, 'gzip,deflate');
-        curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-        if (
-            !file_exists($this->cookiePath . DIRECTORY_SEPARATOR . 'curl.txt')
-        ) {
-            file_put_contents(
-                $this->cookiePath . DIRECTORY_SEPARATOR . 'curl.txt',
-                null
-            );
-        }
-        curl_setopt(
-            $curl,
-            CURLOPT_COOKIEFILE,
-            $this->cookiePath . DIRECTORY_SEPARATOR . 'curl.txt'
-        );
-        curl_setopt(
-            $curl,
-            CURLOPT_COOKIEJAR,
-            $this->cookiePath . DIRECTORY_SEPARATOR . 'curl.txt'
-        );
-
-        $result = curl_exec($curl);
-        if (
-            empty($result) ||
-            !in_array(explode('/', mime_content_type($this->result))[0], [
-                'image',
-                'video',
-            ])
-        ) {
-            echo PHP_EOL .
-                'Error fetching: ' .
-                htmlentities($url) .
-                curl_error($curl);
-            $this->result = null;
-        }
-        curl_close($curl);
-
-        fclose($fp);
-
-        return;
     }
 }

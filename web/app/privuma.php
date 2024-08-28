@@ -191,7 +191,7 @@ class privuma
         return self::$dataDirectory;
     }
 
-    public static function getContent($url, $headers = [])
+    public static function getContent($url, $headers = [], $userAgent = null, $cookies = null, $getTempPath = false)
     {
         $ch = curl_init();
 
@@ -206,9 +206,38 @@ class privuma
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        $data = curl_exec($ch);
+        
+        if (!is_null($userAgent)) {
+            curl_setopt($ch, CURLOPT_USERAGENT, $userAgent);
+        }
+        
+        if (
+            !is_null($cookies) &&
+            file_exists($cookies)
+        ) {
+            curl_setopt(
+                $ch,
+                CURLOPT_COOKIEFILE,
+                $cookies
+            );
+            curl_setopt(
+                $ch,
+                CURLOPT_COOKIEJAR,
+                $cookies
+            );
+        }
+        
+        $return = curl_exec($ch);
         curl_close($ch);
-        return $data;
+        if ($getTempPath) { 
+            $tmpPath = tempnam(sys_get_temp_dir(), 'PVMA-');
+            $tmpPath .= '.' . pathinfo(explode('?', $url)[0], PATHINFO_EXTENSION);
+            if (!file_put_contents($tmpPath, $return)) {
+                return false;   
+            }
+            $return = $tmpPath;
+        }
+        return $return;
     }
 
     public static function getDataFolder()
