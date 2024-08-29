@@ -41,6 +41,7 @@ services:
       - "web/config/.env"
     command: bash -c "echo "" > /etc/cron.d/privuma && php-fpm"
     volumes:
+      - ./docker/etc/php/php.ini:/usr/local/etc/php/conf.d/z-php.ini:ro
       - ./docker/etc/php/zz-overrides.ini:/usr/local/etc/php/conf.d/zz-overrides.ini:ro
       - ./docker/etc/php/zzz-overrides.conf:/usr/local/etc/php-fpm.d/zzz-overrides.conf:ro
       - "./web/:/var/www/html/"
