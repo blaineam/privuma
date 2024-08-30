@@ -448,6 +448,65 @@ $viewerHTML = <<<'HEREHTML'
                     );
                 });
             }
+
+
+            function searchifica(items, query, keys) {
+                var quotes = [...query.toLowerCase().matchAll(/"([^"]+)"/g)].map((i) => i[1]);
+                var unquoted = query.toLowerCase().split('"').filter((i) => !quotes.includes(i)).join('').split(' ').filter((i) => i.length > 0);
+                var ors = unquoted.filter((i) => i.substring(0, 1) === '~');
+                var nots = unquoted.filter((i) => i.substring(0, 1) === '-');
+                var ands = [...quotes, ...unquoted.filter((i) => !ors.includes(i) && !nots.includes(i))];
+                ors = ors.map((i) => i.substring(1, i.length));
+                nots = nots.map((i) => i.substring(1, i.length));
+
+                // console.log({msg: "performing search", quotes, unquoted, ors, nots, ands});
+                var keyMatches = [];
+                function itsamatch(value) {
+                        for (let not of nots) {
+                           if (value.toLowerCase().includes(not)) {
+                               return -1;
+                           }
+                        }
+                        let orMatch = false;
+                        for (let or of ors) {
+                            if (value.toLowerCase().includes(or)) {
+                               orMatch = true;
+                            }
+                        }
+                        if (!orMatch && ors.length > 0) {
+                            return 0;
+                        }
+
+                        let missimgAndMatch = false;
+                        for (let and of ands) {
+                            if (!(value.toLowerCase()).includes(and)) {
+                               missimgAndMatch = true;
+                            }
+                        }
+
+                        if (missimgAndMatch && ands.length > 0) {
+                            return 0;
+                        }
+                        return 1;
+                }
+                var filtered = items.map((item) => {
+                    let matchedKeys = keys.map((key) => {
+                            if (!Object.keys(item).includes(key)) {
+                            return {key, score: 0};
+                        }
+                        return {key, score: itsamatch(String(item[key]))};
+                    });
+                    if (matchedKeys.map((item) => item.score).includes(-1)) {
+                        return {item, matchedKeys: []}
+                    }
+                    return {item, matchedKeys: matchedKeys.filter((item) => item.score > 0).map((item) => item.key)};
+                }).filter((item) => item.matchedKeys.length > 0 );
+               filtered.sort((a,b) =>
+                           keys.indexOf(a.matchedKeys[0]) - keys.indexOf(b.matchedKeys[0])
+                );
+                filtered = filtered.map((item) => item.item);
+                return filtered;
+            }
         </script>
     </head>
     <body>
@@ -605,7 +664,7 @@ $viewerHTML = <<<'HEREHTML'
                   let hash = $.fancybox.getInstance().current.$thumb.data('src').split('/').reverse()[0].split(".")[0];
                   let tokens = rollingTokens(passphrase);
                   let token = tokens[Math.floor(tokens.length / 2)];
-                  let call = `{{ENDPOINT}}?favorite=${hash}&token=${token}`;
+                  let call = `https://server.hawk-bowfin.ts.net:8989/?favorite=${hash}&token=${token}`;
                   $.ajax(call).then((data) => {
                       toast.info(data);
                   });
@@ -681,14 +740,16 @@ $viewerHTML = <<<'HEREHTML'
                 allAlbums = Object.values(allAlbums).map((album) => album[0]);
                 allAlbums = allAlbums.sort((a, b) => a.time - b.time);
                 function findSearch(searchText, res) {
-                    let result = new Fuse(res, {
-                        useExtendedSearch: true,
-                        includeScore: true,
-                        ignoreLocation: true,
-                        findAllMatches: true,
-                        keys: ["filename", "album", "metadata"],
-                    }).search(searchText);
-                    return result.map((result) => result.item);
+                    // let result = new Fuse(res, {
+                    //     minMatchCharLength: 2,
+                    //     useExtendedSearch: true,
+                    //     includeScore: true,
+                    //     ignoreLocation: true,
+                    //     findAllMatches: true,
+                    //     keys: [{name: "filename", weight: .7}, {name: "album", weight: 1.0}, {name:"metadata", weight: 0.1}],
+                    // }).search(searchText);
+                    // return result.map((result) => result.item);
+                    return searchifica(res, searchText, ['album', 'filename', 'metadata'])
                 }
 
                 jQuery.fancybox.defaults = {
@@ -743,20 +804,11 @@ $viewerHTML = <<<'HEREHTML'
 
                 function getFolderContent(results, desiredPath, search = "") {
                     if (search.length > 3) {
-                        let foundAlbums = findSearch(search, alldata).map(
-                            (item) => item.album,
-                        );
-                        return results
-                            .filter((value, index, self) => {
-                                return foundAlbums.includes(value.album);
-                            })
-                            .filter((value, index, self) => {
-                                return (
-                                    self
-                                        .map(({ album }) => album)
-                                        .indexOf(value.album) === index
-                                );
-                            })
+                        return Object.values(findSearch(search, alldata)
+                        .reduce((acc, item) => {
+                            acc[item.album] = item;
+                            return acc;
+                        }, {}))
                             .map((item) => {
                                 return {
                                     ...item,
