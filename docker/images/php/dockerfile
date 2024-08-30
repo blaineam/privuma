@@ -121,8 +121,8 @@ RUN apt-get remove --autoremove --purge -y gcc make cmake autoconf g++ yasm pkg-
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set php user id to host id
-RUN usermod -u 1026 www-data
+ARG USERID=0
+RUN usermod -u ${USERID} www-data
 
 RUN chsh -s /bin/bash www-data
 
@@ -135,6 +135,11 @@ RUN curl https://rclone.org/install.sh | bash
 CMD bash -c "php-fpm"
 
 FROM cenode/privuma-php AS prod
+
+ARG USERID=0
+# Set php user id to host id
+RUN usermod -u ${USERID} www-data
+RUN chsh -s /bin/bash www-data
 
 ARG PHP_PORT=9701
 RUN sed -i "s/9000/${PHP_PORT}/g" /usr/local/etc/php-fpm.d/www.conf

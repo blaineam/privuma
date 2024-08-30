@@ -32,6 +32,7 @@ services:
     build:
       context: ./docker/images/php
       args:
+        USERID: 1003
         PHP_PORT: 9701
       target: prod
     image: cenode/privuma-php
@@ -53,6 +54,7 @@ services:
     build:
       context: ./docker/images/php
       args:
+        USERID: 1003
         PHP_PORT: 9702
       target: prod
     image: cenode/privuma-php
