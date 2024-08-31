@@ -446,62 +446,92 @@ $viewerHTML = <<<'HEREHTML'
 
 
             function searchifica(items, query, keys) {
-                var quotes = [...query.toLowerCase().matchAll(/"([^"]+)"/g)].map((i) => i[1]);
-                var unquoted = query.toLowerCase().split('"').filter((i) => !quotes.includes(i)).join('').split(' ').filter((i) => i.length > 0);
-                var ors = unquoted.filter((i) => i.substring(0, 1) === '~');
-                var nots = unquoted.filter((i) => i.substring(0, 1) === '-');
-                var ands = [...quotes, ...unquoted.filter((i) => !ors.includes(i) && !nots.includes(i))];
-                ors = ors.map((i) => i.substring(1, i.length));
-                nots = nots.map((i) => i.substring(1, i.length));
-
-                // console.log({msg: "performing search", quotes, unquoted, ors, nots, ands});
-                var keyMatches = [];
-                function itsamatch(value) {
-                        for (let not of nots) {
-                           if (value.toLowerCase().includes(not)) {
-                               return -1;
-                           }
-                        }
-                        let orMatch = false;
-                        for (let or of ors) {
-                            if (value.toLowerCase().includes(or)) {
-                               orMatch = true;
-                            }
-                        }
-                        if (!orMatch && ors.length > 0) {
-                            return 0;
-                        }
-
-                        let missimgAndMatch = false;
-                        for (let and of ands) {
-                            if (!(value.toLowerCase()).includes(and)) {
-                               missimgAndMatch = true;
-                            }
-                        }
-
-                        if (missimgAndMatch && ands.length > 0) {
-                            return 0;
-                        }
-                        return 1;
+              if (keys.length == 0 && items.length > 0) {
+                keys = Object.keys(items[0]);
+              }
+              
+              function determineOperation(part) {
+                let potentialOperator = part.substring(0, 1);
+                if (potentialOperator === '~') {
+                  targetOperation = 'anys';
+                } else if (potentialOperator === '!') {
+                  targetOperation = 'excludes';
+                } else {
+                  targetOperation = 'alls';
                 }
-                var filtered = items.map((item) => {
-                    let matchedKeys = keys.map((key) => {
-                            if (!Object.keys(item).includes(key)) {
-                            return {key, score: 0};
-                        }
-                        return {key, score: itsamatch(String(item[key]))};
-                    });
-                    if (matchedKeys.map((item) => item.score).includes(-1)) {
-                        return {item, matchedKeys: []}
-                    }
-                    return {item, matchedKeys: matchedKeys.filter((item) => item.score > 0).map((item) => item.key)};
-                }).filter((item) => item.matchedKeys.length > 0 );
-               filtered.sort((a,b) =>
-                           keys.indexOf(a.matchedKeys[0]) - keys.indexOf(b.matchedKeys[0])
-                );
-                filtered = filtered.map((item) => item.item);
-                return filtered;
-            }
+                
+                return targetOperation;
+              }
+              
+              let query_parts = query.toLowerCase().split(' ').reduce((acc, part) => {
+                if (part.includes('"') && !acc.quoteOpen) {
+                  acc.quoteOpen = true;
+                  acc.quotePartials = [];
+                  acc.targetOperator = determineOperation(part);
+                  acc.quotePartials.push(acc.targetOperator === 'alls' ? part.substring(1, part.length) : part.substring(2, part.length) );
+                }else if (acc.quoteOpen && !part.includes('"')) {
+                  acc.quotePartials.push(part);
+                }else if (part.includes('"') && acc.quoteOpen) {
+                  acc.quotePartials.push(part.substring(0, part.length - 1));
+                  acc[acc.targetOperator].push(acc.quotePartials.join(" "));
+                  acc.quotePartials = [];
+                  acc.quoteOpen = false;
+                } else {
+                  acc.targetOperator = determineOperation(part);
+                  acc[acc.targetOperator].push(acc.targetOperator === 'alls' ? part : part.substring(1, part.length));
+                }
+                return acc;
+              }, {alls: [], anys: [], excludes: []});
+
+              // console.log({msg: "performing search", query_parts});
+              var keyMatches = [];
+              function itsamatch(value) {
+                      value = value.toLowerCase().split(" ");
+                      for (let exclude of query_parts.excludes) {
+                         if (exclude.includes(' ') ? value.join(' ').includes(exclude) : value.includes(exclude)) {
+                             return -1;
+                         }
+                      }
+                      let orMatch = false;
+                      for (let any of query_parts.anys) {
+                          if (any.includes(' ') ? value.join(' ').includes(any) : value.includes(any)) {
+                             orMatch = true;
+                          }
+                      }
+                      if (!orMatch && query_parts.anys.length > 0) {
+                          return 0;
+                      }
+
+                      let missimgAndMatch = false;
+                      for (let all of query_parts.alls) {
+                          if (all.includes(' ') ? !value.join(' ').includes(all) : !value.includes(all)) {
+                             missimgAndMatch = true;
+                          }
+                      }
+
+                      if (missimgAndMatch && query_parts.alls.length > 0) {
+                          return 0;
+                      }
+                      return 1;
+              }
+              var filtered = items.map((item) => {
+                  let matchedKeys = keys.map((key) => {
+                          if (!Object.keys(item).includes(key)) {
+                          return {key, score: 0};
+                      }
+                      return {key, score: itsamatch(String(item[key]))};
+                  });
+                  if (matchedKeys.map((item) => item.score).includes(-1)) {
+                      return {item, matchedKeys: []}
+                  }
+                  return {item, matchedKeys: matchedKeys.filter((item) => item.score > 0).map((item) => item.key)};
+              }).filter((item) => item.matchedKeys.length > 0 );
+             filtered.sort((a,b) =>
+                         keys.indexOf(a.matchedKeys[0]) - keys.indexOf(b.matchedKeys[0])
+              );
+              filtered = filtered.map((item) => item.item);
+              return filtered;
+          }
         </script>
     </head>
     <body>
