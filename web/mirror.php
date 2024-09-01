@@ -43,7 +43,7 @@ function streamFile($file)
 function roundToNearestMinuteInterval(\DateTime $dateTime, $minuteInterval = 60)
 {
     $hourInterval = 1;
-    if($minuteInterval > 60) {
+    if ($minuteInterval > 60) {
         $hourInterval = floor($minuteInterval / 60);
         $minuteInterval = $minuteInterval - ($hourInterval * 60);
         if ($minuteInterval == 0) {
@@ -64,7 +64,7 @@ if (isset($_SERVER['HTTP_PVMA_IP'])) {
     $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_PVMA_IP'];
 }
 
-if(!isset($_SERVER['AUTHTOKEN']) && is_file($dataDirectory . '/AUTHTOKEN.txt')) {
+if (!isset($_SERVER['AUTHTOKEN']) && is_file($dataDirectory . '/AUTHTOKEN.txt')) {
     $_SERVER['AUTHTOKEN'] = file_get_contents($dataDirectory . '/AUTHTOKEN.txt');
 }
 
@@ -77,7 +77,7 @@ function rollingTokens($seed, $noIp = true)
     $count = max(1, $count);
 
     $tokens = [$seed];
-    for($iteration = 0;$iteration <= $count;$iteration++) {
+    for ($iteration = 0;$iteration <= $count;$iteration++) {
         $modifiedMinutes = $iteration * $interval;
         $date = new \DateTime("-$modifiedMinutes minutes", new \DateTimeZone('America/Los_Angeles'));
         $date = $date->setTime($date->format('H'), round($date->format('i') / $interval) * $interval);
@@ -86,7 +86,7 @@ function rollingTokens($seed, $noIp = true)
 
     }
 
-    for($iteration = 1;$iteration <= $count;$iteration++) {
+    for ($iteration = 1;$iteration <= $count;$iteration++) {
         $modifiedMinutes = $iteration * $interval;
         $date = new \DateTime("+$modifiedMinutes minutes", new \DateTimeZone('America/Los_Angeles'));
         $date = $date->setTime($date->format('H'), round($date->format('i') / $interval) * $interval);
@@ -101,7 +101,7 @@ function checkToken($token, $seed)
     return in_array($token, rollingTokens($seed));
 }
 
-if(isset($_GET['token']) && checkToken($_GET['token'], $_SERVER['AUTHTOKEN']) && isset($_GET['media'])) {
+if (isset($_GET['token']) && checkToken($_GET['token'], $_SERVER['AUTHTOKEN']) && isset($_GET['media'])) {
     streamFile($dataDirectory . DIRECTORY_SEPARATOR . ltrim(base64_decode($_GET['media']), DIRECTORY_SEPARATOR));
 }
 

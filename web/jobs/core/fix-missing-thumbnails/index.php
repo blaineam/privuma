@@ -18,7 +18,7 @@ $conn = $privuma->getPDO();
 $qm = new QueueManager();
 
 $album = '';
-if(isset($_GET['album'])) {
+if (isset($_GET['album'])) {
     $album = $conn->quote($_GET['album']);
     echo PHP_EOL . "checking missing thumbnails for media in album: {$album}";
     $album = " and album = {$album} ";
@@ -27,11 +27,11 @@ if(isset($_GET['album'])) {
 $select_results = $conn->query("SELECT id, album, filename FROM media where filename like '%.mp4' and url is null and album != 'Favorites' {$album} order by id desc");
 $results = $select_results->fetchAll(PDO::FETCH_ASSOC);
 echo PHP_EOL . 'Checking ' . count($results) . ' database records';
-foreach(array_chunk($results, 2000) as $key => $chunk) {
-    foreach($chunk as $key => $row) {
+foreach (array_chunk($results, 2000) as $key => $chunk) {
+    foreach ($chunk as $key => $row) {
         $album = $row['album'];
         $filename = str_replace('.mp4', '.jpg', $row['filename']);
-        if(!is_null($album) && !is_null($filename)) {
+        if (!is_null($album) && !is_null($filename)) {
             print_r('🔍 ');
             $videoPath = privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename;
             $thumbnailPath = str_replace('.mp4', '.jpg', $videoPath);

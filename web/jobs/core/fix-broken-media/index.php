@@ -15,7 +15,7 @@ if ($argc > 1) {
 $conn = $privuma->getPDO();
 
 $album = '';
-if(isset($_GET['album'])) {
+if (isset($_GET['album'])) {
     $album = $conn->quote($_GET['album']);
     echo PHP_EOL . "checking broken media in album: {$album}";
     $album = " and album = {$album} ";
@@ -24,11 +24,11 @@ if(isset($_GET['album'])) {
 $select_results = $conn->query("SELECT id, album, filename FROM media where url is null and album != 'Favorites' {$album} order by id desc");
 $results = $select_results->fetchAll(PDO::FETCH_ASSOC);
 echo PHP_EOL . 'Checking ' . count($results) . ' database records';
-foreach(array_chunk($results, 2000) as $key => $chunk) {
-    foreach($chunk as $key => $row) {
+foreach (array_chunk($results, 2000) as $key => $chunk) {
+    foreach ($chunk as $key => $row) {
         $album = $row['album'];
         $filename = $row['filename'];
-        if(!is_null($album) && !is_null($filename)) {
+        if (!is_null($album) && !is_null($filename)) {
             $preserve = privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename;
             $fileMissing = !$ops->is_file($preserve);
             $connectionOk = count($ops->scandir(privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER)) > 0;

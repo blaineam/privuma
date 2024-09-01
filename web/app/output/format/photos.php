@@ -1221,8 +1221,7 @@ function run()
           'mediadirs.json';
         if (file_exists($mediaDirsPath)) {
             foreach (
-                json_decode(file_get_contents($mediaDirsPath), true)
-                as $folderObj
+                json_decode(file_get_contents($mediaDirsPath), true) as $folderObj
             ) {
                 if (
                     isset($folderObj['HasThumbnailJpg']) &&

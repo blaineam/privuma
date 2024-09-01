@@ -10,14 +10,14 @@ use privuma\helpers\mediaFile;
 require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
 
 $privuma = privuma::getInstance();
-if(!is_file(__DIR__ . DIRECTORY_SEPARATOR . 'cleanup.txt')) {
+if (!is_file(__DIR__ . DIRECTORY_SEPARATOR . 'cleanup.txt')) {
     echo PHP_EOL . 'Nothing to clean';
     return;
 }
 $data = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'cleanup.txt');
 unlink(__DIR__ . DIRECTORY_SEPARATOR . 'cleanup.txt');
 
-if(empty($data)) {
+if (empty($data)) {
     echo PHP_EOL . 'Nothing to clean';
     return;
 }
@@ -32,7 +32,7 @@ function remove_utf8_bom($text)
 $items = explode(PHP_EOL, $data);
 
 $ops = $privuma->getCloudFS();
-foreach($items as $item) {
+foreach ($items as $item) {
     $parts = explode(',', $item);
     $path = remove_utf8_bom($parts[0]);
     $paths = explode(DIRECTORY_SEPARATOR, $path);
