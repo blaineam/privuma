@@ -444,12 +444,96 @@ $viewerHTML = <<<'HEREHTML'
                 });
             }
 
+            const md5 = inputString => {
+               const hc = '0123456789abcdef';
+               const rh = n => {let j,s='';for(j=0;j<=3;j++) s+=hc.charAt((n>>(j*8+4))&0x0F)+hc.charAt((n>>(j*8))&0x0F);return s;}
+               const ad = (x,y) => {let l=(x&0xFFFF)+(y&0xFFFF);let m=(x>>16)+(y>>16)+(l>>16);return (m<<16)|(l&0xFFFF);}
+               const rl = (n,c) => (n<<c)|(n>>>(32-c));
+               const cm = (q,a,b,x,s,t) => ad(rl(ad(ad(a,q),ad(x,t)),s),b);
+               const ff = (a,b,c,d,x,s,t) => cm((b&c)|((~b)&d),a,b,x,s,t);
+               const gg = (a,b,c,d,x,s,t) => cm((b&d)|(c&(~d)),a,b,x,s,t);
+               const hh = (a,b,c,d,x,s,t) => cm(b^c^d,a,b,x,s,t);
+               const ii = (a,b,c,d,x,s,t) => cm(c^(b|(~d)),a,b,x,s,t);
+               const sb = x => {
+                  let i;const nblk=((x.length+8)>>6)+1;const blks=[];for(i=0;i<nblk*16;i++) { blks[i]=0 };
+                  for(i=0;i<x.length;i++) {blks[i>>2]|=x.charCodeAt(i)<<((i%4)*8);}
+                  blks[i>>2]|=0x80<<((i%4)*8);blks[nblk*16-2]=x.length*8;return blks;
+               }
+               let i,x=sb(inputString),a=1732584193,b=-271733879,c=-1732584194,d=271733878,olda,oldb,oldc,oldd;
+               for(i=0;i<x.length;i+=16) {olda=a;oldb=b;oldc=c;oldd=d;
+                  a=ff(a,b,c,d,x[i+ 0], 7, -680876936);d=ff(d,a,b,c,x[i+ 1],12, -389564586);c=ff(c,d,a,b,x[i+ 2],17,  606105819);
+                  b=ff(b,c,d,a,x[i+ 3],22,-1044525330);a=ff(a,b,c,d,x[i+ 4], 7, -176418897);d=ff(d,a,b,c,x[i+ 5],12, 1200080426);
+                  c=ff(c,d,a,b,x[i+ 6],17,-1473231341);b=ff(b,c,d,a,x[i+ 7],22,  -45705983);a=ff(a,b,c,d,x[i+ 8], 7, 1770035416);
+                  d=ff(d,a,b,c,x[i+ 9],12,-1958414417);c=ff(c,d,a,b,x[i+10],17,     -42063);b=ff(b,c,d,a,x[i+11],22,-1990404162);
+                  a=ff(a,b,c,d,x[i+12], 7, 1804603682);d=ff(d,a,b,c,x[i+13],12,  -40341101);c=ff(c,d,a,b,x[i+14],17,-1502002290);
+                  b=ff(b,c,d,a,x[i+15],22, 1236535329);a=gg(a,b,c,d,x[i+ 1], 5, -165796510);d=gg(d,a,b,c,x[i+ 6], 9,-1069501632);
+                  c=gg(c,d,a,b,x[i+11],14,  643717713);b=gg(b,c,d,a,x[i+ 0],20, -373897302);a=gg(a,b,c,d,x[i+ 5], 5, -701558691);
+                  d=gg(d,a,b,c,x[i+10], 9,   38016083);c=gg(c,d,a,b,x[i+15],14, -660478335);b=gg(b,c,d,a,x[i+ 4],20, -405537848);
+                  a=gg(a,b,c,d,x[i+ 9], 5,  568446438);d=gg(d,a,b,c,x[i+14], 9,-1019803690);c=gg(c,d,a,b,x[i+ 3],14, -187363961);
+                  b=gg(b,c,d,a,x[i+ 8],20, 1163531501);a=gg(a,b,c,d,x[i+13], 5,-1444681467);d=gg(d,a,b,c,x[i+ 2], 9,  -51403784);
+                  c=gg(c,d,a,b,x[i+ 7],14, 1735328473);b=gg(b,c,d,a,x[i+12],20,-1926607734);a=hh(a,b,c,d,x[i+ 5], 4,    -378558);
+                  d=hh(d,a,b,c,x[i+ 8],11,-2022574463);c=hh(c,d,a,b,x[i+11],16, 1839030562);b=hh(b,c,d,a,x[i+14],23,  -35309556);
+                  a=hh(a,b,c,d,x[i+ 1], 4,-1530992060);d=hh(d,a,b,c,x[i+ 4],11, 1272893353);c=hh(c,d,a,b,x[i+ 7],16, -155497632);
+                  b=hh(b,c,d,a,x[i+10],23,-1094730640);a=hh(a,b,c,d,x[i+13], 4,  681279174);d=hh(d,a,b,c,x[i+ 0],11, -358537222);
+                  c=hh(c,d,a,b,x[i+ 3],16, -722521979);b=hh(b,c,d,a,x[i+ 6],23,   76029189);a=hh(a,b,c,d,x[i+ 9], 4, -640364487);
+                  d=hh(d,a,b,c,x[i+12],11, -421815835);c=hh(c,d,a,b,x[i+15],16,  530742520);b=hh(b,c,d,a,x[i+ 2],23, -995338651);
+                  a=ii(a,b,c,d,x[i+ 0], 6, -198630844);d=ii(d,a,b,c,x[i+ 7],10, 1126891415);c=ii(c,d,a,b,x[i+14],15,-1416354905);
+                  b=ii(b,c,d,a,x[i+ 5],21,  -57434055);a=ii(a,b,c,d,x[i+12], 6, 1700485571);d=ii(d,a,b,c,x[i+ 3],10,-1894986606);
+                  c=ii(c,d,a,b,x[i+10],15,   -1051523);b=ii(b,c,d,a,x[i+ 1],21,-2054922799);a=ii(a,b,c,d,x[i+ 8], 6, 1873313359);
+                  d=ii(d,a,b,c,x[i+15],10,  -30611744);c=ii(c,d,a,b,x[i+ 6],15,-1560198380);b=ii(b,c,d,a,x[i+13],21, 1309151649);
+                  a=ii(a,b,c,d,x[i+ 4], 6, -145523070);d=ii(d,a,b,c,x[i+11],10,-1120210379);c=ii(c,d,a,b,x[i+ 2],15,  718787259);
+                  b=ii(b,c,d,a,x[i+ 9],21, -343485551);a=ad(a,olda);b=ad(b,oldb);c=ad(c,oldc);d=ad(d,oldd);
+               }
+               return rh(a)+rh(b)+rh(c)+rh(d);
+            }
+
+            function saveAlbumPosition(position, album) {
+                let cache = window.localStorage.getItem("PDLAP");
+                let store = {};
+                if (cache !== null) {
+                    try {
+                        let decoded = atob(cache);
+                        store = JSON.parse(decoded);
+                    } catch (e) {
+
+                    }
+                }
+                store[md5(album)] = position;
+                                window.currentAlbumPosition = position;
+                window.localStorage.setItem("PDLAP",
+                btoa(JSON.stringify(store)));
+            }
+
+            function loadAlbumPosition(album) {
+              let cache = window.localStorage.getItem("PDLAP");
+              let store = {};
+              if (cache !== null) {
+                  try {
+                      let decoded = atob(cache);
+                      store = JSON.parse(decoded);
+                  } catch (e) {
+
+                  }
+              }
+              if (store[md5(album)]) {
+                  return store[md5(album)];
+              }
+              return {src: false, currentTime: 0}
+            }
+
+            function updatePlaybackTimestamp(src, album, video) {
+              let currentTime = video.currentTime;
+              if (video.currentTime >= video.duration * 0.99) {
+                  currentTime = 0;
+              }
+              saveAlbumPosition({src, currentTime}, album);
+            }
 
             function searchifica(items, query, keys) {
               if (keys.length == 0 && items.length > 0) {
                 keys = Object.keys(items[0]);
               }
-              
+
               function determineOperation(part) {
                 let potentialOperator = part.substring(0, 1);
                 if (potentialOperator === '~') {
@@ -459,10 +543,10 @@ $viewerHTML = <<<'HEREHTML'
                 } else {
                   targetOperation = 'alls';
                 }
-                
+
                 return targetOperation;
               }
-              
+
               let query_parts = query.toLowerCase().split(' ').reduce((acc, part) => {
                 if (part.includes('"') && !acc.quoteOpen) {
                   acc.quoteOpen = true;
@@ -612,48 +696,6 @@ $viewerHTML = <<<'HEREHTML'
 
             !function(n,t){"object"==typeof exports&&"undefined"!=typeof module?module.exports=t():"function"==typeof define&&define.amd?define(t):(n=n||self).sha1=t()}(this,(function(){"use strict";var n,t=String.fromCharCode;function r(n){return n=function(n,t,r){if(!t&&!r&&n instanceof Uint8Array&&!n.copy)return n;t>>>=0,null==r&&(r=n.byteLength-t);return new Uint8Array(n.buffer,n.byteOffset+t,r)}(n),t.apply(String,n)}function e(n,t){if("string"==typeof n)return n;if(n=r(n),!1!==t&&(e=n,!c.test(e)))if(t)n=s(n);else if(null==t)try{n=s(n)}catch(n){}var e;return n}function i(n,t){n=String(n),null==t&&(t=function(n){var t=a.exec(n);return!!t&&t[1]}(n)),t&&(n=function(n){return unescape(encodeURI(n))}(n));for(var r=n.length,e=new Uint8Array(r);r--;)e[r]=n.charCodeAt(r);return e}function f(n){switch(n){case!1:case"binary":return r(this);case"hex":return i=(t=this).BYTES_PER_ELEMENT<<1,t.reduce((function(n,t){return n+(t>>>0).toString(16).padStart(i,"0")}),"");case"base64":return btoa(r(this));case"utf8":n=!0}var t,i;return e(this,n)}function u(){return void 0!==n||(n=!!new Uint8Array(new Uint16Array([1]).buffer)[0],u=function(){return n}),n}function o(n){return(255&n)<<24|(65280&n)<<8|n>>8&65280|n>>24&255}var a=/([^\x00-\xFF])/,c=/^[\x00-\x7F]*$/;function s(n){return decodeURIComponent(escape(n))}return function(n,t){var r=n&&n.BYTES_PER_ELEMENT?n:i(n,t);return(r=function(n){var t,r,e,i,f,a,c=n.byteLength,s=0,y=Uint32Array.from([t=1732584193,r=4023233417,~t,~r,3285377520]),d=new Uint32Array(80),h=c/4+2|15,p=new Uint32Array(h+1);for(p[h]=8*c,p[c>>2]|=128<<(~c<<3);c--;)p[c>>2]|=n[c]<<(~c<<3);for(t=y.slice();s<h;s+=16,t.set(y)){for(c=0;c<80;t[0]=(f=((n=t[0])<<5|n>>>27)+t[4]+(d[c]=c<16?p[s+c]:f<<1|f>>>31)+1518500249,r=t[1],e=t[2],i=t[3],f+((a=c/5>>2)?2!=a?(r^e^i)+(2&a?1876969533:341275144):882459459+(r&e|r&i|e&i):r&e|~r&i)),t[1]=n,t[2]=r<<30|r>>>2,t[3]=e,t[4]=i,++c)f=d[c-3]^d[c-8]^d[c-14]^d[c-16];for(c=5;c;)y[--c]=y[c]+t[c]}return u()&&(y=y.map(o)),new Uint8Array(y.buffer,y.byteOffset,y.byteLength)}(r)).toString=f,r}}));
 
-            const md5 = inputString => {
-               const hc = '0123456789abcdef';
-               const rh = n => {let j,s='';for(j=0;j<=3;j++) s+=hc.charAt((n>>(j*8+4))&0x0F)+hc.charAt((n>>(j*8))&0x0F);return s;}
-               const ad = (x,y) => {let l=(x&0xFFFF)+(y&0xFFFF);let m=(x>>16)+(y>>16)+(l>>16);return (m<<16)|(l&0xFFFF);}
-               const rl = (n,c) => (n<<c)|(n>>>(32-c));
-               const cm = (q,a,b,x,s,t) => ad(rl(ad(ad(a,q),ad(x,t)),s),b);
-               const ff = (a,b,c,d,x,s,t) => cm((b&c)|((~b)&d),a,b,x,s,t);
-               const gg = (a,b,c,d,x,s,t) => cm((b&d)|(c&(~d)),a,b,x,s,t);
-               const hh = (a,b,c,d,x,s,t) => cm(b^c^d,a,b,x,s,t);
-               const ii = (a,b,c,d,x,s,t) => cm(c^(b|(~d)),a,b,x,s,t);
-               const sb = x => {
-                  let i;const nblk=((x.length+8)>>6)+1;const blks=[];for(i=0;i<nblk*16;i++) { blks[i]=0 };
-                  for(i=0;i<x.length;i++) {blks[i>>2]|=x.charCodeAt(i)<<((i%4)*8);}
-                  blks[i>>2]|=0x80<<((i%4)*8);blks[nblk*16-2]=x.length*8;return blks;
-               }
-               let i,x=sb(inputString),a=1732584193,b=-271733879,c=-1732584194,d=271733878,olda,oldb,oldc,oldd;
-               for(i=0;i<x.length;i+=16) {olda=a;oldb=b;oldc=c;oldd=d;
-                  a=ff(a,b,c,d,x[i+ 0], 7, -680876936);d=ff(d,a,b,c,x[i+ 1],12, -389564586);c=ff(c,d,a,b,x[i+ 2],17,  606105819);
-                  b=ff(b,c,d,a,x[i+ 3],22,-1044525330);a=ff(a,b,c,d,x[i+ 4], 7, -176418897);d=ff(d,a,b,c,x[i+ 5],12, 1200080426);
-                  c=ff(c,d,a,b,x[i+ 6],17,-1473231341);b=ff(b,c,d,a,x[i+ 7],22,  -45705983);a=ff(a,b,c,d,x[i+ 8], 7, 1770035416);
-                  d=ff(d,a,b,c,x[i+ 9],12,-1958414417);c=ff(c,d,a,b,x[i+10],17,     -42063);b=ff(b,c,d,a,x[i+11],22,-1990404162);
-                  a=ff(a,b,c,d,x[i+12], 7, 1804603682);d=ff(d,a,b,c,x[i+13],12,  -40341101);c=ff(c,d,a,b,x[i+14],17,-1502002290);
-                  b=ff(b,c,d,a,x[i+15],22, 1236535329);a=gg(a,b,c,d,x[i+ 1], 5, -165796510);d=gg(d,a,b,c,x[i+ 6], 9,-1069501632);
-                  c=gg(c,d,a,b,x[i+11],14,  643717713);b=gg(b,c,d,a,x[i+ 0],20, -373897302);a=gg(a,b,c,d,x[i+ 5], 5, -701558691);
-                  d=gg(d,a,b,c,x[i+10], 9,   38016083);c=gg(c,d,a,b,x[i+15],14, -660478335);b=gg(b,c,d,a,x[i+ 4],20, -405537848);
-                  a=gg(a,b,c,d,x[i+ 9], 5,  568446438);d=gg(d,a,b,c,x[i+14], 9,-1019803690);c=gg(c,d,a,b,x[i+ 3],14, -187363961);
-                  b=gg(b,c,d,a,x[i+ 8],20, 1163531501);a=gg(a,b,c,d,x[i+13], 5,-1444681467);d=gg(d,a,b,c,x[i+ 2], 9,  -51403784);
-                  c=gg(c,d,a,b,x[i+ 7],14, 1735328473);b=gg(b,c,d,a,x[i+12],20,-1926607734);a=hh(a,b,c,d,x[i+ 5], 4,    -378558);
-                  d=hh(d,a,b,c,x[i+ 8],11,-2022574463);c=hh(c,d,a,b,x[i+11],16, 1839030562);b=hh(b,c,d,a,x[i+14],23,  -35309556);
-                  a=hh(a,b,c,d,x[i+ 1], 4,-1530992060);d=hh(d,a,b,c,x[i+ 4],11, 1272893353);c=hh(c,d,a,b,x[i+ 7],16, -155497632);
-                  b=hh(b,c,d,a,x[i+10],23,-1094730640);a=hh(a,b,c,d,x[i+13], 4,  681279174);d=hh(d,a,b,c,x[i+ 0],11, -358537222);
-                  c=hh(c,d,a,b,x[i+ 3],16, -722521979);b=hh(b,c,d,a,x[i+ 6],23,   76029189);a=hh(a,b,c,d,x[i+ 9], 4, -640364487);
-                  d=hh(d,a,b,c,x[i+12],11, -421815835);c=hh(c,d,a,b,x[i+15],16,  530742520);b=hh(b,c,d,a,x[i+ 2],23, -995338651);
-                  a=ii(a,b,c,d,x[i+ 0], 6, -198630844);d=ii(d,a,b,c,x[i+ 7],10, 1126891415);c=ii(c,d,a,b,x[i+14],15,-1416354905);
-                  b=ii(b,c,d,a,x[i+ 5],21,  -57434055);a=ii(a,b,c,d,x[i+12], 6, 1700485571);d=ii(d,a,b,c,x[i+ 3],10,-1894986606);
-                  c=ii(c,d,a,b,x[i+10],15,   -1051523);b=ii(b,c,d,a,x[i+ 1],21,-2054922799);a=ii(a,b,c,d,x[i+ 8], 6, 1873313359);
-                  d=ii(d,a,b,c,x[i+15],10,  -30611744);c=ii(c,d,a,b,x[i+ 6],15,-1560198380);b=ii(b,c,d,a,x[i+13],21, 1309151649);
-                  a=ii(a,b,c,d,x[i+ 4], 6, -145523070);d=ii(d,a,b,c,x[i+11],10,-1120210379);c=ii(c,d,a,b,x[i+ 2],15,  718787259);
-                  b=ii(b,c,d,a,x[i+ 9],21, -343485551);a=ad(a,olda);b=ad(b,oldb);c=ad(c,oldc);d=ad(d,oldd);
-               }
-               return rh(a)+rh(b)+rh(c)+rh(d);
-            }
 
              function rollingTokens(seed) {
                let interval = 30;
@@ -683,7 +725,7 @@ $viewerHTML = <<<'HEREHTML'
 
                return tokens;
              }
-
+             $.fancybox.defaults.hash = false;
              $.fancybox.defaults.btnTpl.favorite = '<button data-fancybox-favorite class="fancybox-button fancybox-button--favorite">&hearts;</button>';
              $('body').on('click', '[data-fancybox-favorite]', function(e) {
                   let hash = $.fancybox.getInstance().current.$thumb.data('src').split('/').reverse()[0].split(".")[0];
@@ -945,6 +987,8 @@ $viewerHTML = <<<'HEREHTML'
 
                 (async () => {
                     function showAlbum(album, kind) {
+                        window.currentAlbum = album;
+                        window.currentAlbumPosition = loadAlbumPosition(album);
                         res = alldata.filter((media) => media.album === album);
                         let testRes = findSearch(search, res);
                         if (testRes.length > 0) {
@@ -1052,6 +1096,7 @@ $viewerHTML = <<<'HEREHTML'
                                             ? "image"
                                             : "video",
                                         videoResource,
+                                        item.hash,
                                     ]);
                                 }
                                 if (
@@ -1069,6 +1114,7 @@ $viewerHTML = <<<'HEREHTML'
                                         item.metadata,
                                         "",
                                         "",
+                                        item.hash,
                                     ]);
                                 }
                             }),
@@ -1089,10 +1135,11 @@ $viewerHTML = <<<'HEREHTML'
                                             meta,
                                             datatype,
                                             videoResource,
+                                            hash,
                                         ]) =>
                                             isVideo
                                                 ? jQuery("#content").append(
-                                                      `<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery" href="${videoResource}">
+                                                      `<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery"  data-filehash="${hash}"  href="${videoResource}">
                     <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""></div><script type="text/json">${meta}<\/script>` +
                                                           (datatype === "video"
                                                               ? `<svg style="position: absolute;z-index: 2;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1105,12 +1152,17 @@ $viewerHTML = <<<'HEREHTML'
                                                           `</a>`,
                                                   )
                                                 : jQuery("#content").append(
-                                                      `<a class="gallerypicture" data-width="1920" href="${uri}" title="${filename}" data-fancybox="gallery">
+                                                      `<a class="gallerypicture" data-width="1920" href="${uri}" title="${filename}"  data-filehash="${hash}"  data-fancybox="gallery">
                     <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)"></div><script type="text/json">${meta}<\/script></a>`,
                                                   ),
                                     );
                             })
                             .finally(() => {
+                                if (window.currentAlbumPosition.src) {
+                                    let mediaLink = $('a[data-filehash="' + window.currentAlbumPosition.src + '"');
+                                    mediaLink.get(0).scrollIntoView();
+                                    mediaLink.click();
+                                }
                                 processLazyLoad();
                                 jQuery("#content").append(
                                     `<div style="height: 63px"></div>`,
@@ -1347,7 +1399,6 @@ $viewerHTML = <<<'HEREHTML'
                                     element.attr("href", uri);
                                     slide.src = uri;
                                     slide.original = targetsrc;
-                                    console.log(targetsrc);
                                     if (slide.hasError) {
                                         $(
                                             ".fancybox-content.fancybox-error",
@@ -1368,7 +1419,11 @@ $viewerHTML = <<<'HEREHTML'
                     $(document).on(
                         "afterShow.fb",
                         function (e, instance, slide) {
+                            let originalLink = $(
+                                '.gallerypicture[href="' + slide.src + '"]'
+                            );
                             if ($("video").length == 0) {
+                                saveAlbumPosition({src: originalLink.data('filehash'), currentTime: 0}, window.currentAlbum);
                                 let element = $(
                                     '.gallerypicture[href="' + slide.src + '"]',
                                 );
@@ -1517,6 +1572,9 @@ $viewerHTML = <<<'HEREHTML'
                                 updateProgressBar,
                                 500,
                             );
+
+
+                            saveAlbumPosition({src: originalLink.data('filehash'), currentTime: window.currentAlbumPosition.src === originalLink.data('filehash') ? window.currentAlbumPosition.currentTime: 0}, window.currentAlbum);
                             medcrypt.getSrc(slide.src, (uri) => {
                                 $(
                                     '.gallerypicture[href="' + slide.src + '"]',
@@ -1527,6 +1585,14 @@ $viewerHTML = <<<'HEREHTML'
                                     .parent()
                                     .trigger("load")
                                     .trigger("play");
+                                let videoElement = document.getElementsByTagName('video')[0];
+                                videoElement.currentTime = window.currentAlbumPosition.currentTime ?? 0;
+                                videoElement.addEventListener('timeupdate', (e) => {
+                                    updatePlaybackTimestamp(
+                                        originalLink.data('filehash'), window.currentAlbum, videoElement);
+                                });
+
+
                             });
                             $("video").removeAttr("controls");
                             $("video").click(function toggleControls() {
