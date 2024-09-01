@@ -16,11 +16,11 @@ class preserveMedia
     {
         $qm = new QueueManager();
         $this->ops = is_null($operator) ? privuma::getCloudFS() : $operator;
-        if(isset($data['filename'])) {
+        if (isset($data['filename'])) {
             $ext = pathinfo($data['filename'], PATHINFO_EXTENSION);
             $correctedFilename = basename($data['filename'], '.' . $ext) . '.' . strtolower($ext);
         }
-        if(isset($data['album']) && isset($data['filename'])) {
+        if (isset($data['album']) && isset($data['filename'])) {
             $hash = md5_file($data['path']);
             echo PHP_EOL . 'creating media file with: ' . json_encode([
                 'filename' => $correctedFilename,
@@ -30,7 +30,7 @@ class preserveMedia
             ]);
             $mediaFile = new mediaFile(str_replace(['.mpg', '.mod', '.mmv', '.tod', '.wmv', '.asf', '.avi', '.divx', '.mov', '.m4v', '.3gp', '.3g2', '.mp4', '.m2t', '.m2ts', '.mts', '.mkv', '.webm'], '.mp4', $correctedFilename), $data['album'], null, $hash);
             echo PHP_EOL . 'New mediaFile: ' . $mediaFile->path();
-            if($mediaFile->hashConflict()) {
+            if ($mediaFile->hashConflict()) {
                 echo PHP_EOL . 'There was a hash conflict';
                 unlink($data['path']);
                 return;
@@ -38,9 +38,9 @@ class preserveMedia
                 echo PHP_EOL . 'Hash is new for media file';
             }
 
-            if($mediaFile->dupe()) {
+            if ($mediaFile->dupe()) {
                 $this->ops->file_put_contents(privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path(), privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->original());
-                if(!$mediaFile->save()) {
+                if (!$mediaFile->save()) {
                     $this->ops->unlink(privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path());
                     echo PHP_EOL . 'Preservation Failed for: ' . privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path();
                 } else {
@@ -53,8 +53,8 @@ class preserveMedia
             }
 
             echo PHP_EOL . 'Compressing: ' . $data['path'] . ' To: ' . privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path();
-            if($this->compress($data['path'], privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path())) {
-                if(!$mediaFile->save()) {
+            if ($this->compress($data['path'], privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path())) {
+                if (!$mediaFile->save()) {
                     $this->ops->unlink(privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path());
                     echo PHP_EOL . 'Preservation Failed for: ' . privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path();
                 } else {
@@ -69,9 +69,9 @@ class preserveMedia
             return;
         }
 
-        if(isset($data['preserve']) && $this->ops->rename($data['path'], $data['preserve'], false) !== false) {
+        if (isset($data['preserve']) && $this->ops->rename($data['path'], $data['preserve'], false) !== false) {
             $scan = $this->ops->scandir(dirname($data['preserve'], 2), true, false, null, true);
-            if($scan !== false) {
+            if ($scan !== false) {
                 $value = $scan[array_search(basename(dirname($data['preserve'])), array_column($scan, 'Name'))];
                 $value['Path'] = substr(ltrim(dirname($data['preserve']), DIRECTORY_SEPARATOR), strlen(privuma::getDataFolder() . DIRECTORY_SEPARATOR));
                 $qm->enqueue(json_encode(['type' => 'cachePath', 'data' => [
@@ -80,7 +80,7 @@ class preserveMedia
                     'value' => $value,
                 ]]));
             }
-            if(!isset($data['skipThumbnail']) || $data['skipThumbnail'] == false) {
+            if (!isset($data['skipThumbnail']) || $data['skipThumbnail'] == false) {
                 $qm->enqueue(json_encode(['type' => 'generateThumbnail', 'data' => ['path' => $data['preserve']]]));
             }
         }
@@ -97,9 +97,9 @@ class preserveMedia
         $ext = !empty(pathinfo($file, PATHINFO_EXTENSION)) ? pathinfo($file, PATHINFO_EXTENSION): $mimeExt;
         $preserveExt = pathinfo($preserve, PATHINFO_EXTENSION);
 
-        if(in_array(strtoupper($ext), $allowedPhotos) || in_array(strtoupper($preserveExt), $allowedPhotos)) {
+        if (in_array(strtoupper($ext), $allowedPhotos) || in_array(strtoupper($preserveExt), $allowedPhotos)) {
             return $this->compressPhoto($file, $preserve);
-        } elseif(in_array(strtoupper($ext), $allowedVideos) || in_array(strtoupper($preserveExt), $allowedVideos)) {
+        } elseif (in_array(strtoupper($ext), $allowedVideos) || in_array(strtoupper($preserveExt), $allowedVideos)) {
             return $this->compressVideo($file, $preserve);
         } else {
             echo PHP_EOL . 'Unsupported File Extension: ' . $ext;
@@ -152,12 +152,12 @@ class preserveMedia
         if (strtolower($ext) === 'gif') {
             $path = '/usr/local/bin/gifsicle';
             exec($path . ' --help 2>&1', $test, $binNotFound);
-            if($binNotFound !== 0) {
+            if ($binNotFound !== 0) {
                 $path = '/usr/bin/gifsicle';
             }
             exec('nice cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . ' -- ' . $path . " -O3 --careful --conserve-memory --colors=100 --no-ignore-errors --no-warnings --crop-transparency --no-comments --no-extensions --no-names --resize-fit 1920x1920 '" . $tempFile . "' -o '" . $newFileTemp . "'", $void, $response);
 
-            if($response == 0) {
+            if ($response == 0) {
                 echo PHP_EOL . 'gifsicle was successful';
                 $output = $this->ops->rename($newFileTemp, $filePath, false);
             } else {
@@ -168,15 +168,15 @@ class preserveMedia
         } else {
             $path = '/usr/local/bin/magick';
             exec($path . ' -help 2>&1', $test, $binNotFound);
-            if($binNotFound !== 0) {
+            if ($binNotFound !== 0) {
                 $path = '/usr/bin/magick';
             }
             exec('nice ' . $path . " '" . $tempFile . "' -resize 1920x1920 -quality 60 -fuzz 7% '" . $newFileTemp . "'", $void, $response);
             $is = getimagesize($newFileTemp);
-            if($response == 0) {
+            if ($response == 0) {
                 echo PHP_EOL . 'convert was successful';
                 $output = $this->ops->rename($newFileTemp, $filePath, false);
-            } elseif((exif_imagetype($newFileTemp) || $is !== false) && filesize($newFileTemp) < 1024 * 1024 * 30) {
+            } elseif ((exif_imagetype($newFileTemp) || $is !== false) && filesize($newFileTemp) < 1024 * 1024 * 30) {
                 echo PHP_EOL . 'convert failed but this is a reasonably sized image (<30MB), lets save it anyways';
                 $output = $this->ops->rename($newFileTemp, $filePath, false);
             } else {

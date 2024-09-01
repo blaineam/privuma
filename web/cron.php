@@ -14,7 +14,7 @@ if ($DEBUG) {
     var_dump($phpPath);
 }
 
-if(strpos($phpPath, 'not found') !== false || empty($phpPath)) {
+if (strpos($phpPath, 'not found') !== false || empty($phpPath)) {
     echo 'Unmet Dependencies, cannot find php binaries on system.';
     var_dump($phpPath);
     exit(1);
@@ -30,7 +30,7 @@ exec('find ' . sys_get_temp_dir() . DIRECTORY_SEPARATOR . " -maxdepth 1 -type f 
 
 $coreJobsDir = __DIR__ . '/jobs/core';
 $pluginsJobsDir = __DIR__ . '/jobs/plugins';
-foreach(array_diff(array_merge(scandir($coreJobsDir), scandir($pluginsJobsDir)), ['.', '..']) as $job) {
+foreach (array_diff(array_merge(scandir($coreJobsDir), scandir($pluginsJobsDir)), ['.', '..']) as $job) {
     $jobDir = $pluginsJobsDir . '/' . $job . '/';
     if (!is_dir($jobDir)) {
         $jobDir = $coreJobsDir . '/' . $job . '/';
@@ -41,14 +41,14 @@ foreach(array_diff(array_merge(scandir($coreJobsDir), scandir($pluginsJobsDir)),
     $disabled = $jobDir . '.disabled';
     $log = $privuma->getOutputDirectory() . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . $job . '.txt';
 
-    if(!is_file($command)) {
+    if (!is_file($command)) {
         if ($DEBUG) {
             var_dump('COMMAND NOT FOUND: ' . $command);
         }
         continue;
     }
 
-    if(is_file($disabled)) {
+    if (is_file($disabled)) {
         if ($DEBUG) {
             var_dump('Job is disabled: ' . $job);
         }

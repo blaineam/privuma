@@ -18,8 +18,8 @@ if (
 ) {
     session_start();
     $found = false;
-    foreach($unrestrictedSessionVariables as $variableName) {
-        if(isset($_SESSION[$variableName])) {
+    foreach ($unrestrictedSessionVariables as $variableName) {
+        if (isset($_SESSION[$variableName])) {
             $found = true;
         }
     }

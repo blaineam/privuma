@@ -11,7 +11,7 @@ class generateThumbnail
         $ffmpegThreadCount = PHP_OS_FAMILY == 'Darwin' ? 4 : 1;
         $ffmpegPath = PHP_OS_FAMILY == 'Darwin' ? '/usr/local/bin/ffmpeg' : '/usr/bin/ffmpeg';
 
-        if(isset($data['path']) && strpos($data['path'], '.mp4') !== false) {
+        if (isset($data['path']) && strpos($data['path'], '.mp4') !== false) {
             $tempFile = privuma::getCloudFS()->pull($data['path']);
             rename($tempFile, $tempFile . '.mp4');
             $tempFile = $tempFile . '.mp4';

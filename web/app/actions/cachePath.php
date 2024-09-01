@@ -11,19 +11,19 @@ class cachePath
         // default json cache;
         $cache = 'mediadirs';
 
-        if(isset($data['cacheName'])) {
+        if (isset($data['cacheName'])) {
             $cache = $data['cacheName'];
             unset($data['cacheName']);
             echo PHP_EOL . 'Using cache: ' . $cache;
         }
 
-        if(isset($data['emptyCache'])) {
+        if (isset($data['emptyCache'])) {
             $this->emptyCache($cache);
             unset($data['emptyCache']);
             echo PHP_EOL . 'Emptied Cache';
         }
 
-        if(isset($data['key'])) {
+        if (isset($data['key'])) {
             $this->appendCache($data['value'], $data['key'], $cache);
             echo PHP_EOL . 'Saved Cache Key: ' . $data['key'];
         }
@@ -47,7 +47,7 @@ class cachePath
         -- opening in w+ would truncate the file *before* we could get a lock!
         */
 
-        if(version_compare(PHP_VERSION, '5.2.6') >= 0) {
+        if (version_compare(PHP_VERSION, '5.2.6') >= 0) {
             $mode = 'c+';
         } else {
             //'c+' would be the ideal $mode to use, but that's only
@@ -59,7 +59,7 @@ class cachePath
         }
 
         //open file
-        if($handle = @fopen($file, $mode)) {
+        if ($handle = @fopen($file, $mode)) {
             //get write lock
             flock($handle, LOCK_EX);
 

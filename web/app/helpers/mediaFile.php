@@ -78,7 +78,7 @@ class mediaFile
         }
 
         $files = $this->cloudFS->glob(privuma::getDataFolder() . DIRECTORY_SEPARATOR . self::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . explode('---', $filename)[0] . '.*');
-        if($files === false) {
+        if ($files === false) {
             $files = [];
         }
 
@@ -110,7 +110,7 @@ class mediaFile
 
     public function hash()
     {
-        if(!is_null($this->url)) {
+        if (!is_null($this->url)) {
             return md5($this->url);
         }
 
@@ -119,7 +119,7 @@ class mediaFile
 
     public function original()
     {
-        if(is_null($this->hash) && $hash = $this->hash()) {
+        if (is_null($this->hash) && $hash = $this->hash()) {
             $this->hash = $hash;
         }
 
@@ -177,7 +177,7 @@ class mediaFile
 
     public function hashConflict()
     {
-        if(is_null($this->hash) && $hash = $this->hash()) {
+        if (is_null($this->hash) && $hash = $this->hash()) {
             $this->hash = $hash;
         }
 
@@ -194,7 +194,7 @@ class mediaFile
 
     public function duplicateHashes()
     {
-        if(is_null($this->hash) && $hash = $this->persistedHash()) {
+        if (is_null($this->hash) && $hash = $this->persistedHash()) {
             $this->hash = $hash;
         }
 
@@ -260,7 +260,7 @@ class mediaFile
 
     public function save(): bool
     {
-        if(is_null($this->hash) && $hash = $this->hash()) {
+        if (is_null($this->hash) && $hash = $this->hash()) {
             $this->hash = $hash;
         }
 
@@ -289,7 +289,7 @@ class mediaFile
 
     public function favorited(): bool
     {
-        if(is_null($this->hash) && $hash = $this->hash()) {
+        if (is_null($this->hash) && $hash = $this->hash()) {
             $this->hash = $hash;
         }
 
@@ -305,7 +305,7 @@ class mediaFile
 
     public function favorite(): bool
     {
-        if(is_null($this->hash) && $hash = $this->hash()) {
+        if (is_null($this->hash) && $hash = $this->hash()) {
             $this->hash = $hash;
         }
 
@@ -313,7 +313,7 @@ class mediaFile
             $date = date('Y-m-d H:i:s');
             $stmt = $this->pdo->prepare('INSERT INTO media (dupe, album, hash, filename, url, thumbnail, time, metadata)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-            if($stmt->execute([
+            if ($stmt->execute([
                 1,
                 'Favorites',
                 $this->hash,
@@ -328,7 +328,7 @@ class mediaFile
         } else {
             $date = date('Y-m-d H:i:s');
             $stmt = $this->pdo->prepare('DELETE FROM media WHERE album = \'Favorites\' AND hash = ?');
-            if($stmt->execute([
+            if ($stmt->execute([
                 $this->hash,
             ]) !== false) {
                 return false;
@@ -356,7 +356,7 @@ class mediaFile
     public function delete(?string $hash = null)
     {
         $this->hash = $this->persistedHash();
-        if(!$this->duplicateHashes()) {
+        if (!$this->duplicateHashes()) {
             $dlPath = str_replace(
                 ['.mpg', '.mod', '.mmv', '.tod', '.wmv', '.asf', '.avi', '.divx', '.mov', '.m4v', '.3gp', '.3g2', '.mp4', '.m2t', '.m2ts', '.mts', '.mkv', '.webm'], '.mp4',
                 ($this->persistedHash() ?? $hash ?? $this->hash) . '.' . pathinfo($this->path(), PATHINFO_EXTENSION)
@@ -367,13 +367,13 @@ class mediaFile
             }
         }
 
-        if(!is_null($hash)) {
+        if (!is_null($hash)) {
             $stmt = $this->pdo->prepare('DELETE FROM media WHERE hash = ?');
             $stmt->execute([$hash]);
             return;
         }
 
-        if(!is_null($this->id)) {
+        if (!is_null($this->id)) {
             $stmt = $this->pdo->prepare('DELETE FROM media WHERE id = ?');
             $stmt->execute([$this->id]);
             $this->cloudFS->unlink($this->path());
@@ -412,11 +412,11 @@ class mediaFile
         $sanitized = preg_replace('/[^a-zA-Z0-9_\-\s\(\)~]+/', '', $str);
 
         $parts = explode(DIRECTORY_SEPARATOR, $name);
-        if(count($parts) > 1) {
+        if (count($parts) > 1) {
             $sanitized = implode(DIRECTORY_SEPARATOR, array_map('self::sanitize', $parts));
         }
 
-        if($sanitized !== $name || !is_null($storedValue)) {
+        if ($sanitized !== $name || !is_null($storedValue)) {
             $sanitizedFiles = json_decode(file_get_contents(self::SANITIZED_PATH), true) ?? [];
             $sanitizedFiles[$sanitized] = $storedValue ?? $name;
             file_put_contents(self::SANITIZED_PATH, json_encode($sanitizedFiles, JSON_PRETTY_PRINT));
