@@ -35,7 +35,7 @@ services:
         USERID: 1003
         PHP_PORT: 9701
       target: prod
-    image: cenode/privuma-php
+    # image: cenode/privuma-php
     restart: always
     container_name: privuma_php_web
     env_file:
@@ -57,7 +57,7 @@ services:
         USERID: 1003
         PHP_PORT: 9702
       target: prod
-    image: cenode/privuma-php
+    # image: cenode/privuma-php
     restart: always
     container_name: privuma_php_cron
     env_file:
@@ -122,6 +122,16 @@ services:
       - gluetun
     network_mode: "service:gluetun"
     command: serve http --read-only --no-checksum --no-modtime --addr :8993 ${CLOUDFS_HTTP_TERTIARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+  cloudfs-http-quadary:
+    image: rclone/rclone:latest
+    container_name: privuma_cloudfs_http_quadary
+    restart: always
+    ports:
+      - 8994:8994
+    volumes:
+      - ./web/config/rclone:/config/rclone
+    user: "${UID}:${GID}"
+    command: serve http --read-only --no-checksum --no-modtime --addr :8994 --user ${CLOUDFS_HTTP_QUADARY_USER} --pass ${CLOUDFS_HTTP_QUADARY_PASS} ${CLOUDFS_HTTP_QUADARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
   # cloudfs-s3:
   #   image: rclone/rclone:beta
   #   container_name: privuma_cloudfs_s3

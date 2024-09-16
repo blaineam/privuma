@@ -33,6 +33,7 @@ if (!$downloadLocationUnencrypted) {
 $conn = $privuma->getPDO();
 
 $ops = new cloudFS($downloadLocation, true, '/usr/bin/rclone', null, true);
+$opsNoEncodeNoPrefix = new cloudFS($downloadLocation, false, '/usr/bin/rclone', null, false);
 $opsPlain = new cloudFS(
     $downloadLocationUnencrypted,
     false,
@@ -56,7 +57,7 @@ $stmt->execute();
 $dlData = $stmt->fetchAll();
 echo PHP_EOL . 'Building web app payload of media to download';
 $stmt = $conn->prepare(
-    "SELECT CASE WHEN length(filename) >= 10 THEN substr(filename,-10) ELSE filename END filename, album, dupe, time, hash, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE (album = 'Favorites' or blocked = 0) and hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;"
+    "SELECT filename, album, dupe, time, hash, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE (album = 'Favorites' or blocked = 0) and hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;"
 );
 $stmt->execute();
 $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
@@ -117,8 +118,8 @@ function condenseMetaData($item)
                       substr(trimExtraNewLines($item['description']), 0, 256)
                   ),
                   sanitizeLine($item['favorites']),
-                  sanitizeLine(implode(', ', array_slice($item['tags'], 0, 5))),
-                  substr(trimExtraNewLines($item['comments']), 0, 256),
+                  sanitizeLine(implode(', ',array_slice($item['tags'], 0, 20))),
+                  //substr(trimExtraNewLines($item['comments']), 0, 256),
                 ])
             ),
             'UTF-8',
@@ -342,7 +343,7 @@ $viewerHTML = <<<'HEREHTML'
                                         currentTries + 1,
                                     );
                                 } else {
-                                    action("");
+                                    action(resource);
                                 }
                             });
                     });
@@ -530,92 +531,132 @@ $viewerHTML = <<<'HEREHTML'
             }
 
             function searchifica(items, query, keys) {
-              if (keys.length == 0 && items.length > 0) {
+            if (keys.length == 0 && items.length > 0) {
                 keys = Object.keys(items[0]);
-              }
+            }
 
-              function determineOperation(part) {
+            function determineOperation(part) {
                 let potentialOperator = part.substring(0, 1);
-                if (potentialOperator === '~') {
-                  targetOperation = 'anys';
-                } else if (potentialOperator === '!') {
-                  targetOperation = 'excludes';
+                if (potentialOperator === "~") {
+                targetOperation = "anys";
+                } else if (potentialOperator === "!" || potentialOperator === "-") {
+                targetOperation = "excludes";
                 } else {
-                  targetOperation = 'alls';
+                targetOperation = "alls";
                 }
 
                 return targetOperation;
-              }
+            }
 
-              let query_parts = query.toLowerCase().split(' ').reduce((acc, part) => {
-                if (part.includes('"') && !acc.quoteOpen) {
-                  acc.quoteOpen = true;
-                  acc.quotePartials = [];
-                  acc.targetOperator = determineOperation(part);
-                  acc.quotePartials.push(acc.targetOperator === 'alls' ? part.substring(1, part.length) : part.substring(2, part.length) );
-                }else if (acc.quoteOpen && !part.includes('"')) {
-                  acc.quotePartials.push(part);
-                }else if (part.includes('"') && acc.quoteOpen) {
-                  acc.quotePartials.push(part.substring(0, part.length - 1));
-                  acc[acc.targetOperator].push(acc.quotePartials.join(" "));
-                  acc.quotePartials = [];
-                  acc.quoteOpen = false;
+            let query_parts = query
+                .toLowerCase()
+                .split(" ")
+                .reduce(
+                (acc, part) => {
+                    if (part.includes('"') && !acc.quoteOpen) {
+                    acc.quoteOpen = true;
+                    acc.quotePartials = [];
+                    acc.targetOperator = determineOperation(part);
+                    acc.quotePartials.push(
+                        acc.targetOperator === "alls"
+                        ? part.substring(1, part.length)
+                        : part.substring(2, part.length)
+                    );
+                    } else if (acc.quoteOpen && !part.includes('"')) {
+                    acc.quotePartials.push(part);
+                    } else if (part.includes('"') && acc.quoteOpen) {
+                    acc.quotePartials.push(part.substring(0, part.length - 1));
+                    acc[acc.targetOperator].push(acc.quotePartials.join(" "));
+                    acc.quotePartials = [];
+                    acc.quoteOpen = false;
+                    } else {
+                    acc.targetOperator = determineOperation(part);
+                    acc[acc.targetOperator].push(
+                        acc.targetOperator === "alls"
+                        ? part
+                        : part.substring(1, part.length)
+                    );
+                    }
+                    return acc;
+                },
+                { alls: [], anys: [], excludes: [] }
+                );
+
+            // console.log({ msg: "performing search", query_parts });
+            var keyMatches = [];
+            function itsamatch(value) {
+                value = value.toLowerCase().split(" ");
+                for (let exclude of query_parts.excludes) {
+                if (
+                    (exclude.includes(" ") && value.join(" ").includes(exclude)) ||
+                    value.filter((v) => v.includes(exclude)).length > 0
+                ) {
+                    return {score: -1, matches: []};
+                }
+                }
+                let matches = [];
+                let orMatch = false;
+                for (let any of query_parts.anys) {
+                if (
+                    (any.includes(" ") && value.join(" ").includes(any)) ||
+                    value.filter((v) => v.includes(any)).length > 0
+                ) {
+                    orMatch = true;
+                    matches.push(value.join(" ").indexOf(any));
+                }
+                }
+                if (!orMatch && query_parts.anys.length > 0) {
+                return {score: 0, matches: []};
+                }
+
+                let missimgAndMatch = false;
+                for (let all of query_parts.alls) {
+                if (
+                    (all.includes(" ") && !value.join(" ").includes(all)) ||
+                    value.filter((v) => v.includes(all)).length == 0
+                ) {
+                    missimgAndMatch = true;
                 } else {
-                  acc.targetOperator = determineOperation(part);
-                  acc[acc.targetOperator].push(acc.targetOperator === 'alls' ? part : part.substring(1, part.length));
+                    matches.push(value.join(" ").indexOf(all));
+                }
+                }
+
+                if (missimgAndMatch && query_parts.alls.length > 0) {
+                return {score: 0, matches: []};
+                }
+                return {score: 1, matches};
+            }
+            var filtered = items.reduce((acc, item) => {
+                let subject = keys.map((key) => {
+                if (!Object.keys(item).includes(key) || item[key] == null) {
+                    return {key, subject: '', length: 0};
+                }
+                return {key, subject: item[key], length: item[key].length};
+                });
+                let combinedSubject = subject.map((i) => i.subject).join(' ');
+                let match = itsamatch(combinedSubject);
+                if (match["score"] > 0) {
+                match.matches.sort();
+                let matchedKeys = {};
+                let offset = 0;
+                for(let i = 0; i < subject.length;i++) {
+                    match.matches.forEach((pos) => {
+                    if(pos >= offset && pos < subject[i].length + offset) {
+                        matchedKeys[subject[i].key] = 1;
+                    }
+                    })
+                    offset += subject[i].length + 1;
+                }
+                acc.push({item, matchedKeys: Object.keys(matchedKeys)});
                 }
                 return acc;
-              }, {alls: [], anys: [], excludes: []});
-
-              // console.log({msg: "performing search", query_parts});
-              var keyMatches = [];
-              function itsamatch(value) {
-                      value = value.toLowerCase().split(" ");
-                      for (let exclude of query_parts.excludes) {
-                         if (exclude.includes(' ') ? value.join(' ').includes(exclude) : value.includes(exclude)) {
-                             return -1;
-                         }
-                      }
-                      let orMatch = false;
-                      for (let any of query_parts.anys) {
-                          if (any.includes(' ') ? value.join(' ').includes(any) : value.includes(any)) {
-                             orMatch = true;
-                          }
-                      }
-                      if (!orMatch && query_parts.anys.length > 0) {
-                          return 0;
-                      }
-
-                      let missimgAndMatch = false;
-                      for (let all of query_parts.alls) {
-                          if (all.includes(' ') ? !value.join(' ').includes(all) : !value.includes(all)) {
-                             missimgAndMatch = true;
-                          }
-                      }
-
-                      if (missimgAndMatch && query_parts.alls.length > 0) {
-                          return 0;
-                      }
-                      return 1;
-              }
-              var filtered = items.map((item) => {
-                  let matchedKeys = keys.map((key) => {
-                          if (!Object.keys(item).includes(key)) {
-                          return {key, score: 0};
-                      }
-                      return {key, score: itsamatch(String(item[key]))};
-                  });
-                  if (matchedKeys.map((item) => item.score).includes(-1)) {
-                      return {item, matchedKeys: []}
-                  }
-                  return {item, matchedKeys: matchedKeys.filter((item) => item.score > 0).map((item) => item.key)};
-              }).filter((item) => item.matchedKeys.length > 0 );
-             filtered.sort((a,b) =>
-                         keys.indexOf(a.matchedKeys[0]) - keys.indexOf(b.matchedKeys[0])
-              );
-              filtered = filtered.map((item) => item.item);
-              return filtered;
-          }
+            }, []);
+            filtered.sort(
+                (a, b) => keys.indexOf(a.matchedKeys[0]) - keys.indexOf(b.matchedKeys[0])
+            );
+            filtered = filtered.map((item) => item.item);
+            return filtered;
+            }
         </script>
     </head>
     <body>
@@ -731,7 +772,7 @@ $viewerHTML = <<<'HEREHTML'
                   let hash = $.fancybox.getInstance().current.$thumb.data('src').split('/').reverse()[0].split(".")[0];
                   let tokens = rollingTokens(passphrase);
                   let token = tokens[Math.floor(tokens.length / 2)];
-                  let call = `https://server.hawk-bowfin.ts.net:8989/?favorite=${hash}&token=${token}`;
+                  let call = `{{ENDPOINT}}?favorite=${hash}&token=${token}`;
                   $.ajax(call).then((data) => {
                       toast.info(data);
                   });
@@ -1814,6 +1855,7 @@ $viewerHTML = str_replace(
 
 echo PHP_EOL . 'Downloading Offline Web App Viewer HTML File';
 $opsPlain->file_put_contents('index.html', $viewerHTML);
+$opsNoEncodeNoPrefix->file_put_contents('index.html', $viewerHTML);
 unset($viewerHTML);
 
 echo PHP_EOL . 'Database Downloads have been completed';
