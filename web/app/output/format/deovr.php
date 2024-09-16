@@ -44,11 +44,11 @@ function findMedia($path)
     $cacheStillRecent = $currentTime - $lastRan < 90 * 24 * 60 * 60;
     $scan = ['.', '..'];
 
-    if(is_file($cachePath) && $cacheStillRecent) {
+    if (is_file($cachePath) && $cacheStillRecent) {
         $scan = json_decode(file_get_contents($cachePath), true);
     } else {
         $scan = $ops->scandir($path, true, true);
-        if($scan === false) {
+        if ($scan === false) {
             $scan = [];
         } else {
             file_put_contents($cachePath, json_encode($scan, JSON_INVALID_UTF8_IGNORE + JSON_THROW_ON_ERROR));
@@ -56,12 +56,12 @@ function findMedia($path)
     }
 
     $output = [];
-    foreach($scan as $id => $obj) {
-        if($obj['IsDir']) {
+    foreach ($scan as $id => $obj) {
+        if ($obj['IsDir']) {
             /* $output = [...$output, findMedia($path .'/'.$obj['Name'])]; */
         } else {
             $ext = pathinfo($obj['Name'], PATHINFO_EXTENSION);
-            if(in_array(strtolower($ext),  ['mp4'])) {
+            if (in_array(strtolower($ext),  ['mp4'])) {
                 $dir = dirname($obj['Path']);
                 $filename = basename($obj['Name'], '.' . $ext);
                 $thumbnailPath = $path . '/' . $filename . '.jpg';
@@ -274,14 +274,14 @@ if (isset($_GET['json'])) {
     echo '<!DOCTYPE html>';
 }
 
-if(!isset($_SESSION['deoAuthozied'])) {
+if (!isset($_SESSION['deoAuthozied'])) {
     $json = file_get_contents('php://input');
     $data = json_decode($json, true);
     $allowGetLogin = false;
     $username = $_POST['login'] ?? ($allowGetLogin ? $_GET['login'] : null) ?? $data['username'];
     $password = $_POST['password'] ?? ($allowGetLogin ? $_GET['password'] : null) ?? $data['password'];
-    if(isset($username) && isset($password)) {
-        if($username === $DEOVR_LOGIN && $password === $DEOVR_PASSWORD) {
+    if (isset($username) && isset($password)) {
+        if ($username === $DEOVR_LOGIN && $password === $DEOVR_PASSWORD) {
             $_SESSION['deoAuthozied'] = true;
         } else {
             if ($responseTypeJson) {
@@ -328,7 +328,7 @@ function get3dAttrs($filename)
     $output = [];
     $upperFilename = strtoupper($filename);
     $filenameParts = array_map('trim', explode('_', $upperFilename));
-    if(!(bool) array_intersect($filenameParts, [
+    if (!(bool) array_intersect($filenameParts, [
         '180',
         '360',
         'FISHEYE',
@@ -349,7 +349,7 @@ function get3dAttrs($filename)
     $output['is3d'] = !(bool) array_intersect($filenameParts, ['MONO']);
     $output['stereoMode'] = 'mono';
     $output['screenType'] = 'flat';
-    if((bool) array_intersect($filenameParts, [
+    if ((bool) array_intersect($filenameParts, [
         'LR',
         '3DH',
         'SBS',
@@ -357,7 +357,7 @@ function get3dAttrs($filename)
         $output['stereoMode'] = 'sbs';
     }
 
-    if((bool) array_intersect($filenameParts, [
+    if ((bool) array_intersect($filenameParts, [
         'TB',
         '3DV',
         'OVERUNDER',
@@ -365,7 +365,7 @@ function get3dAttrs($filename)
         $output['stereoMode'] = 'tb';
     }
 
-    if((bool) array_intersect($filenameParts, [
+    if ((bool) array_intersect($filenameParts, [
         '180',
         'FISHEYE',
         'FISHEYE190',
@@ -376,7 +376,7 @@ function get3dAttrs($filename)
         $output['screenType'] = 'dome';
     }
 
-    if((bool) array_intersect($filenameParts, [
+    if ((bool) array_intersect($filenameParts, [
         '360',
     ])) {
         $output['screenType'] = 'sphere';
@@ -407,12 +407,12 @@ function getResolution($filename)
 }
 $deovrJsonPath = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'deovr.json';
 $json = file_exists($deovrJsonPath) ? json_decode(file_get_contents($deovrJsonPath), true) ?? [] : [];
-if(isset($_GET['media']) && isset($_GET['id'])) {
-    if($_GET['media'] === 'cached') {
-        foreach($json as $site => $search) {
-            foreach($search as $s => $scenes) {
-                foreach($scenes['list'] as $k => $scene) {
-                    if($_GET['id'] == $scenes['list'][$k]['id']) {
+if (isset($_GET['media']) && isset($_GET['id'])) {
+    if ($_GET['media'] === 'cached') {
+        foreach ($json as $site => $search) {
+            foreach ($search as $s => $scenes) {
+                foreach ($scenes['list'] as $k => $scene) {
+                    if ($_GET['id'] == $scenes['list'][$k]['id']) {
                         $originalUrl = $scenes['list'][$k]['encodings'][0]['videoSources'][0]['url'];
                         $scenes['list'][$k]['encodings'][0]['videoSources'][0]['url'] = getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode('?', $scenes['list'][$k]['encodings'][0]['videoSources'][0]['url'])[0]), false, true, false);
                         $thumbnailUrl = getProtectedUrlForMediaPath($DEOVR_DATA_DIRECTORY . DIRECTORY_SEPARATOR . 'deovr' . DIRECTORY_SEPARATOR . basename(explode('?', $scenes['list'][$k]['thumbnailUrl'])[0], '.jpg') . '_thumbnail.jpg', false, true, true);
@@ -499,7 +499,7 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
     $filename = basename($mediaPath, '.' . $ext);
     $attrs = get3dAttrs($filename);
 
-    if($responseTypeJson) {
+    if ($responseTypeJson) {
         header('Content-Type: application/json');
         echo json_encode(array_merge([
             'encodings' =>
@@ -588,9 +588,9 @@ if(isset($_GET['media']) && isset($_GET['id'])) {
 $media = findMedia($DEOVR_DATA_DIRECTORY);
 
 $cached = [];
-foreach($json as $site => $search) {
-    foreach($search as $s => $scenes) {
-        foreach($scenes['list'] as $k => $scene) {
+foreach ($json as $site => $search) {
+    foreach ($search as $s => $scenes) {
+        foreach ($scenes['list'] as $k => $scene) {
             $originalUrl = $scenes['list'][$k]['encodings'][0]['videoSources'][0]['url'];
             $scenes['list'][$k] = (!$isDeoVR && $responseTypeJson)
             ? $ENDPOINT . ($responseTypeJson ? ($isDeoVR ? 'deovr' : 'heresphere') : 'vr') . '/?id=' . $scenes['list'][$k]['id'] . '&media=cached'
@@ -606,7 +606,7 @@ foreach($json as $site => $search) {
         $cached[] = $scenes;
     }
 }
-if($responseTypeJson) {
+if ($responseTypeJson) {
     $deoJSON = [
         ($isDeoVR ? 'scenes' : 'library') => [
             ...array_values($media),
@@ -662,7 +662,7 @@ if($responseTypeJson) {
             <ul class="tabs">
                 <?php
 
-    foreach($scenes as $index => $scene) {
+    foreach ($scenes as $index => $scene) {
         echo '<li data-tab-target="#' . urlencode($scene['name']) . '" class="' . ($index === 0 ? 'active' : '') . ' tab">' . $scene['name'] . '</li>';
     }
     ?>
@@ -683,27 +683,27 @@ if($responseTypeJson) {
 
 <div class="tab-content">
     <?php
-    foreach($scenes as $index => $scene) {
+    foreach ($scenes as $index => $scene) {
         echo '<div data-tab-content id="' . urlencode($scene['name']) . '" class="' . ($index === 0 ? 'active' : '') . '"><h2>' . $scene['name'] . '</h2>';
-        foreach($scene['list'] as $item) {
+        foreach ($scene['list'] as $item) {
             $ua = strtolower($_SERVER['HTTP_USER_AGENT']);
-            if(stripos($ua, 'x11') !== false) {
+            if (stripos($ua, 'x11') !== false) {
                 echo ' <a data-gallery-link="true" href="' . $item['videoSrc'] . '"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
             } else {
                 $hash = 'NONE';
-                if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'dome') {
+                if ($item['stereoMode'] === 'sbs' && $item['screenType'] === 'dome') {
                     $hash = '180_LR';
                 }
-                if($item['stereoMode'] === 'tb') {
+                if ($item['stereoMode'] === 'tb') {
                     $hash = '360_TB';
                 }
-                if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'flat') {
+                if ($item['stereoMode'] === 'sbs' && $item['screenType'] === 'flat') {
                     $hash = 'SBS';
                 }
-                if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'dome' && $item['is3d'] === false) {
+                if ($item['stereoMode'] === 'sbs' && $item['screenType'] === 'dome' && $item['is3d'] === false) {
                     $hash = 'SBS';
                 }
-                if($item['stereoMode'] === 'sbs' && $item['screenType'] === 'sphere') {
+                if ($item['stereoMode'] === 'sbs' && $item['screenType'] === 'sphere') {
                     $hash = '360_LR';
                 }
                 echo ' <a data-gallery-link="true" data-fancybox="gallery"  data-type="iframe" href="#" data-src="' . $item['video_url'] . '&html=1#' . $hash . '"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';

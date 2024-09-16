@@ -302,8 +302,7 @@ class processMedia
             ) {
                 echo PHP_EOL . 'Temp Directory full, cleaning temp director';
                 foreach (
-                    glob(sys_get_temp_dir() . DIRECTORY_SEPARATOR . '*')
-                    as $file
+                    glob(sys_get_temp_dir() . DIRECTORY_SEPARATOR . '*') as $file
                 ) {
                     if (time() - filectime($file) > 60 * 60 * 2) {
                         unlink($file);
