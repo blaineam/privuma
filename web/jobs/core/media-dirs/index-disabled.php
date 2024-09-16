@@ -25,7 +25,7 @@ function getDirContents($dir, &$results = array())
         $path = $dir . DIRECTORY_SEPARATOR . $value;
         if (!$fileObj['IsDir']) {
             $ext = pathinfo($path, PATHINFO_EXTENSION);
-            if(in_array(strtolower($ext), ['mp4', 'jpg', 'jpeg', 'gif', 'png', 'heif']) && strpos($dir, $ops->encode('SCRATCH') === false)) {
+            if (in_array(strtolower($ext), ['mp4', 'jpg', 'jpeg', 'gif', 'png', 'heif']) && strpos($dir, $ops->encode('SCRATCH') === false)) {
                 $mediaDir = true;
             }
         } elseif ($value != '.' && $value != '..' && $value !== 'privuma' && $value !== '@eaDir') {
@@ -59,21 +59,21 @@ function get_data_dirs($dir)
     $paths = array_column($scans, 'Path');
     array_multisort($paths, SORT_NATURAL, $scans);
     $output = [];
-    foreach($scans as $scan) {
+    foreach ($scans as $scan) {
 
-        if($scan['Name'] === '.mediadir') {
+        if ($scan['Name'] === '.mediadir') {
             $scan['Path'] = dirname($scan['Path']);
         }
 
-        if(!isset($output[$scan['Path']]['HasThumbnailJpg'])) {
+        if (!isset($output[$scan['Path']]['HasThumbnailJpg'])) {
             $scan['HasThumbnailJpg'] = false;
         }
-        if($scan['Name'] === '1.jpg') {
+        if ($scan['Name'] === '1.jpg') {
             $scan['Path'] = dirname($scan['Path']);
             $scan['HasThumbnailJpg'] = true;
         }
 
-        if(isset($output[rtrim(dirname($scan['Path']), DIRECTORY_SEPARATOR)])) {
+        if (isset($output[rtrim(dirname($scan['Path']), DIRECTORY_SEPARATOR)])) {
             unset($output[rtrim(dirname($scan['Path']), DIRECTORY_SEPARATOR)]);
         }
         $output[$scan['Path']] = $scan;
@@ -89,7 +89,7 @@ function get_data_dirs($dir)
 //     ],
 // ]));
 
-foreach(get_data_dirs($SYNC_FOLDER) as $key => $value) {
+foreach (get_data_dirs($SYNC_FOLDER) as $key => $value) {
     $privuma->getQueueManager()->enqueue(json_encode([
         'type' => 'cachePath',
         'data' => [

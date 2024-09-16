@@ -13,7 +13,7 @@ if ($argc > 1) {
 $conn = $privuma->getPDO();
 
 $album = '';
-if(isset($_GET['album'])) {
+if (isset($_GET['album'])) {
     $album = $conn->quote($_GET['album']);
     echo PHP_EOL . "checking broken links in album: {$album}";
     $album = " and album = {$album} ";
@@ -22,12 +22,12 @@ if(isset($_GET['album'])) {
 $select_results = $conn->query("SELECT id, url, thumbnail FROM media where url is not null {$album} order by id asc");
 $results = $select_results->fetchAll(PDO::FETCH_ASSOC);
 echo PHP_EOL . 'Checking ' . count($results) . ' database records';
-foreach(array_chunk($results, 2000) as $key => $chunk) {
-    foreach($chunk as $key => $row) {
-        if(!is_null($row['url'])) {
+foreach (array_chunk($results, 2000) as $key => $chunk) {
+    foreach ($chunk as $key => $row) {
+        if (!is_null($row['url'])) {
             //echo PHP_EOL."Checking URL: " . $row['url'];
             $headers = get_headers($row['url'], true);
-            if(!is_array($headers)) {
+            if (!is_array($headers)) {
                 continue;
             }
             $head = array_change_key_case($headers);
@@ -57,7 +57,7 @@ foreach(array_chunk($results, 2000) as $key => $chunk) {
                 $delete_stmt->execute([$row['id']]);
                 echo PHP_EOL . $delete_stmt->rowCount() . ' - Deleted missing remote media url: ' . $row['url'];
             } elseif (strpos($head['content-type'], 'video') !== false) {
-                if(!is_null($row['thumbnail'])) {
+                if (!is_null($row['thumbnail'])) {
                     //echo PHP_EOL."Checking thumbnail: " . $row['thumbnail'];
                     $headers = get_headers($row['thumbnail'], true);
                     $head = array_change_key_case($headers);
