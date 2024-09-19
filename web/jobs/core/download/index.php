@@ -775,6 +775,8 @@ $viewerHTML = <<<'HEREHTML'
                   let call = `{{ENDPOINT}}?favorite=${hash}&token=${token}`;
                   $.ajax(call).then((data) => {
                       toast.info(data);
+                  }).catch(() => {
+                      toast.error("Something went wrong");
                   });
              });
 
