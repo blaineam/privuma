@@ -58,6 +58,8 @@ services:
         PHP_PORT: 9702
       target: prod
     # image: cenode/privuma-php
+    security_opt:
+      - seccomp:seccomp.json
     restart: always
     container_name: privuma_php_cron
     env_file:
