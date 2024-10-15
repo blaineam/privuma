@@ -265,23 +265,25 @@ $viewerHTML = <<<'HEREHTML'
                 startQueue: async () => {
                     var chunkSize = 8;
                     while (medcrypt.requestQueue.length) {
-                        await new Promise((r) =>
-                            setTimeout(
-                                r,
-                                Math.floor(Math.random() * 400) + 100,
-                            ),
-                        );
                         if (medcrypt.requestQueue.length >= chunkSize) {
                             await Promise.allSettled(
                                 Array(chunkSize)
                                     .fill()
-                                    .map((v, i) =>
-                                        medcrypt.requestQueue.shift()(),
+                                    .map((v, i) => {
+										const item = medcrypt.requestQueue.shift();
+										if (typeof item == 'function') {
+											return item();
+										}
+										return item;
+                                    }
+
                                     ),
                             );
                         } else {
                             const item = medcrypt.requestQueue.shift();
-                            await item();
+							if (typeof item == 'function') {
+								await item();
+							}
                         }
                     }
                 },
@@ -294,7 +296,7 @@ $viewerHTML = <<<'HEREHTML'
                     resource,
                     action = () => {},
                     currentTries = 0,
-                ) {
+					) {
                     medcrypt.requestQueue.push(async () => {
                         return new Promise(async (resolve, reject) => {
                             if (medcrypt.loadedCache[resource]) {
@@ -305,8 +307,20 @@ $viewerHTML = <<<'HEREHTML'
                                 return resolve(resource);
                             }
 
+
                             if (usingRapiServe.length) {
-                                return resolve(usingRapiServe + "/" + resource);
+								let targetSrc = usingRapiServe + "/" + resource;
+								if (resource.startsWith(usingRapiServe + "/")) {
+									targetSrc = resource;
+								}
+								return fetch(targetSrc, { headers: { 'range': 'bytes=0-1'}}).then(function(response) {
+								    if (!response.ok) {
+								        throw new Error("HTTP status " + response.status);
+								    }
+									return true
+								}).then(() => {
+									resolve(targetSrc);
+								}).catch((e) => reject(e));
                             }
 
                             try {
@@ -336,22 +350,20 @@ $viewerHTML = <<<'HEREHTML'
                             .catch((err) => {
                                 medcrypt.finishProgress();
                                 if (currentTries < medcrypt.maxTries) {
-                                    console.error(err);
-                                    medcrypt.getSrc(
+									let delay = currentTries + 1 * 1000;
+									setTimeout(() => medcrypt.getSrc(
                                         resource,
                                         action,
                                         currentTries + 1,
-                                    );
+                                    ), delay);
+
                                 } else {
                                     action(resource);
                                 }
                             });
-                    });
-                    if (!medcrypt.processingQueue)
-                        medcrypt.processingQueue = medcrypt.startQueue();
-                    return medcrypt.processingQueue.finally(() => {
-                        medcrypt.processingQueue = undefined;
-                    });
+						});
+					medcrypt.processingQueue = medcrypt.startQueue();
+                    return medcrypt.processingQueue;
                 },
             };
 
@@ -708,7 +720,7 @@ $viewerHTML = <<<'HEREHTML'
                 if (usingRapiServe.length) {
                     var formData = new FormData();
                     formData.append("key", btoa(passphrase));
-                    fetch(usingRapiServe, {
+										fetch(usingRapiServe, {
                         method: "POST",
                         body: formData,
                         headers: {
@@ -872,7 +884,7 @@ $viewerHTML = <<<'HEREHTML'
                     caption: function (instance, item) {
                         let el = $('.gallerypicture[href="' + item.src + '"]');
                         let metadata = el.find("script").text().trim();
-                        if (metadata.length > 0) {
+                        if (metadata.length > 0 && metadata != '0') {
                             return (
                                 '<a class="btn btn-secondary toggle-collapsible">Expand Details</a><div class="collapsible collapsed">' +
                                 metadata +
@@ -1185,7 +1197,7 @@ $viewerHTML = <<<'HEREHTML'
                                                       `<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery"  data-filehash="${hash}"  href="${videoResource}">
                     <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""></div><script type="text/json">${meta}<\/script>` +
                                                           (datatype === "video"
-                                                              ? `<svg style="position: absolute;z-index: 2;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                              ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <rect x="0" fill="none" width="24" height="24"/>
                             <g>
                               <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
@@ -1201,12 +1213,12 @@ $viewerHTML = <<<'HEREHTML'
                                     );
                             })
                             .finally(() => {
+                                processLazyLoad();
                                 if (window.currentAlbumPosition.src) {
                                     let mediaLink = $('a[data-filehash="' + window.currentAlbumPosition.src + '"');
                                     mediaLink.get(0).scrollIntoView();
                                     mediaLink.click();
                                 }
-                                processLazyLoad();
                                 jQuery("#content").append(
                                     `<div style="height: 63px"></div>`,
                                 );
@@ -1431,6 +1443,18 @@ $viewerHTML = <<<'HEREHTML'
                         "beforeLoad.fb",
                         function (e, instance, slide) {
                             if (slide.type === "image") {
+
+                            } else {
+                            }
+                        },
+                    );
+                    $(document).on(
+                        "afterShow.fb",
+                        function (e, instance, slide) {
+                            let originalLink = $(
+                                '.gallerypicture[href="' + slide.src + '"]'
+								);
+
                                 let element = $(
                                     '.gallerypicture[href="' + slide.src + '"]',
                                 );
@@ -1438,7 +1462,10 @@ $viewerHTML = <<<'HEREHTML'
                                     slide.src.length > 0
                                         ? slide.src
                                         : element.data("src");
-                                medcrypt.getSrc(targetsrc, (uri) => {
+							if ($("video").length == 0) {
+                                saveAlbumPosition({src: originalLink.data('filehash'), currentTime: 0}, window.currentAlbum);
+
+								medcrypt.getSrc(targetsrc, (uri) => {
                                     element.attr("href", uri);
                                     slide.src = uri;
                                     slide.original = targetsrc;
@@ -1455,25 +1482,6 @@ $viewerHTML = <<<'HEREHTML'
                                         instance.loadSlide(slide);
                                     }
                                 });
-                            } else {
-                            }
-                        },
-                    );
-                    $(document).on(
-                        "afterShow.fb",
-                        function (e, instance, slide) {
-                            let originalLink = $(
-                                '.gallerypicture[href="' + slide.src + '"]'
-                            );
-                            if ($("video").length == 0) {
-                                saveAlbumPosition({src: originalLink.data('filehash'), currentTime: 0}, window.currentAlbum);
-                                let element = $(
-                                    '.gallerypicture[href="' + slide.src + '"]',
-                                );
-                                let targetsrc =
-                                    slide.src.length > 0
-                                        ? slide.src
-                                        : element.data("src");
                                 if (
                                     $.fancybox.getInstance().SlideShow.isActive
                                 ) {
@@ -1588,40 +1596,58 @@ $viewerHTML = <<<'HEREHTML'
                                 return;
                             }
 
-                            $("video").trigger("pause");
-                            var videoDuration = $("video").attr("duration");
+							try {
+	                            $("video").trigger("pause");
+	                            var videoDuration = $("video").attr("duration");
 
-                            var updateProgressBar = function () {
-                                if ($("video").attr("readyState")) {
-                                    var buffered = $("video")
-                                        .attr("buffered")
-                                        .end(0);
-                                    var percent =
-                                        (100 * buffered) / videoDuration;
+	                            var updateProgressBar = function () {
+	                                if ($("video").attr("readyState")) {
+	                                    var buffered = $("video")
+	                                        .attr("buffered")
+	                                        .end(0);
+	                                    var percent =
+	                                        (100 * buffered) / videoDuration;
 
-                                    medcrypt.transfers.loaded = percent;
-                                    medcrypt.transfers.size = 100;
-                                    medcrypt.displayProgress();
-                                    if (percent > 10) {
-                                        $("video").trigger("play");
-                                    }
-                                    if (buffered >= videoDuration) {
-                                        clearInterval(this.watchBuffer);
-                                        medcrypt.finishProgress();
-                                    }
-                                }
-                            };
-                            var watchBuffer = setInterval(
-                                updateProgressBar,
-                                500,
-                            );
+	                                    medcrypt.transfers.loaded = percent;
+	                                    medcrypt.transfers.size = 100;
+	                                    medcrypt.displayProgress();
+	                                    if (percent > 10) {
+	                                        $("video").trigger("play");
+	                                    }
+	                                    if (buffered >= videoDuration) {
+	                                        clearInterval(this.watchBuffer);
+	                                        medcrypt.finishProgress();
+	                                    }
+	                                }
+	                            };
+	                            var watchBuffer = setInterval(
+	                                updateProgressBar,
+	                                500,
+	                            );
+							} catch (e) {
+								console.error(e);
+							}
 
-
-                            saveAlbumPosition({src: originalLink.data('filehash'), currentTime: window.currentAlbumPosition.src === originalLink.data('filehash') ? window.currentAlbumPosition.currentTime: 0}, window.currentAlbum);
                             medcrypt.getSrc(slide.src, (uri) => {
-                                $(
-                                    '.gallerypicture[href="' + slide.src + '"]',
-                                ).attr("href", uri);
+								element.attr("href", uri);
+                                slide.src = uri;
+                                slide.original = targetsrc;
+                                if (slide.hasError) {
+                                    $(
+                                        ".fancybox-content.fancybox-error",
+                                    ).remove();
+                                    $.fancybox
+                                        .getInstance()
+                                        .current.$slide.trigger("onReset");
+                                    slide.hasError = false;
+                                    slide.isLoading = false;
+                                    slide.isLoaded = false;
+                                    instance.loadSlide(slide);
+                                }
+
+                                // $(
+                                //     '.gallerypicture[href="' + slide.src + '"]',
+                                // ).attr("href", uri);
                                 $("video")
                                     .find("Source:first")
                                     .attr("src", uri)
@@ -1646,104 +1672,107 @@ $viewerHTML = <<<'HEREHTML'
                                 }
                             });
 
+
+                            saveAlbumPosition({src: originalLink.data('filehash'), currentTime: window.currentAlbumPosition.src === originalLink.data('filehash') ? window.currentAlbumPosition.currentTime: 0}, window.currentAlbum);
+
                             if ($.fancybox.getInstance().SlideShow.isActive) {
                                 $.fancybox.getInstance().SlideShow.stop();
                                 slideshowStarted = true;
                             }
 
-                            if (!slideshowStarted) {
-                                return;
-                            }
+                            if (slideshowStarted) {
 
-                            if (slideshowTimer) {
-                                clearTimeout(slideshowTimer);
-                            }
-                            window
-                                .getGifDuration(slide.src)
-                                .then((duration) => {
-                                    jQuery(`img[src="${slide.src}"]`).attr(
-                                        "data-duration",
-                                        duration,
-                                    );
-                                    let defaultDuration = 5000;
-                                    let gifduration = duration;
-                                    gifduration =
-                                        !gifduration ||
-                                        typeof gifduration === "undefined" ||
-                                        gifduration == 0
-                                            ? defaultDuration
-                                            : gifduration;
-                                    if (
-                                        slide.$content &&
-                                        jQuery(slide.$content).find("video")
-                                            .length > 0
-                                    ) {
-                                        jQuery(slide.$content)
-                                            .find("video")
-                                            .trigger("play");
-                                        jQuery(slide.$content)
-                                            .find("video")
-                                            .on("ended", function () {
-                                                $.fancybox.getInstance().next();
-                                            });
-                                        return;
-                                    }
+	                            if (slideshowTimer) {
+	                                clearTimeout(slideshowTimer);
+	                            }
+	                            window
+	                                .getGifDuration(slide.src)
+	                                .then((duration) => {
+	                                    jQuery(`img[src="${slide.src}"]`).attr(
+	                                        "data-duration",
+	                                        duration,
+	                                    );
+	                                    let defaultDuration = 5000;
+	                                    let gifduration = duration;
+	                                    gifduration =
+	                                        !gifduration ||
+	                                        typeof gifduration === "undefined" ||
+	                                        gifduration == 0
+	                                            ? defaultDuration
+	                                            : gifduration;
+	                                    if (
+	                                        slide.$content &&
+	                                        jQuery(slide.$content).find("video")
+	                                            .length > 0
+	                                    ) {
+	                                        jQuery(slide.$content)
+	                                            .find("video")
+	                                            .trigger("play");
+	                                        jQuery(slide.$content)
+	                                            .find("video")
+	                                            .on("ended", function () {
+	                                                $.fancybox.getInstance().next();
+	                                            });
+	                                        return;
+	                                    }
 
-                                    let targetDuration = gifduration;
-                                    if (gifduration < defaultDuration) {
-                                        let gifDivisible = Math.ceil(
-                                            defaultDuration / gifduration,
-                                        );
-                                        targetDuration =
-                                            gifduration * gifDivisible;
-                                    }
+	                                    let targetDuration = gifduration;
+	                                    if (gifduration < defaultDuration) {
+	                                        let gifDivisible = Math.ceil(
+	                                            defaultDuration / gifduration,
+	                                        );
+	                                        targetDuration =
+	                                            gifduration * gifDivisible;
+	                                    }
 
-                                    slideshowTimer = setTimeout(function () {
-                                        $.fancybox.getInstance().next();
-                                    }, targetDuration);
-                                })
-                                .catch(() => {
-                                    let defaultDuration = 5000;
-                                    let gifduration = jQuery(slide.$thumb).data(
-                                        "duration",
-                                    );
-                                    gifduration =
-                                        !gifduration ||
-                                        typeof gifduration === "undefined" ||
-                                        gifduration == 0
-                                            ? defaultDuration
-                                            : gifduration;
-                                    if (
-                                        slide.$content &&
-                                        jQuery(slide.$content).find("video")
-                                            .length > 0
-                                    ) {
-                                        jQuery(slide.$content)
-                                            .find("video")
-                                            .trigger("play");
-                                        jQuery(slide.$content)
-                                            .find("video")
-                                            .on("ended", function () {
-                                                $.fancybox.getInstance().next();
-                                            });
-                                        return;
-                                    }
+	                                    slideshowTimer = setTimeout(function () {
+	                                        $.fancybox.getInstance().next();
+	                                    }, targetDuration);
+	                                })
+	                                .catch(() => {
+	                                    let defaultDuration = 5000;
+	                                    let gifduration = jQuery(slide.$thumb).data(
+	                                        "duration",
+	                                    );
+	                                    gifduration =
+	                                        !gifduration ||
+	                                        typeof gifduration === "undefined" ||
+	                                        gifduration == 0
+	                                            ? defaultDuration
+	                                            : gifduration;
+	                                    if (
+	                                        slide.$content &&
+	                                        jQuery(slide.$content).find("video")
+	                                            .length > 0
+	                                    ) {
+	                                        jQuery(slide.$content)
+	                                            .find("video")
+	                                            .trigger("play");
+	                                        jQuery(slide.$content)
+	                                            .find("video")
+	                                            .on("ended", function () {
+	                                                $.fancybox.getInstance().next();
+	                                            });
+	                                        return;
+	                                    }
 
-                                    let targetDuration = gifduration;
-                                    if (gifduration < defaultDuration) {
-                                        let gifDivisible = Math.ceil(
-                                            defaultDuration / gifduration,
-                                        );
-                                        targetDuration =
-                                            gifduration * gifDivisible;
-                                    }
+	                                    let targetDuration = gifduration;
+	                                    if (gifduration < defaultDuration) {
+	                                        let gifDivisible = Math.ceil(
+	                                            defaultDuration / gifduration,
+	                                        );
+	                                        targetDuration =
+	                                            gifduration * gifDivisible;
+	                                    }
 
-                                    slideshowTimer = setTimeout(function () {
-                                        $.fancybox.getInstance().next();
-                                    }, targetDuration);
-                                });
-                        },
-                    );
+	                                    slideshowTimer = setTimeout(function () {
+	                                        $.fancybox.getInstance().next();
+	                                    }, targetDuration);
+	                                });
+
+								}
+	                        },
+	                );
 
                     let scrollMemory = {};
                     $("#backBtn").click(function () {
@@ -1767,6 +1796,7 @@ $viewerHTML = <<<'HEREHTML'
                                 window.location.hash = "";
                             }
                         }
+
                     });
 
                     let lastHash = window.location.hash;
