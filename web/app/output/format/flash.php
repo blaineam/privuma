@@ -8,7 +8,6 @@ use privuma\privuma;
 use privuma\helpers\cloudFS;
 use privuma\helpers\tokenizer;
 
-
 $DEOVR_MIRROR = privuma::getEnv('RCLONE_DESTINATION');
 $ops = new cloudFS($DEOVR_MIRROR);
 $tokenizer = new tokenizer();
@@ -191,27 +190,24 @@ $loginForm = '<html>
     </body>
 </html>';
 
-
-
-
 if (!isset($_SESSION['flashAuthozied'])) {
     $json = file_get_contents('php://input');
     $data = json_decode($json, true);
     $allowGetLogin = false;
-    $username = $_POST['login'] ?? ($allowGetLogin ? $_GET['login'] : null) ?? $data['username'] ?? "";
-    $password = $_POST['password'] ?? ($allowGetLogin ? $_GET['password'] : null) ?? $data['password'] ?? "";
+    $username = $_POST['login'] ?? ($allowGetLogin ? $_GET['login'] : null) ?? $data['username'] ?? '';
+    $password = $_POST['password'] ?? ($allowGetLogin ? $_GET['password'] : null) ?? $data['password'] ?? '';
     if (isset($username) && isset($password)) {
         if ($username === $DEOVR_LOGIN && $password === $DEOVR_PASSWORD) {
             $_SESSION['flashAuthozied'] = true;
         } else {
-                echo $loginForm;
-                die();
-        }
-    } else {
-			
             echo $loginForm;
             die();
-  
+        }
+    } else {
+
+        echo $loginForm;
+        die();
+
     }
 }
 
@@ -232,29 +228,18 @@ if (!isset($_SESSION['CREATED'])) {
     $_SESSION['CREATED'] = time();  // update creation time
 }
 
-
-
-
-
-
-
-
-
-
-
-
 $flashJsonPath = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'flash.json';
 $json = file_exists($flashJsonPath) ? json_decode(file_get_contents($flashJsonPath), true) ?? [] : [];
 
 if (isset($_GET['media']) && isset($_GET['id'])) {
     if ($_GET['media'] === 'cached') {
-			foreach ($json as $search => $posts) {
-                foreach ($posts as $k => $post) {
-                    if ($_GET['id'] == $post['id']) {
-                        $originalUrl = $post['url'];
-                        $proxiedUrl = getProtectedUrlForMediaPath($originalUrl);
-                        echo '<!DOCTYPE html>';
-                            echo '
+        foreach ($json as $search => $posts) {
+            foreach ($posts as $k => $post) {
+                if ($_GET['id'] == $post['id']) {
+                    $originalUrl = $post['url'];
+                    $proxiedUrl = getProtectedUrlForMediaPath($originalUrl);
+                    echo '<!DOCTYPE html>';
+                    echo '
                                 <html>
                                     <head>
                                     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -276,16 +261,16 @@ if (isset($_GET['media']) && isset($_GET['id'])) {
                                     </body>
                                 </html>
                             ';
-                            die();
-                        }
-                    
+                    die();
                 }
-         
+
+            }
+
         }
     }
 }
-	echo '<!DOCTYPE html>';	
-    echo '<html>
+echo '<!DOCTYPE html>';
+echo '<html>
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 ' . $htmlStyle . '
@@ -325,16 +310,16 @@ if (isset($_GET['media']) && isset($_GET['id'])) {
                 </style>
             <head>
             <body>';
-   
-    ?>
+
+?>
 
             <ul class="tabs">
                 <?php
 
-    foreach ($json as $search => $results) {
-        echo '<li data-tab-target="#' . urlencode($search) . '" class="' . ($search === array_key_first($json) ? 'active' : '') . ' tab">' . $search . '</li>';
-    }
-    ?>
+foreach ($json as $search => $results) {
+    echo '<li data-tab-target="#' . urlencode($search) . '" class="' . ($search === array_key_first($json) ? 'active' : '') . ' tab">' . $search . '</li>';
+}
+?>
     <li class="tab"><a style="width:100%;height:100%;" href="?logout=1"><svg fill="#ffffff" height="20px" width="20px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 	 viewBox="0 0 384.971 384.971" xml:space="preserve">
 <g>
@@ -352,22 +337,22 @@ if (isset($_GET['media']) && isset($_GET['id'])) {
 
 <div class="tab-content">
     <?php
-    foreach ($json as $search => $posts) {
-        echo '<div data-tab-content id="' . urlencode($search) . '" class="' . ($search === array_key_first($json) ? 'active' : '') . '"><h2>' . $search . '</h2>';
-        foreach ($posts as $post) {
-            $ua = strtolower($_SERVER['HTTP_USER_AGENT']);
-            if (stripos($ua, 'x11') !== false) {
-                echo '<a data-gallery-link="true" href="?media=cached&id=' . $post['id'] . '">' . $post['title'] . '</a> ';
-            } else {
-							
-                echo ' <a data-gallery-link="true" data-fancybox="gallery"  data-type="iframe" href="#" data-src="?media=cached&id=' . $post['id'] . '">' . $post['title'] . '</a> ';
-            }
+foreach ($json as $search => $posts) {
+    echo '<div data-tab-content id="' . urlencode($search) . '" class="' . ($search === array_key_first($json) ? 'active' : '') . '"><h2>' . $search . '</h2>';
+    foreach ($posts as $post) {
+        $ua = strtolower($_SERVER['HTTP_USER_AGENT']);
+        if (stripos($ua, 'x11') !== false) {
+            echo '<a data-gallery-link="true" href="?media=cached&id=' . $post['id'] . '">' . $post['title'] . '</a> ';
+        } else {
 
+            echo ' <a data-gallery-link="true" data-fancybox="gallery"  data-type="iframe" href="#" data-src="?media=cached&id=' . $post['id'] . '">' . $post['title'] . '</a> ';
         }
-        echo '</div>';
+
     }
     echo '</div>';
-    echo "
+}
+echo '</div>';
+echo "
     <script>
 
 
@@ -392,6 +377,3 @@ echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.mi
 			<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 		</body>
         </html>';
-
-
-
