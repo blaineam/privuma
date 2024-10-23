@@ -23,6 +23,7 @@ $privuma = privuma::getInstance();
 $tokenizer = new tokenizer();
 $USE_MIRROR = privuma::getEnv('USE_MIRROR');
 $RCLONE_MIRROR = privuma::getEnv('RCLONE_MIRROR');
+$FLASH_MIRROR = privuma::getEnv('FLASH_RCLONE_LOCATION');
 $DEOVR_MIRROR = privuma::getEnv('DEOVR_MIRROR');
 $DEOVR_USE_CLOUDFS_HTTP_ENDPOINT = privuma::getEnv(
     'DEOVR_USE_CLOUDFS_HTTP_ENDPOINT'
@@ -205,6 +206,7 @@ function redirectToMedia($path)
     }
 
     if ($USE_MIRROR) {
+				global $FLASH_MIRROR;
         global $RCLONE_MIRROR;
         global $DEOVR_MIRROR;
         global $rcloneConfig;
@@ -212,7 +214,7 @@ function redirectToMedia($path)
         global $CLOUDFS_HTTP_ENDPOINT;
         $mirror_parts = explode(
             ':',
-            isset($_GET['deovr']) ? $DEOVR_MIRROR ?? $RCLONE_MIRROR : $RCLONE_MIRROR
+            isset($_GET['flash']) ? $FLASH_MIRROR ?? $RCLONE_MIRROR :( isset($_GET['deovr']) ? $DEOVR_MIRROR ?? $RCLONE_MIRROR : $RCLONE_MIRROR)
         );
         $rclone_config_key = $mirror_parts[0];
         $bucket = explode(
