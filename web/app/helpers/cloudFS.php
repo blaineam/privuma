@@ -217,12 +217,17 @@ class cloudFS
         return false;
     }
 
-    public function readfile(string $path)
+    public function readfile(string $path, bool $unsafe = false)
     {
+				if ($unsafe) {
+						$this->execute('cat', $path, null, false, true, [], true);
+						return;
+				}
         if ($this->is_file($path)) {
             try {
                 $this->execute('cat', $path, null, false, true, [], true);
             } catch (Exception $e) {
+								var_dump($e);
                 error_log($e->getMessage());
                 return false;
             }
@@ -486,7 +491,7 @@ class cloudFS
         return true;
     }
 
-    private function formatPath(string $path, bool $remote = true): string
+    public function formatPath(string $path, bool $remote = true): string
     {
         return str_replace(
             DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR,
@@ -640,7 +645,7 @@ class cloudFS
                 '2>&1',
             ]
         );
-        /* echo PHP_EOL.$cmd; */
+         // echo PHP_EOL.$cmd;
         if ($passthru) {
             passthru($cmd, $result_code);
         } else {

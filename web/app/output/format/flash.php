@@ -8,8 +8,8 @@ use privuma\privuma;
 use privuma\helpers\cloudFS;
 use privuma\helpers\tokenizer;
 
-$DEOVR_MIRROR = privuma::getEnv('RCLONE_DESTINATION');
-$ops = new cloudFS($DEOVR_MIRROR);
+$FLASH_MIRROR = privuma::getEnv('FLASH_RCLONE_DESTINATION');
+$ops = new cloudFS($FLASH_MIRROR);
 $tokenizer = new tokenizer();
 $ENDPOINT = privuma::getEnv('ENDPOINT');
 $AUTHTOKEN = privuma::getEnv('AUTHTOKEN');
@@ -21,7 +21,7 @@ function getProtectedUrlForMediaPath($path)
     global $ENDPOINT;
     global $AUTHTOKEN;
     global $tokenizer;
-    $uri = 'media.swf?token=' . $tokenizer->rollingTokens($AUTHTOKEN)[1] . '&deovr=1&media=' . urlencode(base64_encode($path));
+    $uri = 'media.swf?token=' . $tokenizer->rollingTokens($AUTHTOKEN)[1] . '&flash=1&media=' . urlencode(base64_encode($path));
     return $ENDPOINT . $uri;
 }
 
@@ -228,8 +228,82 @@ if (!isset($_SESSION['CREATED'])) {
     $_SESSION['CREATED'] = time();  // update creation time
 }
 
+$RCLONE_DESTINATION_PATH =
+    $privuma->getEnv("FLASH_DATA_DIRECTORY") . DIRECTORY_SEPARATOR;
+
+
+function getOpsPathPrefixForLink($link, $search) {
+	global $RCLONE_DESTINATION_PATH;
+	$filenameBase = basename(strtolower($link), ".swf");
+	return implode("/", [$RCLONE_DESTINATION_PATH, $search, $filenameBase]);
+}
+
+function streamThumbnail($path) {
+	global $ops;
+	//var_dump([$path, $ops->getPathInfo($path)]);
+	//die();
+	header("Content-Type: image/png");
+	$ops->readfile($path, true);
+	die();
+}
+
+function processLink($link, $search) {
+	global $ops;
+	global $RCLONE_DESTINATION_PATH;
+	$filenameBase = basename(strtolower($link), ".swf");
+	$thumbnail = getTempNameWithExtension("png");
+	$thumbnailTarget = implode("/", [$RCLONE_DESTINATION_PATH, $search, $filenameBase . ".png"]);
+	$flashTarget = implode("/", [$RCLONE_DESTINATION_PATH, $search, $filenameBase . ".swf"]);
+	$flash = getTempNameWithExtension("swf");
+	if ($ops->file_exists($flashTarget) && $ops->file_exists($thumbnailTarget)) {
+		return;
+	}
+	
+	file_put_contents($flash, file_get_contents($link));
+	exec("/usr/local/ruffle/target/release/exporter --skip-unsupported -p low --silent $flash $thumbnail 2>&1");
+	if (!$ops->is_dir($RCLONE_DESTINATION_PATH)) {
+    $ops->mkdir($RCLONE_DESTINATION_PATH);
+  }
+	
+	$ops->rename($flash, $flashTarget, false);
+	$ops->rename($thumbnail, $thumbnailTarget, false);
+}
+
+
+if (isset($_GET['thumbnail']) && isset($_GET['search'])) {
+	$link = urldecode(base64_decode($_GET['thumbnail']));
+	$search = urldecode(base64_decode($_GET['search']));
+	$path = getOpsPathPrefixForLink($link, $search) . ".png";
+	//var_dump($path);
+	//die();
+	
+	if (!$ops->is_file($path)) {
+		processLink($link, $search);
+	}
+	
+	header("Location: " . getProtectedUrlForMediaPath($path));
+	die();
+	
+	streamThumbnail($path);
+	die();
+}
+
 $flashJsonPath = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'flash.json';
 $json = file_exists($flashJsonPath) ? json_decode(file_get_contents($flashJsonPath), true) ?? [] : [];
+
+if (isset($_GET['access'])) {
+	header('Location: ' . getProtectedUrlForMediaPath(urldecode(base64_decode($_GET['access']))));
+	return;
+}
+
+
+function getTempNameWithExtension($ext) {
+	$tmpname = tempnam(sys_get_temp_dir(), "PVMA-");
+	$newtmpname = $tmpname . "." . $ext;
+	rename($tmpname, $newtmpname);	
+	return $newtmpname;
+}
+
 
 if (isset($_GET['media']) && isset($_GET['id'])) {
     if ($_GET['media'] === 'cached') {
@@ -237,6 +311,14 @@ if (isset($_GET['media']) && isset($_GET['id'])) {
             foreach ($posts as $k => $post) {
                 if ($_GET['id'] == $post['id']) {
                     $originalUrl = $post['url'];
+										$width = $post['file']['width'] ?? '100%';
+										
+										$height = $post['file']['height'] ?? '100%';
+										
+										if ($width != '100%') {
+											$height = (( $height / $width ) * 100) . "vw";
+											$width = '100vw';
+										}
                     $proxiedUrl = getProtectedUrlForMediaPath($originalUrl);
                     echo '<!DOCTYPE html>';
                     echo '
@@ -249,13 +331,10 @@ if (isset($_GET['media']) && isset($_GET['id'])) {
                                     <head>
                                     <body>
 
-
-  <div style="width:100%; height: calc( 100% - 25px ); display:block; position:absolute; margin:0; padding:0;top:0;left:0;"> <object>
+																			<object style="width:'.$width.';height:'.$height.';">
                                             <embed src="' . $proxiedUrl . '" width="100%" height="100%">
                                       </object>
-
-    </div>
-																																								<script src="/flash/ruffle/ruffle.js">
+																						
                                         
                                         </script>
                                     </body>
@@ -276,9 +355,9 @@ echo '<html>
                 ' . $htmlStyle . '
 				<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" integrity="sha512-H9jrZiiopUdsLpg94A333EfumgUBpO9MdbxStdeITo+KEIMaNfHNvwyjjDJb+ERPaRS6DpyRlKbvPUasNItRyw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
                 <style>
-                a[data-gallery-link="true"] {
+                a[data-fancybox] {
                     width: 42vw;
-                    height: 43vw;
+                    height: auto;
                     margin: 2.5vw;
                     border-radius: 5vw;
                     display:inline-block;
@@ -286,21 +365,23 @@ echo '<html>
 					border: 1px solid white;
 					padding: 2.5vw;
 					font-family: sans-serif;
-					font-size: 2em;
+					font-size: 1.2em;
 					line-height: 1.0;
                 }
-                img {
-                    object-fit: cover;
-                    height: 100%;
-                    width: 100%;
-                    object-position: 0% 50%;
-                }
-            @media (min-width:801px)  {
+                
+								a[data-fancybox] img {
+									object-fit:cover;
+										float:left;
+										width:100px;
+										height:100px;
+										margin-right: 10px;
+									}
+            @media (max-width:801px)  {
 
 
-                a[data-gallery-link="true"] {
-                    width: 19vw;
-                    height: 20vw;
+                a[data-fancybox] {
+                    width: 84vw;
+                    height: auto;
                     margin: 2.5vw;
                     border-radius: 5vw;
                     display:inline-block;
@@ -308,12 +389,12 @@ echo '<html>
                 }
             }
                 </style>
-            <head>
+				<script src="/flash/ruffle/ruffle.js"></script>
+            </head>
             <body>';
 
 ?>
-
-            <ul class="tabs">
+            <ul class="tabs" style="overflow-x: scroll">
                 <?php
 
 foreach ($json as $search => $results) {
@@ -340,18 +421,17 @@ foreach ($json as $search => $results) {
 foreach ($json as $search => $posts) {
     echo '<div data-tab-content id="' . urlencode($search) . '" class="' . ($search === array_key_first($json) ? 'active' : '') . '"><h2>' . $search . '</h2>';
     foreach ($posts as $post) {
-        $ua = strtolower($_SERVER['HTTP_USER_AGENT']);
-        if (stripos($ua, 'x11') !== false) {
-            echo '<a data-gallery-link="true" href="?media=cached&id=' . $post['id'] . '">' . $post['title'] . '</a> ';
-        } else {
-
-            echo ' <a data-gallery-link="true" data-fancybox="gallery"  data-type="iframe" href="#" data-src="?media=cached&id=' . $post['id'] . '">' . $post['title'] . '</a> ';
-        }
+            echo '<a data-fancybox href="javascript:;" data-src="#inline-player" data-url="?access=' . urlencode(base64_encode($post['url'])) . '"><img loading="lazy" class="lazy" data-hash="' . md5(basename($post['url'])) . '" data-baksrc="?search=' . urlencode(base64_encode($search)) . '&thumbnail=' . urlencode(base64_encode($post['url'])) . '" />
+' . $post['title'] . '<p style="display:none;">' . implode(", ", $post["tags"]["general"] ?? []) . '</p></a> '; //
 
     }
     echo '</div>';
 }
 echo '</div>';
+echo '<div id="searchBox" style="position:fixed; left: 10px; bottom: 10px; width:100%; max-width: 320px; padding:5px; border-radius:7.5px; background-color: rgba(0,0,0,0.85);"><input style="border-radius:5px; padding:3px; font-size:16px; width:100%;" type="search" placeholder="search" name="search" id="search" /></div>';
+echo '
+	<div id="inline-player" style="display:none;width:100%;height:100%;background-color:#000000;padding:0px;margin:0px;">
+	</div>';
 echo "
     <script>
 
@@ -370,10 +450,126 @@ tabs.forEach(tab => {
     })
     tab.classList.add('active')
     target.classList.add('active')
+		processLazyLoad();
   })
 })
 </script>";
 echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 			<script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js" integrity="sha512-uURl+ZXMBrF4AwGaWmEetzrd+J5/8NRkWAvJx5sbPSSuOb0bZLqf+tOzniObO00BjHa/dD7gub9oCGMLPQHtQA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+			<script>
+			
+			$.fancybox.defaults.touch = false;
+			$.fancybox.defaults.keyboard = false;
+			
+				const ruffle = window.RufflePlayer.newest();
+				
+				function md5ToImage(hash) {
+       const canvas = document.createElement("canvas");
+       const ctx = canvas.getContext("2d");
+       canvas.width = 8;
+       canvas.height = 8;
+
+       const bytes = [];
+       for (let i = 0; i < hash.length; i += 2) {
+           bytes.push(parseInt(hash.substr(i, 2), 16));
+       }
+
+       const imageData = ctx.createImageData(8, 8);
+       for (let i = 0; i < 64; i++) {
+           imageData.data[i * 4] = bytes[i % 16];
+           imageData.data[i * 4 + 1] = bytes[(i + 4) % 16];
+           imageData.data[i * 4 + 2] = bytes[(i + 8) % 16];
+           imageData.data[i * 4 + 3] = 255;
+       }
+
+       ctx.putImageData(imageData, 0, 0);
+       return canvas.toDataURL();
+   }
+
+  	$("a[data-fancybox] img").each(function(el) {
+			$(this).attr(`retro`, md5ToImage($(this).data(`hash`)));
+		});
+
+function processLazyLoad() {
+                var lazyImages = [].slice.call(
+                    document.querySelectorAll("img.lazy"),
+                );
+                if ("IntersectionObserver" in window) {
+                    let lazyImageObserver = new IntersectionObserver(function (
+                        entries,
+                        observer,
+                    ) {
+                        entries.forEach(function (entry) {
+                            let lazyImage = entry.target;
+                            if (
+                                entry.isIntersecting &&
+                                lazyImage.dataset.src != ""
+                            ) {
+																lazyImage.onerror = function() {
+																	lazyImage.src = md5ToImage(lazyImage.dataset.hash);	
+																};
+																lazyImage.src = lazyImage.dataset.src;
+                                lazyImage.classList.remove("lazy-waiting");
+                                lazyImage.classList.add("lazy-loaded");
+                            } else if (
+                                lazyImage.classList.contains("lazy-loaded") &&
+                                lazyImage.src !== lazyImage.dataset.retro
+                            ) {
+                                lazyImage.dataset.src = lazyImage.src;
+                                lazyImage.src = lazyImage.dataset.retro;
+                                lazyImage.classList.remove("lazy-loaded");
+                                lazyImage.classList.add("lazy-waiting");
+                            }
+                        });
+                    });
+                    lazyImages.forEach(function (lazyImage) {
+                        lazyImageObserver.observe(lazyImage);
+                    });
+                }
+            }
+						
+						processLazyLoad();
+
+
+    
+			$(document).on("beforeShow.fb", function( e, instance, slide ) {
+				const player = ruffle.createPlayer();
+    $("#inline-player").empty().html(player);
+    player.load({
+        "url": slide.opts.$orig.data("url"),
+        "scale": "showAll",
+        "openUrlMode": "deny",
+        "allowNetworking": "none",
+        "letterbox": "on",
+      });
+	player.style.width = "100%"; player.style.height = "100%";
+});
+
+$("#search").keypress((event) => {
+	if (event.which === 13) {
+		if ($("#search").val().length <= 2) {
+			$(`a[data-fancybox]`).show();
+			return;
+		}
+		$(`a[data-fancybox]`).each(function(el){ 
+			var match = true;
+			var area = $(this).text();
+			($("#search").val()).toLowerCase().split(" ").forEach((word) => {
+				console.log(area);
+			 	if(!area.includes(word)) {
+				 	match = false;
+			 	}
+		 	});
+	
+		
+			 if (match) {
+				 $(this).show();
+			 } else {
+				 $(this).hide();
+			 }
+		});
+	}
+});
+				</script>
 		</body>
         </html>';

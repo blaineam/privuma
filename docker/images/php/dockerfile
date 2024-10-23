@@ -113,15 +113,23 @@ RUN  sed -i 's%  <policy domain="coder" rights="none" pattern="PDF" />%  <policy
       sed -i 's% <policy domain="resource" name="area" value="128MP"/>% <policy domain="resource" name="area" value="512MP"/>%g' /usr/local/etc/ImageMagick-7/policy.xml && \
       sed -i 's% <policy domain="resource" name="memory" value="256MiB"/>% <policy domain="resource" name="memory" value="1GiB"/>%g' /usr/local/etc/ImageMagick-7/policy.xml
 
+RUN apt-get install -y default-jdk
 
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+
+RUN cd /usr/local/ \
+		&& git clone https://github.com/ruffle-rs/ruffle.git ruffle
+RUN cd /usr/local/ruffle \
+		&& /root/.cargo/bin/cargo build --release --package=exporter --bin=exporter \
+		&& /usr/local/ruffle/target/release/exporter --version
 
 # Cleanup extra packages
 RUN apt-get remove --autoremove --purge -y gcc make cmake autoconf g++ yasm pkg-config libpng-dev libjpeg62-turbo-dev libde265-dev libx265-dev libxml2-dev libtiff-dev libfontconfig1-dev libfreetype6-dev
 
 # Clear cache
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get clean
 
-ARG USERID=0
+ARG USERID=1000
 RUN usermod -u ${USERID} www-data
 
 RUN chsh -s /bin/bash www-data
@@ -136,7 +144,7 @@ CMD bash -c "php-fpm"
 
 FROM cenode/privuma-php AS prod
 
-ARG USERID=0
+ARG USERID=1000
 # Set php user id to host id
 RUN usermod -u ${USERID} www-data
 RUN chsh -s /bin/bash www-data
@@ -146,3 +154,5 @@ RUN sed -i "s/9000/${PHP_PORT}/g" /usr/local/etc/php-fpm.d/www.conf
 RUN sed -i "s/9000/${PHP_PORT}/g" /usr/local/etc/php-fpm.d/zz-docker.conf
 
 EXPOSE ${PHP_PORT}
+
+RUN mkdir /var/www/.cache && chown www-data /var/www/.cache
