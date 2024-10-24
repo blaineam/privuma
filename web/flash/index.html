@@ -5870,7 +5870,7 @@
         window.dataset = JSON.parse(atob(text));
         window.ranFirst = false;
         for (var search in window.dataset) {
-          if (search == atob("TWF0dXJl")) {
+          if (window.localStorage.getItem("TWF0dXJl") !== true && search == atob("TWF0dXJl")) {
             continue;
           }
           setupPage(search);
@@ -5979,6 +5979,7 @@
         
         if ($("#search").val() === atob('SSBhbSBvZiBhZ2UgdG8gdmlldyBNYXR1cmUgY29udGVudA==')) {
           $("#search").val("");
+          window.localStorage.setItem("TWF0dXJl", true);
           setupPage(atob('TWF0dXJl'));
           $(`a[data-fancybox]`).show();
           return;
