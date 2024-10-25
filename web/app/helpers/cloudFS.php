@@ -219,15 +219,15 @@ class cloudFS
 
     public function readfile(string $path, bool $unsafe = false)
     {
-				if ($unsafe) {
-						$this->execute('cat', $path, null, false, true, [], true);
-						return;
-				}
+        if ($unsafe) {
+            $this->execute('cat', $path, null, false, true, [], true);
+            return;
+        }
         if ($this->is_file($path)) {
             try {
                 $this->execute('cat', $path, null, false, true, [], true);
             } catch (Exception $e) {
-								var_dump($e);
+                var_dump($e);
                 error_log($e->getMessage());
                 return false;
             }
@@ -645,7 +645,7 @@ class cloudFS
                 '2>&1',
             ]
         );
-         // echo PHP_EOL.$cmd;
+        // echo PHP_EOL.$cmd;
         if ($passthru) {
             passthru($cmd, $result_code);
         } else {

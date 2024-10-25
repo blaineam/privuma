@@ -229,81 +229,81 @@ if (!isset($_SESSION['CREATED'])) {
 }
 
 $RCLONE_DESTINATION_PATH =
-    $privuma->getEnv("FLASH_DATA_DIRECTORY") . DIRECTORY_SEPARATOR;
+    $privuma->getEnv('FLASH_DATA_DIRECTORY') . DIRECTORY_SEPARATOR;
 
-
-function getOpsPathPrefixForLink($link, $search) {
-	global $RCLONE_DESTINATION_PATH;
-	$filenameBase = basename(strtolower($link), ".swf");
-	return implode("/", [$RCLONE_DESTINATION_PATH, $search, $filenameBase]);
+function getOpsPathPrefixForLink($link, $search)
+{
+    global $RCLONE_DESTINATION_PATH;
+    $filenameBase = basename(strtolower($link), '.swf');
+    return implode('/', [$RCLONE_DESTINATION_PATH, $search, $filenameBase]);
 }
 
-function streamThumbnail($path) {
-	global $ops;
-	//var_dump([$path, $ops->getPathInfo($path)]);
-	//die();
-	header("Content-Type: image/png");
-	$ops->readfile($path, true);
-	die();
+function streamThumbnail($path)
+{
+    global $ops;
+    //var_dump([$path, $ops->getPathInfo($path)]);
+    //die();
+    header('Content-Type: image/png');
+    $ops->readfile($path, true);
+    die();
 }
 
-function processLink($link, $search) {
-	global $ops;
-	global $RCLONE_DESTINATION_PATH;
-	$filenameBase = basename(strtolower($link), ".swf");
-	$thumbnail = getTempNameWithExtension("png");
-	$thumbnailTarget = implode("/", [$RCLONE_DESTINATION_PATH, $search, $filenameBase . ".png"]);
-	$flashTarget = implode("/", [$RCLONE_DESTINATION_PATH, $search, $filenameBase . ".swf"]);
-	$flash = getTempNameWithExtension("swf");
-	if ($ops->file_exists($flashTarget) && $ops->file_exists($thumbnailTarget)) {
-		return;
-	}
-	
-	file_put_contents($flash, file_get_contents($link));
-	exec("/usr/local/ruffle/target/release/exporter --skip-unsupported -p low --silent $flash $thumbnail 2>&1");
-	if (!$ops->is_dir($RCLONE_DESTINATION_PATH)) {
-    $ops->mkdir($RCLONE_DESTINATION_PATH);
-  }
-	
-	$ops->rename($flash, $flashTarget, false);
-	$ops->rename($thumbnail, $thumbnailTarget, false);
-}
+function processLink($link, $search)
+{
+    global $ops;
+    global $RCLONE_DESTINATION_PATH;
+    $filenameBase = basename(strtolower($link), '.swf');
+    $thumbnail = getTempNameWithExtension('png');
+    $thumbnailTarget = implode('/', [$RCLONE_DESTINATION_PATH, $search, $filenameBase . '.png']);
+    $flashTarget = implode('/', [$RCLONE_DESTINATION_PATH, $search, $filenameBase . '.swf']);
+    $flash = getTempNameWithExtension('swf');
+    if ($ops->file_exists($flashTarget) && $ops->file_exists($thumbnailTarget)) {
+        return;
+    }
 
+    file_put_contents($flash, file_get_contents($link));
+    exec("/usr/local/ruffle/target/release/exporter --skip-unsupported -p low --silent $flash $thumbnail 2>&1");
+    if (!$ops->is_dir($RCLONE_DESTINATION_PATH)) {
+        $ops->mkdir($RCLONE_DESTINATION_PATH);
+    }
+
+    $ops->rename($flash, $flashTarget, false);
+    $ops->rename($thumbnail, $thumbnailTarget, false);
+}
 
 if (isset($_GET['thumbnail']) && isset($_GET['search'])) {
-	$link = urldecode(base64_decode($_GET['thumbnail']));
-	$search = urldecode(base64_decode($_GET['search']));
-	$path = getOpsPathPrefixForLink($link, $search) . ".png";
-	//var_dump($path);
-	//die();
-	
-	if (!$ops->is_file($path)) {
-		processLink($link, $search);
-	}
-	
-	header("Location: " . getProtectedUrlForMediaPath($path));
-	die();
-	
-	streamThumbnail($path);
-	die();
+    $link = urldecode(base64_decode($_GET['thumbnail']));
+    $search = urldecode(base64_decode($_GET['search']));
+    $path = getOpsPathPrefixForLink($link, $search) . '.png';
+    //var_dump($path);
+    //die();
+
+    if (!$ops->is_file($path)) {
+        processLink($link, $search);
+    }
+
+    header('Location: ' . getProtectedUrlForMediaPath($path));
+    die();
+
+    streamThumbnail($path);
+    die();
 }
 
 $flashJsonPath = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'flash.json';
 $json = file_exists($flashJsonPath) ? json_decode(file_get_contents($flashJsonPath), true) ?? [] : [];
 
 if (isset($_GET['access'])) {
-	header('Location: ' . getProtectedUrlForMediaPath(urldecode(base64_decode($_GET['access']))));
-	return;
+    header('Location: ' . getProtectedUrlForMediaPath(urldecode(base64_decode($_GET['access']))));
+    return;
 }
 
-
-function getTempNameWithExtension($ext) {
-	$tmpname = tempnam(sys_get_temp_dir(), "PVMA-");
-	$newtmpname = $tmpname . "." . $ext;
-	rename($tmpname, $newtmpname);	
-	return $newtmpname;
+function getTempNameWithExtension($ext)
+{
+    $tmpname = tempnam(sys_get_temp_dir(), 'PVMA-');
+    $newtmpname = $tmpname . '.' . $ext;
+    rename($tmpname, $newtmpname);
+    return $newtmpname;
 }
-
 
 if (isset($_GET['media']) && isset($_GET['id'])) {
     if ($_GET['media'] === 'cached') {
@@ -311,14 +311,14 @@ if (isset($_GET['media']) && isset($_GET['id'])) {
             foreach ($posts as $k => $post) {
                 if ($_GET['id'] == $post['id']) {
                     $originalUrl = $post['url'];
-										$width = $post['file']['width'] ?? '100%';
-										
-										$height = $post['file']['height'] ?? '100%';
-										
-										if ($width != '100%') {
-											$height = (( $height / $width ) * 100) . "vw";
-											$width = '100vw';
-										}
+                    $width = $post['file']['width'] ?? '100%';
+
+                    $height = $post['file']['height'] ?? '100%';
+
+                    if ($width != '100%') {
+                        $height = (($height / $width) * 100) . 'vw';
+                        $width = '100vw';
+                    }
                     $proxiedUrl = getProtectedUrlForMediaPath($originalUrl);
                     echo '<!DOCTYPE html>';
                     echo '
@@ -331,7 +331,7 @@ if (isset($_GET['media']) && isset($_GET['id'])) {
                                     <head>
                                     <body>
 
-																			<object style="width:'.$width.';height:'.$height.';">
+																			<object style="width:' . $width . ';height:' . $height . ';">
                                             <embed src="' . $proxiedUrl . '" width="100%" height="100%">
                                       </object>
 																						
@@ -421,8 +421,8 @@ foreach ($json as $search => $results) {
 foreach ($json as $search => $posts) {
     echo '<div data-tab-content id="' . urlencode($search) . '" class="' . ($search === array_key_first($json) ? 'active' : '') . '"><h2>' . $search . '</h2>';
     foreach ($posts as $post) {
-            echo '<a data-fancybox href="javascript:;" data-src="#inline-player" data-url="?access=' . urlencode(base64_encode($post['url'])) . '"><img loading="lazy" class="lazy" data-hash="' . md5(basename($post['url'])) . '" data-baksrc="?search=' . urlencode(base64_encode($search)) . '&thumbnail=' . urlencode(base64_encode($post['url'])) . '" />
-' . $post['title'] . '<p style="display:none;">' . implode(", ", $post["tags"]["general"] ?? []) . '</p></a> '; //
+        echo '<a data-fancybox href="javascript:;" data-src="#inline-player" data-url="?access=' . urlencode(base64_encode($post['url'])) . '"><img loading="lazy" class="lazy" data-hash="' . md5(basename($post['url'])) . '" data-baksrc="?search=' . urlencode(base64_encode($search)) . '&thumbnail=' . urlencode(base64_encode($post['url'])) . '" />
+' . $post['title'] . '<p style="display:none;">' . implode(', ', $post['tags']['general'] ?? []) . '</p></a> '; //
 
     }
     echo '</div>';
