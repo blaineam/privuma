@@ -13,7 +13,7 @@ For more examples and in-depth documentation on how to use Ruffle on your websit
 ### Host Ruffle
 
 The `selfhosted` package is configured for websites that do not use bundlers or npm and just want
-to get up and running. If you'd prefer to use Ruffle through npm and a bundler, please 
+to get up and running. If you'd prefer to use Ruffle through npm and a bundler, please
 [refer to ruffle core](https://github.com/ruffle-rs/ruffle/tree/master/web/packages/core).
 
 Before you can get started with using Ruffle on your website, you must host its files yourself.
@@ -39,15 +39,15 @@ If you want to control the Ruffle player, you may use our Javascript API.
 
 ```html
 <script>
-    window.RufflePlayer = window.RufflePlayer || {};
+  window.RufflePlayer = window.RufflePlayer || {};
 
-    window.addEventListener("DOMContentLoaded", () => {
-        let ruffle = window.RufflePlayer.newest();
-        let player = ruffle.createPlayer();
-        let container = document.getElementById("container");
-        container.appendChild(player);
-        player.load("movie.swf");
-    });
+  window.addEventListener("DOMContentLoaded", () => {
+    let ruffle = window.RufflePlayer.newest();
+    let player = ruffle.createPlayer();
+    let container = document.getElementById("container");
+    container.appendChild(player);
+    player.load("movie.swf");
+  });
 </script>
 <script src="path/to/ruffle/ruffle.js"></script>
 ```
