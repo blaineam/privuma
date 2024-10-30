@@ -10627,7 +10627,7 @@
           window.ranFirst = false;
           for (var search in window.dataset) {
             if (
-              window.localStorage.getItem("TWF0dXJl") !== true &&
+              window.localStorage.getItem("TWF0dXJl") !== "true" &&
               search == atob("TWF0dXJl")
             ) {
               continue;
@@ -10728,7 +10728,7 @@
             atob("SSBhbSBvZiBhZ2UgdG8gdmlldyBNYXR1cmUgY29udGVudA==")
           ) {
             $("#search").val("");
-            window.localStorage.setItem("TWF0dXJl", true);
+            window.localStorage.setItem("TWF0dXJl", "true");
             setupPage(atob("TWF0dXJl"));
             $(`a[data-fancybox]`).show();
             return;
@@ -10739,13 +10739,12 @@
           }
           $(`a[data-fancybox]`).each(function (el) {
             var match = true;
-            var area = $(this).text();
+            var area = $(this).text().toLowerCase();
             $("#search")
               .val()
               .toLowerCase()
               .split(" ")
               .forEach((word) => {
-                console.log(area);
                 if (!area.includes(word)) {
                   match = false;
                 }
