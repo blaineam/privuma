@@ -160,14 +160,35 @@ $viewerHTML = <<<'HEREHTML'
       body.compensate-for-scrollbar{overflow:hidden}.fancybox-active{height:auto}.fancybox-is-hidden{left:-9999px;margin:0;position:absolute!important;top:-9999px;visibility:hidden}.fancybox-container{-webkit-backface-visibility:hidden;height:100%;left:0;outline:none;position:fixed;-webkit-tap-highlight-color:transparent;top:0;-ms-touch-action:manipulation;touch-action:manipulation;transform:translateZ(0);width:100%;z-index:99992}.fancybox-container *{box-sizing:border-box}.fancybox-bg,.fancybox-inner,.fancybox-outer,.fancybox-stage{bottom:0;left:0;position:absolute;right:0;top:0}.fancybox-outer{-webkit-overflow-scrolling:touch;overflow-y:auto}.fancybox-bg{background:#1e1e1e;opacity:0;transition-duration:inherit;transition-property:opacity;transition-timing-function:cubic-bezier(.47,0,.74,.71)}.fancybox-is-open .fancybox-bg{opacity:.9;transition-timing-function:cubic-bezier(.22,.61,.36,1)}.fancybox-caption,.fancybox-infobar,.fancybox-navigation .fancybox-button,.fancybox-toolbar{direction:ltr;opacity:0;position:absolute;transition:opacity .25s ease,visibility 0s ease .25s;visibility:hidden;z-index:99997}.fancybox-show-caption .fancybox-caption,.fancybox-show-infobar .fancybox-infobar,.fancybox-show-nav .fancybox-navigation .fancybox-button,.fancybox-show-toolbar .fancybox-toolbar{opacity:1;transition:opacity .25s ease 0s,visibility 0s ease 0s;visibility:visible}.fancybox-infobar{color:#ccc;font-size:13px;-webkit-font-smoothing:subpixel-antialiased;height:44px;left:0;line-height:44px;min-width:44px;mix-blend-mode:difference;padding:0 10px;pointer-events:none;top:0;-webkit-touch-callout:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.fancybox-toolbar{right:0;top:0}.fancybox-stage{direction:ltr;overflow:visible;transform:translateZ(0);z-index:99994}.fancybox-is-open .fancybox-stage{overflow:hidden}.fancybox-slide{-webkit-backface-visibility:hidden;display:none;height:100%;left:0;outline:none;overflow:auto;-webkit-overflow-scrolling:touch;padding:44px;position:absolute;text-align:center;top:0;transition-property:transform,opacity;white-space:normal;width:100%;z-index:99994}.fancybox-slide:before{content:"";display:inline-block;font-size:0;height:100%;vertical-align:middle;width:0}.fancybox-is-sliding .fancybox-slide,.fancybox-slide--current,.fancybox-slide--next,.fancybox-slide--previous{display:block}.fancybox-slide--image{overflow:hidden;padding:44px 0}.fancybox-slide--image:before{display:none}.fancybox-slide--html{padding:6px}.fancybox-content{background:#fff;display:inline-block;margin:0;max-width:100%;overflow:auto;-webkit-overflow-scrolling:touch;padding:44px;position:relative;text-align:left;vertical-align:middle}.fancybox-slide--image .fancybox-content{animation-timing-function:cubic-bezier(.5,0,.14,1);-webkit-backface-visibility:hidden;background:transparent;background-repeat:no-repeat;background-size:100% 100%;left:0;max-width:none;overflow:visible;padding:0;position:absolute;top:0;transform-origin:top left;transition-property:transform,opacity;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;z-index:99995}.fancybox-can-zoomOut .fancybox-content{cursor:zoom-out}.fancybox-can-zoomIn .fancybox-content{cursor:zoom-in}.fancybox-can-pan .fancybox-content,.fancybox-can-swipe .fancybox-content{cursor:grab}.fancybox-is-grabbing .fancybox-content{cursor:grabbing}.fancybox-container [data-selectable=true]{cursor:text}.fancybox-image,.fancybox-spaceball{background:transparent;border:0;height:100%;left:0;margin:0;max-height:none;max-width:none;padding:0;position:absolute;top:0;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;width:100%}.fancybox-spaceball{z-index:1}.fancybox-slide--iframe .fancybox-content,.fancybox-slide--map .fancybox-content,.fancybox-slide--pdf .fancybox-content,.fancybox-slide--video .fancybox-content{height:100%;overflow:visible;padding:0;width:100%}.fancybox-slide--video .fancybox-content{background:#000}.fancybox-slide--map .fancybox-content{background:#e5e3df}.fancybox-slide--iframe .fancybox-content{background:#fff}.fancybox-iframe,.fancybox-video{background:transparent;border:0;display:block;height:100%;margin:0;overflow:hidden;padding:0;width:100%}.fancybox-iframe{left:0;position:absolute;top:0}.fancybox-error{background:#fff;cursor:default;max-width:400px;padding:40px;width:100%}.fancybox-error p{color:#444;font-size:16px;line-height:20px;margin:0;padding:0}.fancybox-button{background:rgba(30,30,30,.6);border:0;border-radius:0;box-shadow:none;cursor:pointer;display:inline-block;height:44px;margin:0;padding:10px;position:relative;transition:color .2s;vertical-align:top;visibility:inherit;width:44px}.fancybox-button,.fancybox-button:link,.fancybox-button:visited{color:#ccc}.fancybox-button:hover{color:#fff}.fancybox-button:focus{outline:none}.fancybox-button.fancybox-focus{outline:1px dotted}.fancybox-button[disabled],.fancybox-button[disabled]:hover{color:#888;cursor:default;outline:none}.fancybox-button div{height:100%}.fancybox-button svg{display:block;height:100%;overflow:visible;position:relative;width:100%}.fancybox-button svg path{fill:currentColor;stroke-width:0}.fancybox-button--fsenter svg:nth-child(2),.fancybox-button--fsexit svg:first-child,.fancybox-button--pause svg:first-child,.fancybox-button--play svg:nth-child(2){display:none}.fancybox-progress{background:#ff5268;height:2px;left:0;position:absolute;right:0;top:0;transform:scaleX(0);transform-origin:0;transition-property:transform;transition-timing-function:linear;z-index:99998}.fancybox-close-small{background:transparent;border:0;border-radius:0;color:#ccc;cursor:pointer;opacity:.8;padding:8px;position:absolute;right:-12px;top:-44px;z-index:401}.fancybox-close-small:hover{color:#fff;opacity:1}.fancybox-slide--html .fancybox-close-small{color:currentColor;padding:10px;right:0;top:0}.fancybox-slide--image.fancybox-is-scaling .fancybox-content{overflow:hidden}.fancybox-is-scaling .fancybox-close-small,.fancybox-is-zoomable.fancybox-can-pan .fancybox-close-small{display:none}.fancybox-navigation .fancybox-button{background-clip:content-box;height:100px;opacity:0;position:absolute;top:calc(50% - 50px);width:70px}.fancybox-navigation .fancybox-button div{padding:7px}.fancybox-navigation .fancybox-button--arrow_left{left:0;left:env(safe-area-inset-left);padding:31px 26px 31px 6px}.fancybox-navigation .fancybox-button--arrow_right{padding:31px 6px 31px 26px;right:0;right:env(safe-area-inset-right)}.fancybox-caption{background:linear-gradient(0deg,rgba(0,0,0,.85) 0,rgba(0,0,0,.3) 50%,rgba(0,0,0,.15) 65%,rgba(0,0,0,.075) 75.5%,rgba(0,0,0,.037) 82.85%,rgba(0,0,0,.019) 88%,transparent);bottom:0;color:#eee;font-size:14px;font-weight:400;left:0;line-height:1.5;padding:75px 44px 25px;pointer-events:none;right:0;text-align:center;z-index:99996}@supports (padding:max(0px)){.fancybox-caption{padding:75px max(44px,env(safe-area-inset-right)) max(25px,env(safe-area-inset-bottom)) max(44px,env(safe-area-inset-left))}}.fancybox-caption--separate{margin-top:-50px}.fancybox-caption__body{max-height:50vh;overflow:auto;pointer-events:all}.fancybox-caption a,.fancybox-caption a:link,.fancybox-caption a:visited{color:#ccc;text-decoration:none}.fancybox-caption a:hover{color:#fff;text-decoration:underline}.fancybox-loading{animation:a 1s linear infinite;background:transparent;border:4px solid #888;border-bottom-color:#fff;border-radius:50%;height:50px;left:50%;margin:-25px 0 0 -25px;opacity:.7;padding:0;position:absolute;top:50%;width:50px;z-index:99999}@keyframes a{to{transform:rotate(1turn)}}.fancybox-animated{transition-timing-function:cubic-bezier(0,0,.25,1)}.fancybox-fx-slide.fancybox-slide--previous{opacity:0;transform:translate3d(-100%,0,0)}.fancybox-fx-slide.fancybox-slide--next{opacity:0;transform:translate3d(100%,0,0)}.fancybox-fx-slide.fancybox-slide--current{opacity:1;transform:translateZ(0)}.fancybox-fx-fade.fancybox-slide--next,.fancybox-fx-fade.fancybox-slide--previous{opacity:0;transition-timing-function:cubic-bezier(.19,1,.22,1)}.fancybox-fx-fade.fancybox-slide--current{opacity:1}.fancybox-fx-zoom-in-out.fancybox-slide--previous{opacity:0;transform:scale3d(1.5,1.5,1.5)}.fancybox-fx-zoom-in-out.fancybox-slide--next{opacity:0;transform:scale3d(.5,.5,.5)}.fancybox-fx-zoom-in-out.fancybox-slide--current{opacity:1;transform:scaleX(1)}.fancybox-fx-rotate.fancybox-slide--previous{opacity:0;transform:rotate(-1turn)}.fancybox-fx-rotate.fancybox-slide--next{opacity:0;transform:rotate(1turn)}.fancybox-fx-rotate.fancybox-slide--current{opacity:1;transform:rotate(0deg)}.fancybox-fx-circular.fancybox-slide--previous{opacity:0;transform:scale3d(0,0,0) translate3d(-100%,0,0)}.fancybox-fx-circular.fancybox-slide--next{opacity:0;transform:scale3d(0,0,0) translate3d(100%,0,0)}.fancybox-fx-circular.fancybox-slide--current{opacity:1;transform:scaleX(1) translateZ(0)}.fancybox-fx-tube.fancybox-slide--previous{transform:translate3d(-100%,0,0) scale(.1) skew(-10deg)}.fancybox-fx-tube.fancybox-slide--next{transform:translate3d(100%,0,0) scale(.1) skew(10deg)}.fancybox-fx-tube.fancybox-slide--current{transform:translateZ(0) scale(1)}@media (max-height:576px){.fancybox-slide{padding-left:6px;padding-right:6px}.fancybox-slide--image{padding:6px 0}.fancybox-close-small{right:-6px}.fancybox-slide--image .fancybox-close-small{background:#4e4e4e;color:#f2f4f6;height:36px;opacity:1;padding:6px;right:0;top:0;width:36px}.fancybox-caption{padding-left:12px;padding-right:12px}@supports (padding:max(0px)){.fancybox-caption{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}}}.fancybox-share{background:#f4f4f4;border-radius:3px;max-width:90%;padding:30px;text-align:center}.fancybox-share h1{color:#222;font-size:35px;font-weight:700;margin:0 0 20px}.fancybox-share p{margin:0;padding:0}.fancybox-share__button{border:0;border-radius:3px;display:inline-block;font-size:14px;font-weight:700;line-height:40px;margin:0 5px 10px;min-width:130px;padding:0 15px;text-decoration:none;transition:all .2s;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;white-space:nowrap}.fancybox-share__button:link,.fancybox-share__button:visited{color:#fff}.fancybox-share__button:hover{text-decoration:none}.fancybox-share__button--fb{background:#3b5998}.fancybox-share__button--fb:hover{background:#344e86}.fancybox-share__button--pt{background:#bd081d}.fancybox-share__button--pt:hover{background:#aa0719}.fancybox-share__button--tw{background:#1da1f2}.fancybox-share__button--tw:hover{background:#0d95e8}.fancybox-share__button svg{height:25px;margin-right:7px;position:relative;top:-1px;vertical-align:middle;width:25px}.fancybox-share__button svg path{fill:#fff}.fancybox-share__input{background:transparent;border:0;border-bottom:1px solid #d7d7d7;border-radius:0;color:#5d5b5b;font-size:14px;margin:10px 0 0;outline:none;padding:10px 15px;width:100%}.fancybox-thumbs{background:#ddd;bottom:0;display:none;margin:0;-webkit-overflow-scrolling:touch;-ms-overflow-style:-ms-autohiding-scrollbar;padding:2px 2px 4px;position:absolute;right:0;-webkit-tap-highlight-color:rgba(0,0,0,0);top:0;width:212px;z-index:99995}.fancybox-thumbs-x{overflow-x:auto;overflow-y:hidden}.fancybox-show-thumbs .fancybox-thumbs{display:block}.fancybox-show-thumbs .fancybox-inner{right:212px}.fancybox-thumbs__list{font-size:0;height:100%;list-style:none;margin:0;overflow-x:hidden;overflow-y:auto;padding:0;position:absolute;position:relative;white-space:nowrap;width:100%}.fancybox-thumbs-x .fancybox-thumbs__list{overflow:hidden}.fancybox-thumbs-y .fancybox-thumbs__list::-webkit-scrollbar{width:7px}.fancybox-thumbs-y .fancybox-thumbs__list::-webkit-scrollbar-track{background:#fff;border-radius:10px;box-shadow:inset 0 0 6px rgba(0,0,0,.3)}.fancybox-thumbs-y .fancybox-thumbs__list::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:10px}.fancybox-thumbs__list a{-webkit-backface-visibility:hidden;backface-visibility:hidden;background-color:rgba(0,0,0,.1);background-position:50%;background-repeat:no-repeat;background-size:cover;cursor:pointer;float:left;height:75px;margin:2px;max-height:calc(100% - 8px);max-width:calc(50% - 4px);outline:none;overflow:hidden;padding:0;position:relative;-webkit-tap-highlight-color:transparent;width:100px}.fancybox-thumbs__list a:before{border:6px solid #ff5268;bottom:0;content:"";left:0;opacity:0;position:absolute;right:0;top:0;transition:all .2s cubic-bezier(.25,.46,.45,.94);z-index:99991}.fancybox-thumbs__list a:focus:before{opacity:.5}.fancybox-thumbs__list a.fancybox-thumbs-active:before{opacity:1}@media (max-width:576px){.fancybox-thumbs{width:110px}.fancybox-show-thumbs .fancybox-inner{right:110px}.fancybox-thumbs__list a{max-width:calc(100% - 10px)}}
 
       /* Custom CSS */
-      html, body{margin: 0;padding: 0;height: 100%;width: 100%;background-color: #000000;color:#ffffff;}.gallerypicture {width: calc(100%/4)!important;display: inline-block;height: 18.75vw!important;position: relative;}.gallerypicture img {object-fit: cover;cursor: pointer;object-position: 50% 50%;width: 100%;height: 100%;transition: transform .5s ease-in-out,opacity .5s ease-in-out;}.gallerypicture img:hover {transform: scale(1.2);}.gallerypicture .img-wrapper{overflow:hidden; width:100%; height:100%;display:inline-block;}.gallerypicture .album-menu{display: block;position: absolute;top:0px;width: 100%;background-color: rgba(0, 0, 0, 0.85);height: auto;line-height: 20px;font-size: 18px;padding: 4px 0px 4px 4px;color: white;}.logout{position: fixed;display: block;top:5px;right: 5px;width: auto;color: white;z-index: 5;background-color: #333333;}h1,h3{margin-top: 50px;}img {border: 0;}img:not([src]) {visibility: hidden;}@media screen and (max-width: 1200px) {.gallerypicture {width: calc(100%/3)!important;height: 25vw!important;}}@media screen and (max-width: 992px) {.gallerypicture {width: calc(100%/2)!important;height: 37.5vw!important;}}#searchBox {z-index:1;position: fixed;bottom: 5px;;left: 5px;padding:5px;width:auto;height:auto;background-color: rgba(0,0,0,0.7);border-radius:20px;}#searchInput {width:75%;min-width:225px;background-color: #000000;color:#ffffff;display:inline-block;} #backBtn{width:25%;min-width:75px;display:inline-block;vertical-align:baseline;}#downloadPassword {background-color: #000000;color:#ffffff;} #backBtn{width:25%;display:inline-block;vertical-align:baseline;} .collapsible { white-space: pre-wrap; text-align: left; margin-top:50px; background: #000000; padding:15px; } .toggle-collapsible { position:fixed; margin-top:-25px;left: 50%;transform: translateX(-50%); } .collapsed{ display:none;} .fancybox-content {background:#000000 !important;overflow-y:scroll !important; color: #ffffff !important;}.ff-loading-icon{background:none !important;}*::-webkit-scrollbar {display: none; }*{-ms-overflow-style: none;scrollbar-width: none;}.fancybox-content{padding:0px !important;}.ff-container.ff-loading-icon:before{background-image:none !important;}.openalbum {font-size: 18px;padding: 0px 2px;line-height: 14px;}#progress {position: fixed;z-index: 100000;top: 0;left: -6px;width: 1%;height: 3px;background-color: #ce0000;-moz-border-radius: 1px;-webkit-border-radius: 1px;border-radius: 1px;-moz-transition: width 600ms ease-out, opacity 500ms linear;-ms-transition: width 600ms ease-out, opacity 500ms linear;-o-transition: width 600ms ease-out, opacity 500ms linear;-webkit-transition: width 600ms ease-out, opacity 500ms linear;transition: width 1000ms ease-out, opacity 500ms linear;will-change: width, opacity;}#progress b,#progress i {position: absolute;top: 0;height: 3px;-moz-box-shadow: #777777 1px 0 6px 1px;-ms-box-shadow: #777777 1px 0 6px 1px;-webkit-box-shadow: #777777 1px 0 6px 1px;box-shadow: #777777 1px 0 6px 1px;-moz-border-radius: 100%;-webkit-border-radius: 100%;border-radius: 100%;}#progress b {clip: rect(-6px, 22px, 14px, 10px);opacity: 0.6;width: 20px;right: 0;}#progress i {clip: rect(-6px, 90px, 14px, -6px);opacity: 0.6;width: 180px;right: -80px;}.btn {border-radius: 15px;border: 0px solid transparent;text-decoration: none;appearance: none;padding: 12px;font-size: 16px;line-height: 16px;background-color:#222222 !important;color: #ffffff;}.form-control {border-radius: 15px;border: 0px solid transparent;text-decoration: none;appearance: none;padding: 10px;font-size: 16px;line-height: 16px;background-color:#222222 !important;color: #ffffff;}* { font-family: sans-serif; margin: 0;}.btn.min-width{min-width: 16px;box-sizing: content-box;}.dropdown {position: relative;display: inline-block;}.dropdown-content {display: none;position: absolute;background-color: #333333;min-width: 160px;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 1;border-radius: 15px;overflow:hidden;}.dropdown-content div {color: #eeeeee;padding: 12px 16px;font-size: 16px;line-height: 16px;text-decoration: none;display: flex;place-items: center;gap: 10px;}.dropdown-content div:hover,.dropdown-content div:focus {background-color: #454545;}.dropdown:hover .dropdown-content, .dropdown:focus .dropdown-content {display: block; z-index: 1000;}.dropdown:hover .btn, .dropdown:focus .btn {background-color: #454545;}#album-content .gallerypicture{float:left;}.t-wrap{z-index:999999}
+      html, body{margin: 0;padding: 0;height: 100%;width: 100%;background-color: #000000;color:#ffffff;}.gallerypicture {width: calc(100%/4)!important;display: inline-block;height: 18.75vw!important;position: relative;}.gallerypicture img {object-fit: cover;cursor: pointer;object-position: 50% 50%;width: 100%;height: 100%;transition: transform .5s ease-in-out,opacity .5s ease-in-out;}.gallerypicture img:hover {transform: scale(1.2);}.gallerypicture .img-wrapper{overflow:hidden; width:100%; height:100%;display:inline-block;}.gallerypicture .album-menu{display: block;position: absolute;top:0px;width: 100%;background-color: rgba(0, 0, 0, 0.85);height: auto;line-height: 20px;font-size: 18px;padding: 4px 0px 4px 4px;color: white;}.logout{position: fixed;display: block;top:5px;right: 5px;width: auto;color: white;z-index: 5;background-color: #333333;}h1,h3{margin-top: 50px;}img {border: 0;}img:not([src]) {visibility: hidden;}@media screen and (max-width: 1200px) {.gallerypicture {width: calc(100%/3)!important;height: 25vw!important;}}@media screen and (max-width: 992px) {.gallerypicture {width: calc(100%/2)!important;height: 37.5vw!important;}}#searchBox {z-index:1;position: fixed;bottom: 5px;;left: 5px;padding:5px;width:auto;height:auto;background-color: rgba(0,0,0,0.7);border-radius:20px;}#searchInput {width:75%;min-width:225px;background-color: #000000;color:#ffffff;display:inline-block;} #backBtn{width:25%;min-width:75px;display:inline-block;vertical-align:baseline;}#downloadPassword {background-color: #000000;color:#ffffff;} #backBtn{width:25%;display:inline-block;vertical-align:baseline;} .collapsible { white-space: pre-wrap; text-align: left; margin-top:50px; background: #000000; padding:15px; } .toggle-collapsible { position:fixed; margin-top:-25px;left: 50%;transform: translateX(-50%); } .collapsed{ display:none;} .fancybox-content {background:#000000 !important;overflow-y:scroll !important; color: #ffffff !important;}.ff-loading-icon{background:none !important;}*::-webkit-scrollbar {display: none; }*{-ms-overflow-style: none;scrollbar-width: none;}.fancybox-content{padding:0px !important;}.ff-container.ff-loading-icon:before{background-image:none !important;}.openalbum {font-size: 18px;padding: 0px 2px;line-height: 14px;}#progress {position: fixed;z-index: 100000;top: 0;left: -6px;width: 1%;height: 3px;background-color: #ce0000;-moz-border-radius: 1px;-webkit-border-radius: 1px;border-radius: 1px;-moz-transition: width 600ms ease-out, opacity 500ms linear;-ms-transition: width 600ms ease-out, opacity 500ms linear;-o-transition: width 600ms ease-out, opacity 500ms linear;-webkit-transition: width 600ms ease-out, opacity 500ms linear;transition: width 1000ms ease-out, opacity 500ms linear;will-change: width, opacity;}#progress b,#progress i {position: absolute;top: 0;height: 3px;-moz-box-shadow: #777777 1px 0 6px 1px;-ms-box-shadow: #777777 1px 0 6px 1px;-webkit-box-shadow: #777777 1px 0 6px 1px;box-shadow: #777777 1px 0 6px 1px;-moz-border-radius: 100%;-webkit-border-radius: 100%;border-radius: 100%;}#progress b {clip: rect(-6px, 22px, 14px, 10px);opacity: 0.6;width: 20px;right: 0;}#progress i {clip: rect(-6px, 90px, 14px, -6px);opacity: 0.6;width: 180px;right: -80px;}.btn {border-radius: 15px;border: 0px solid transparent;text-decoration: none;appearance: none;padding: 12px;font-size: 16px;line-height: 16px;background-color:#222222 !important;color: #ffffff;}.form-control {border-radius: 15px;border: 0px solid transparent;text-decoration: none;appearance: none;padding: 10px;font-size: 16px;line-height: 16px;background-color:#222222 !important;color: #ffffff;}* { font-family: sans-serif; margin: 0;}.btn.min-width{min-width: 16px;box-sizing: content-box;}.dropdown {position: relative;display: inline-block;}.dropdown-content {display: none;position: absolute;background-color: #333333;min-width: 160px;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 1;border-radius: 15px;overflow:hidden;}.dropdown-content div {color: #eeeeee;padding: 12px 16px;font-size: 16px;line-height: 16px;text-decoration: none;display: flex;place-items: center;gap: 10px;}.dropdown-content div:hover,.dropdown-content div:focus {background-color: #454545;}.dropdown:hover .dropdown-content, .dropdown:focus .dropdown-content {display: block; z-index: 1000;}.dropdown:hover .btn, .dropdown:focus .btn {background-color: #454545;}#album-content .gallerypicture{float:left;}.t-wrap{z-index:999999}#media-types {
+        background-color: gray;
+        width: fit-content;
+        list-style: none;
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        margin: 0px;
+        padding: 0px;
+        border-radius: 7.5px;
+        display: flex;
+        flex-direction: column;
+        gap:0px;
+        overflow:hidden;
+      }
+      #media-types li {
+        padding: 5px;
+        align:center;
+      }
+      #media-types li.active {
+        background-color: #333333;
+      }
     </style>
         <!-- prettier-ignore -->
         <script>
       /**
        * Javascript Libraries
        */
-
+       
        /**
        * rclone-crypt-browser-tools.js
        */
@@ -196,6 +217,23 @@ $viewerHTML = <<<'HEREHTML'
             function sleep(ms) {
                 return new Promise((resolve) => setTimeout(resolve, ms));
             }
+            
+            function loadMediaTypeSelections() {
+                let currentMediaTypes = JSON.parse(window.localStorage.getItem("media-types-selected") ?? '{"gifs": true, "videos": true, "photos": true}');
+                Object.entries(currentMediaTypes).forEach(([key, val]) => {
+                    val ? $(`#media-type-${key}`).addClass('active') : $(`#media-type-${key}`).removeClass('active');
+                });
+                return currentMediaTypes;
+            }
+            
+            function saveMediaTypeSelections() {
+                let currentMediaTypes = JSON.parse(window.localStorage.getItem("media-types-selected") ?? '{"gifs": true, "videos": true, "photos": true}');
+                Object.entries(currentMediaTypes).forEach(([key, val]) => {
+                    currentMediaTypes[key] = $(`#media-type-${key}`).hasClass('active');
+                });
+                window.localStorage.setItem("media-types-selected", JSON.stringify(currentMediaTypes));
+            }
+
 
             let medcrypt = {
                 loadedCache: {},
@@ -270,20 +308,20 @@ $viewerHTML = <<<'HEREHTML'
                                 Array(chunkSize)
                                     .fill()
                                     .map((v, i) => {
-										const item = medcrypt.requestQueue.shift();
-										if (typeof item == 'function') {
-											return item();
-										}
-										return item;
+                    const item = medcrypt.requestQueue.shift();
+                    if (typeof item == 'function') {
+                      return item();
+                    }
+                    return item;
                                     }
 
                                     ),
                             );
                         } else {
                             const item = medcrypt.requestQueue.shift();
-							if (typeof item == 'function') {
-								await item();
-							}
+              if (typeof item == 'function') {
+                await item();
+              }
                         }
                     }
                 },
@@ -296,7 +334,7 @@ $viewerHTML = <<<'HEREHTML'
                     resource,
                     action = () => {},
                     currentTries = 0,
-					) {
+          ) {
                     medcrypt.requestQueue.push(async () => {
                         return new Promise(async (resolve, reject) => {
                             if (medcrypt.loadedCache[resource]) {
@@ -309,18 +347,18 @@ $viewerHTML = <<<'HEREHTML'
 
 
                             if (usingRapiServe.length) {
-								let targetSrc = usingRapiServe + "/" + resource;
-								if (resource.startsWith(usingRapiServe + "/")) {
-									targetSrc = resource;
-								}
-								return fetch(targetSrc, { headers: { 'range': 'bytes=0-1'}}).then(function(response) {
-								    if (!response.ok) {
-								        throw new Error("HTTP status " + response.status);
-								    }
-									return true
-								}).then(() => {
-									resolve(targetSrc);
-								}).catch((e) => reject(e));
+                let targetSrc = usingRapiServe + "/" + resource;
+                if (resource.startsWith(usingRapiServe + "/")) {
+                  targetSrc = resource;
+                }
+                return fetch(targetSrc, { headers: { 'range': 'bytes=0-1'}}).then(function(response) {
+                    if (!response.ok) {
+                        throw new Error("HTTP status " + response.status);
+                    }
+                  return true
+                }).then(() => {
+                  resolve(targetSrc);
+                }).catch((e) => reject(e));
                             }
 
                             try {
@@ -350,8 +388,8 @@ $viewerHTML = <<<'HEREHTML'
                             .catch((err) => {
                                 medcrypt.finishProgress();
                                 if (currentTries < medcrypt.maxTries) {
-									let delay = currentTries + 1 * 1000;
-									setTimeout(() => medcrypt.getSrc(
+                  let delay = currentTries + 1 * 1000;
+                  setTimeout(() => medcrypt.getSrc(
                                         resource,
                                         action,
                                         currentTries + 1,
@@ -361,8 +399,8 @@ $viewerHTML = <<<'HEREHTML'
                                     action(resource);
                                 }
                             });
-						});
-					medcrypt.processingQueue = medcrypt.startQueue();
+            });
+          medcrypt.processingQueue = medcrypt.startQueue();
                     return medcrypt.processingQueue;
                 },
             };
@@ -499,6 +537,68 @@ $viewerHTML = <<<'HEREHTML'
                }
                return rh(a)+rh(b)+rh(c)+rh(d);
             }
+            
+            function throttle(func, wait) {
+              let inThrottle, lastFn, lastTime;
+            
+              return function() {
+                const context = this,
+                  args = arguments;
+            
+                if (!inThrottle) {
+                  func.apply(context, args);
+                  lastTime = Date.now();
+                  inThrottle = true;
+                } else {
+                  clearTimeout(lastFn);
+                  lastFn = setTimeout(function() {
+                    if (Date.now() - lastTime >= wait) {
+                      func.apply(context, args);
+                      lastTime = Date.now();
+                    }
+                  }, Math.max(wait - (Date.now() - lastTime), 0));
+                }
+              };
+            }
+            function syncPlayBackPositionsReal(sendLocal = false, runCallback = () => {}) { 
+                let actions = {
+                    "playbackSync": {
+                        
+                    }
+                }
+                if (sendLocal) {
+                    let cache = window.localStorage.getItem("PDLAP");
+                    let store = {};
+                    if (cache !== null) {
+                        try {
+                            let decoded = atob(cache);
+                            store = JSON.parse(decoded);
+                        } catch (e) {
+                    
+                        }
+                    }
+                    actions["playbackSync"]["in"] = store;
+                }
+                
+                let request = btoa(JSON.stringify(actions));
+                  let tokens = rollingTokens(passphrase);
+                  let token = tokens[Math.floor(tokens.length / 2)];
+                  let call = `{{ENDPOINT}}?token=${token}`;
+                  $.ajax({
+                      url: call,
+                      type: "POST",
+                      data: {"actions": request}
+                  }).then((data) => {
+                      window.localStorage.setItem("PDLAP",
+                      btoa(JSON.stringify(data["playbackSync"]["out"])));
+                      runCallback();
+                  }).catch((e) => {
+                      console.error(e);
+                      runCallback();
+                  });
+              }
+              
+              window.syncPlaybackPositions = throttle(syncPlayBackPositionsReal, 5000);
 
             function saveAlbumPosition(position, album) {
                 let cache = window.localStorage.getItem("PDLAP");
@@ -515,6 +615,7 @@ $viewerHTML = <<<'HEREHTML'
                                 window.currentAlbumPosition = position;
                 window.localStorage.setItem("PDLAP",
                 btoa(JSON.stringify(store)));
+                syncPlaybackPositions(true);
             }
 
             function loadAlbumPosition(album) {
@@ -690,6 +791,35 @@ $viewerHTML = <<<'HEREHTML'
                 placeholder="Search"
             />
         </div>
+        <ul id="media-types">
+          <li id="media-type-gifs" class="active">
+            <svg width="30px" height="30px" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M1 1.5C1 0.671573 1.67157 0 2.5 0H10.7071L14 3.29289V13.5C14 14.3284 13.3284 15 12.5 15H2.5C1.67157 15 1 14.3284 1 13.5V1.5ZM2 11V6H5V7H3V10H4V8.5H5V11H2ZM8 7H9V6H6V7H7V10H6V11H9V10H8V7ZM13 6V7H11V8H12V9H11V11H10V6H13Z" fill="#ffffff"/>
+        </svg>
+          </li>
+          <li id="media-type-videos">
+            <svg width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="0" fill="none" width="24" height="24"/>
+                                    <g>
+                                      <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
+                                    </g>
+                                  </svg>
+          </li>
+          <li id="media-type-photos">
+            <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+                                                        width="30px" height="30px" viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">
+                                            <g>
+                                                <path fill="#ffffff" d="M93.194,18c0-2.47-2.002-4.472-4.472-4.472c-0.228,0-0.447,0.034-0.667,0.067V13.5H11.25v0.028
+                                                    c-2.47,0-4.472,2.002-4.472,4.472l0,0.001v63.998l0,0.001l0,0.001V82.5h0.05c0.252,2.231,2.123,3.972,4.421,3.972V86.5h76.805
+                                                    v-0.095c0.219,0.033,0.438,0.067,0.667,0.067c2.299,0,4.17-1.74,4.422-3.972h0.078V18H93.194z M83.265,76.543H72.404
+                                                    c-0.038-0.155-0.092-0.304-0.166-0.442l0.018-0.01l-22.719-39.35l-0.009,0.005c-0.5-1.027-1.544-1.74-2.764-1.74
+                                                    c-1.251,0-2.324,0.749-2.807,1.821L28.838,63.013l-3.702-6.411l-0.005,0.003c-0.264-0.542-0.814-0.918-1.457-0.918
+                                                    c-0.659,0-1.224,0.395-1.479,0.958l-5.46,9.457V23.485h66.53V76.543z"/>
+                                                <circle fill="#ffffff" cx="68.122" cy="38.584" r="10.1"/>
+                                            </g>
+                                        </svg>
+          </li>
+        </ul>
         <script src="index.php?RapiServe=1"></script>
         <script src="../index.php?RapiServe=1"></script>
         <script>
@@ -720,7 +850,7 @@ $viewerHTML = <<<'HEREHTML'
                 if (usingRapiServe.length) {
                     var formData = new FormData();
                     formData.append("key", btoa(passphrase));
-										fetch(usingRapiServe, {
+                    fetch(usingRapiServe, {
                         method: "POST",
                         body: formData,
                         headers: {
@@ -850,6 +980,7 @@ $viewerHTML = <<<'HEREHTML'
             }
 
             function runApp() {
+                loadMediaTypeSelections();
                 var delim = "1--57--2";
                 var alldata = window.mobileCheck()
                     ? JSON.parse(encrypted_data)
@@ -1041,9 +1172,25 @@ $viewerHTML = <<<'HEREHTML'
                 }
 
                 (async () => {
+                    loadMediaTypeSelections()
+                    $(document).on('click', '#media-types li', function(e) {
+                      $(this).toggleClass('active');
+                      saveMediaTypeSelections();
+                      run();
+                    });
                     function showAlbum(album, kind) {
                         window.currentAlbum = album;
-                        window.currentAlbumPosition = loadAlbumPosition(album);
+                       delete window.currentAlbumPosition;
+                       syncPlayBackPositionsReal(false, () => {
+                            window.currentAlbumPosition = loadAlbumPosition(album);
+                            if (window.currentAlbumPosition.src) {
+                                let mediaLink = $('a[data-filehash="' + window.currentAlbumPosition.src + '"');
+                                mediaLink.get(0).scrollIntoView();
+                                mediaLink.click();
+                                let videoElement = document.getElementsByTagName('video')[0];
+                                videoElement.currentTime = window.currentAlbumPosition.currentTime ?? 0;
+                            }
+                        })
                         res = alldata.filter((media) => media.album === album);
                         let testRes = findSearch(search, res);
                         if (testRes.length > 0) {
@@ -1213,6 +1360,21 @@ $viewerHTML = <<<'HEREHTML'
                                     );
                             })
                             .finally(() => {
+                                Object.entries(loadMediaTypeSelections()).forEach(([key, val]) => {
+                                    if (val) {
+                                        return;
+                                    }
+                                   if (key == 'gifs') {
+                                       $('.gallerypicture[href*=".gif"]').remove();
+                                   } else if (key == 'videos') {
+                                        $('.gallerypicture[href*=".mp4"]').remove();
+                                        $('.gallerypicture[href*=".webm"]').remove();
+                                   } else if (key == 'photos') {
+                                        $('.gallerypicture[href*=".png"]').remove();
+                                        $('.gallerypicture[href*=".jpg"]').remove();
+                                        $('.gallerypicture[href*=".jpeg"]').remove();
+                                   }
+                                });
                                 processLazyLoad();
                                 if (window.currentAlbumPosition.src) {
                                     let mediaLink = $('a[data-filehash="' + window.currentAlbumPosition.src + '"');
@@ -1453,7 +1615,7 @@ $viewerHTML = <<<'HEREHTML'
                         function (e, instance, slide) {
                             let originalLink = $(
                                 '.gallerypicture[href="' + slide.src + '"]'
-								);
+                );
 
                                 let element = $(
                                     '.gallerypicture[href="' + slide.src + '"]',
@@ -1462,14 +1624,20 @@ $viewerHTML = <<<'HEREHTML'
                                     slide.src.length > 0
                                         ? slide.src
                                         : element.data("src");
-							if ($("video").length == 0) {
+              if ($("video").length == 0) {
                                 saveAlbumPosition({src: originalLink.data('filehash'), currentTime: 0}, window.currentAlbum);
 
-								medcrypt.getSrc(targetsrc, (uri) => {
+                medcrypt.getSrc(targetsrc, (uri) => {
+                  $(".fancybox-container a[data-fancybox-download]").attr("href", uri);
                                     element.attr("href", uri);
                                     slide.src = uri;
                                     slide.original = targetsrc;
-                                    if (slide.hasError) {
+                                    let elementa = $(
+                                        '.gallerypicture[href="' + slide.src + '"]',
+                                    );
+                                    let attempts = parseInt(elementa.attr("data-attempts") ?? "0", 10) ?? 0;
+                                    if (slide.hasError && attempts < 3 ) {
+                                        elementa.attr("data-attempts", attempts + 1 );
                                         $(
                                             ".fancybox-content.fancybox-error",
                                         ).remove();
@@ -1596,40 +1764,40 @@ $viewerHTML = <<<'HEREHTML'
                                 return;
                             }
 
-							try {
-	                            $("video").trigger("pause");
-	                            var videoDuration = $("video").attr("duration");
+              try {
+                              $("video").trigger("pause");
+                              var videoDuration = $("video").attr("duration");
 
-	                            var updateProgressBar = function () {
-	                                if ($("video").attr("readyState")) {
-	                                    var buffered = $("video")
-	                                        .attr("buffered")
-	                                        .end(0);
-	                                    var percent =
-	                                        (100 * buffered) / videoDuration;
+                              var updateProgressBar = function () {
+                                  if ($("video").attr("readyState")) {
+                                      var buffered = $("video")
+                                          .attr("buffered")
+                                          .end(0);
+                                      var percent =
+                                          (100 * buffered) / videoDuration;
 
-	                                    medcrypt.transfers.loaded = percent;
-	                                    medcrypt.transfers.size = 100;
-	                                    medcrypt.displayProgress();
-	                                    if (percent > 10) {
-	                                        $("video").trigger("play");
-	                                    }
-	                                    if (buffered >= videoDuration) {
-	                                        clearInterval(this.watchBuffer);
-	                                        medcrypt.finishProgress();
-	                                    }
-	                                }
-	                            };
-	                            var watchBuffer = setInterval(
-	                                updateProgressBar,
-	                                500,
-	                            );
-							} catch (e) {
-								console.error(e);
-							}
+                                      medcrypt.transfers.loaded = percent;
+                                      medcrypt.transfers.size = 100;
+                                      medcrypt.displayProgress();
+                                      if (percent > 10) {
+                                          $("video").trigger("play");
+                                      }
+                                      if (buffered >= videoDuration) {
+                                          clearInterval(this.watchBuffer);
+                                          medcrypt.finishProgress();
+                                      }
+                                  }
+                              };
+                              var watchBuffer = setInterval(
+                                  updateProgressBar,
+                                  500,
+                              );
+              } catch (e) {
+                console.error(e);
+              }
 
                             medcrypt.getSrc(slide.src, (uri) => {
-								element.attr("href", uri);
+                element.attr("href", uri);
                                 slide.src = uri;
                                 slide.original = targetsrc;
                                 if (slide.hasError) {
@@ -1682,97 +1850,97 @@ $viewerHTML = <<<'HEREHTML'
 
                             if (slideshowStarted) {
 
-	                            if (slideshowTimer) {
-	                                clearTimeout(slideshowTimer);
-	                            }
-	                            window
-	                                .getGifDuration(slide.src)
-	                                .then((duration) => {
-	                                    jQuery(`img[src="${slide.src}"]`).attr(
-	                                        "data-duration",
-	                                        duration,
-	                                    );
-	                                    let defaultDuration = 5000;
-	                                    let gifduration = duration;
-	                                    gifduration =
-	                                        !gifduration ||
-	                                        typeof gifduration === "undefined" ||
-	                                        gifduration == 0
-	                                            ? defaultDuration
-	                                            : gifduration;
-	                                    if (
-	                                        slide.$content &&
-	                                        jQuery(slide.$content).find("video")
-	                                            .length > 0
-	                                    ) {
-	                                        jQuery(slide.$content)
-	                                            .find("video")
-	                                            .trigger("play");
-	                                        jQuery(slide.$content)
-	                                            .find("video")
-	                                            .on("ended", function () {
-	                                                $.fancybox.getInstance().next();
-	                                            });
-	                                        return;
-	                                    }
+                              if (slideshowTimer) {
+                                  clearTimeout(slideshowTimer);
+                              }
+                              window
+                                  .getGifDuration(slide.src)
+                                  .then((duration) => {
+                                      jQuery(`img[src="${slide.src}"]`).attr(
+                                          "data-duration",
+                                          duration,
+                                      );
+                                      let defaultDuration = 5000;
+                                      let gifduration = duration;
+                                      gifduration =
+                                          !gifduration ||
+                                          typeof gifduration === "undefined" ||
+                                          gifduration == 0
+                                              ? defaultDuration
+                                              : gifduration;
+                                      if (
+                                          slide.$content &&
+                                          jQuery(slide.$content).find("video")
+                                              .length > 0
+                                      ) {
+                                          jQuery(slide.$content)
+                                              .find("video")
+                                              .trigger("play");
+                                          jQuery(slide.$content)
+                                              .find("video")
+                                              .on("ended", function () {
+                                                  $.fancybox.getInstance().next();
+                                              });
+                                          return;
+                                      }
 
-	                                    let targetDuration = gifduration;
-	                                    if (gifduration < defaultDuration) {
-	                                        let gifDivisible = Math.ceil(
-	                                            defaultDuration / gifduration,
-	                                        );
-	                                        targetDuration =
-	                                            gifduration * gifDivisible;
-	                                    }
+                                      let targetDuration = gifduration;
+                                      if (gifduration < defaultDuration) {
+                                          let gifDivisible = Math.ceil(
+                                              defaultDuration / gifduration,
+                                          );
+                                          targetDuration =
+                                              gifduration * gifDivisible;
+                                      }
 
-	                                    slideshowTimer = setTimeout(function () {
-	                                        $.fancybox.getInstance().next();
-	                                    }, targetDuration);
-	                                })
-	                                .catch(() => {
-	                                    let defaultDuration = 5000;
-	                                    let gifduration = jQuery(slide.$thumb).data(
-	                                        "duration",
-	                                    );
-	                                    gifduration =
-	                                        !gifduration ||
-	                                        typeof gifduration === "undefined" ||
-	                                        gifduration == 0
-	                                            ? defaultDuration
-	                                            : gifduration;
-	                                    if (
-	                                        slide.$content &&
-	                                        jQuery(slide.$content).find("video")
-	                                            .length > 0
-	                                    ) {
-	                                        jQuery(slide.$content)
-	                                            .find("video")
-	                                            .trigger("play");
-	                                        jQuery(slide.$content)
-	                                            .find("video")
-	                                            .on("ended", function () {
-	                                                $.fancybox.getInstance().next();
-	                                            });
-	                                        return;
-	                                    }
+                                      slideshowTimer = setTimeout(function () {
+                                          $.fancybox.getInstance().next();
+                                      }, targetDuration);
+                                  })
+                                  .catch(() => {
+                                      let defaultDuration = 5000;
+                                      let gifduration = jQuery(slide.$thumb).data(
+                                          "duration",
+                                      );
+                                      gifduration =
+                                          !gifduration ||
+                                          typeof gifduration === "undefined" ||
+                                          gifduration == 0
+                                              ? defaultDuration
+                                              : gifduration;
+                                      if (
+                                          slide.$content &&
+                                          jQuery(slide.$content).find("video")
+                                              .length > 0
+                                      ) {
+                                          jQuery(slide.$content)
+                                              .find("video")
+                                              .trigger("play");
+                                          jQuery(slide.$content)
+                                              .find("video")
+                                              .on("ended", function () {
+                                                  $.fancybox.getInstance().next();
+                                              });
+                                          return;
+                                      }
 
-	                                    let targetDuration = gifduration;
-	                                    if (gifduration < defaultDuration) {
-	                                        let gifDivisible = Math.ceil(
-	                                            defaultDuration / gifduration,
-	                                        );
-	                                        targetDuration =
-	                                            gifduration * gifDivisible;
-	                                    }
+                                      let targetDuration = gifduration;
+                                      if (gifduration < defaultDuration) {
+                                          let gifDivisible = Math.ceil(
+                                              defaultDuration / gifduration,
+                                          );
+                                          targetDuration =
+                                              gifduration * gifDivisible;
+                                      }
 
-	                                    slideshowTimer = setTimeout(function () {
-	                                        $.fancybox.getInstance().next();
-	                                    }, targetDuration);
-	                                });
+                                      slideshowTimer = setTimeout(function () {
+                                          $.fancybox.getInstance().next();
+                                      }, targetDuration);
+                                  });
 
-								}
-	                        },
-	                );
+                }
+                          },
+                  );
 
                     let scrollMemory = {};
                     $("#backBtn").click(function () {
@@ -1870,15 +2038,6 @@ $viewerHTML = <<<'HEREHTML'
 </html>
 HEREHTML;
 
-echo PHP_EOL . 'Downloading encrypted database offline website payload';
-$mobiledata = 'const encrypted_data = `' . $mobiledata . '`;';
-$ops->file_put_contents('encrypted_mobile_data.js', $mobiledata);
-unset($mobiledata);
-
-$data = 'const encrypted_data = ' . $data . ';';
-$ops->file_put_contents('encrypted_data.js', $data);
-unset($data);
-
 $viewerHTML = str_replace(
     '{{ENDPOINT}}',
     privuma::getEnv('ENDPOINT'),
@@ -1889,6 +2048,17 @@ echo PHP_EOL . 'Downloading Offline Web App Viewer HTML File';
 $opsPlain->file_put_contents('index.html', $viewerHTML);
 $opsNoEncodeNoPrefix->file_put_contents('index.html', $viewerHTML);
 unset($viewerHTML);
+
+echo PHP_EOL . 'Downloading encrypted database offline website payload';
+echo PHP_EOL . 'Downloading Mobile Dataset';
+$mobiledata = 'const encrypted_data = `' . $mobiledata . '`;';
+$ops->file_put_contents('encrypted_mobile_data.js', $mobiledata);
+unset($mobiledata);
+
+echo PHP_EOL . 'Downloading Desktop Dataset';
+$data = 'const encrypted_data = ' . $data . ';';
+$ops->file_put_contents('encrypted_data.js', $data);
+unset($data);
 
 echo PHP_EOL . 'Database Downloads have been completed';
 echo PHP_EOL .
