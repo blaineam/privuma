@@ -327,7 +327,7 @@ if (
 } elseif (
     isset($_GET['token']) &&
     ($tokenizer->checkToken($_GET['token'], $AUTHTOKEN) ||
-      (isset($_GET['favorite']) &&
+      ((isset($_GET['favorite']) || isset($_POST['actions']) ) &&
         $tokenizer->checkToken(
             $_GET['token'],
             privuma::getEnv('DOWNLOAD_PASSWORD'),
@@ -1004,10 +1004,36 @@ function run()
         header('Pragma: no-cache');
         header('Content-Type: application/json');
         print json_encode($photos, JSON_UNESCAPED_SLASHES);
-    } elseif (isset($_GET['favorite'])) {
-        if (is_base64_encoded($_GET['favorite'])) {
-            $_GET['favorite'] = base64_decode($_GET['favorite']);
+    } elseif (isset($_POST['actions'])) {
+        //if (is_base64_encoded(urldecode($_POST['actions']))) {
+            $_POST['actions'] = base64_decode(urldecode($_POST['actions']));
+        //}
+        $actionRequest = json_decode($_POST['actions'], true);
+        $response = [];
+        $cachePath = privuma::getOutputDirectory() .
+          DIRECTORY_SEPARATOR .
+          'cache' .
+          DIRECTORY_SEPARATOR .
+          'playbackSync.json';
+        if (isset($actionRequest["playbackSync"])) {
+            $current = is_file($cachePath) ? json_decode(file_get_contents($cachePath), true) : [];
+            if (isset($actionRequest["playbackSync"]["in"])) {
+                $current = array_merge($current, $actionRequest["playbackSync"]["in"]);
+                file_put_contents($cachePath, json_encode($current));
+            }
+            
+            $response["playbackSync"] = ["out" => $current];
         }
+        
+        header("Content-Type: application/json");
+        http_response_code(200);
+        echo json_encode($response);
+        die();
+        
+    } elseif (isset($_GET['favorite'])) {
+        //if (is_base64_encoded($_GET['favorite'])) {
+            $_GET['favorite'] = base64_decode($_GET['favorite']);
+        //}
 
         $mediaPath = str_replace(
             '..',
