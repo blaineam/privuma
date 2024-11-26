@@ -31,8 +31,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.2"
-          memory: 250M
+          cpus: "1.0"
+          memory: 2G
   php-web:
     build:
       context: ./docker/images/php
@@ -58,8 +58,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.4"
-          memory: 1G
+          cpus: "1.0"
+          memory: 2G
   php-cron:
     build:
       context: ./docker/images/php
