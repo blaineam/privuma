@@ -1081,8 +1081,17 @@ function run()
             isValidMd5($_GET['media']) ||
             strpos($_GET['media'], 'h-') === 0
         ) {
-            $hash = str_replace('h-', '', $_GET['media']);
+            $originalExt = pathinfo($_GET['media'], PATHINFO_EXTENSION);
+            $hash = str_replace('h-', '', strlen($originalExt) > 0 ? basename($_GET['media'], ".".$originalExt) : $_GET['media']);
             $mediaFileUrl = (new mediaFile('foo', 'bar', null, $hash))->source();
+            
+            $destExt = pathinfo(basename(explode("?", $mediaFileUrl)[0]), PATHINFO_EXTENSION);
+            if ($destExt !== $originalExt) {
+                $thumb = (new mediaFile('foo', 'bar', null, $hash))->record()['thumbnail'];
+                if (strlen($thumb) > 5) {
+                    $mediaFileUrl = $thumb;
+                }
+            }
             if (is_string($mediaFileUrl)) {
                 $_GET['media'] = $mediaFileUrl;
             } else {
@@ -1102,7 +1111,7 @@ function run()
                 $_GET['media'] = str_Replace(
                     DIRECTORY_SEPARATOR,
                     '-----',
-                    dirname($file) . DIRECTORY_SEPARATOR . $filename . '.' . $ext
+                    dirname($file) . DIRECTORY_SEPARATOR . $filename . '.' . (strlen($originalExt) > 0 ? $originalExt : $ext)
                 );
             }
         } elseif (is_base64_encoded($_GET['media'])) {
