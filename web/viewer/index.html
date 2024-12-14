@@ -157,7 +157,7 @@
 				requestQueue: [],
 				dirCache: {},
 				startQueue: async () => {
-					var chunkSize = 8;
+					var chunkSize = 4;
 					while (medcrypt.requestQueue.length) {
 						if (medcrypt.requestQueue.length >= chunkSize) {
 							await Promise.allSettled(
@@ -629,7 +629,7 @@
 		</script>
 	</head>
 	<body>
-		<div id="logout" onclick="logout()" style="z-index:2;border-radius: 7.5px; padding: 7.5px; position: absolute; top: 10px; right: 10px; background-color: gray;">
+		<div id="logout" onclick="logout()" style="z-index:2;border-radius: 7.5px; padding: 7.5px; position: fixed; top: 10px; right: 10px; background-color: gray;">
 			<svg fill="#ffffff" height="24px" width="24px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
 				 viewBox="0 0 384.971 384.971" xml:space="preserve">
 			<g>
