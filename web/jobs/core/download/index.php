@@ -118,7 +118,7 @@ function condenseMetaData($item)
                       substr(trimExtraNewLines($item['description']), 0, 256)
                   ),
                   sanitizeLine($item['favorites']),
-                  sanitizeLine(implode(', ', array_slice($item['tags'], 0, 20))),
+                  sanitizeLine(implode(', ', array_slice($item['tags'], 0, 60))),
                   //substr(trimExtraNewLines($item['comments']), 0, 256),
                 ])
             ),
