@@ -1,5 +1,5 @@
 <?php
-ini_set("memory_limit", "2G");
+ini_set('memory_limit', '2G');
 // error_reporting(E_ALL);
 // ini_set("display_errors", "on");
 session_start();
@@ -9,11 +9,11 @@ use privuma\helpers\tokenizer;
 
 require_once __DIR__ .
   DIRECTORY_SEPARATOR .
-  ".." .
+  '..' .
   DIRECTORY_SEPARATOR .
-  "app" .
+  'app' .
   DIRECTORY_SEPARATOR .
-  "privuma.php";
+  'privuma.php';
 
 $privuma = privuma::getInstance();
 $tokenizer = new tokenizer();

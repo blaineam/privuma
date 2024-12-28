@@ -155,7 +155,7 @@ class preserveMedia
             if ($binNotFound !== 0) {
                 $path = '/usr/bin/gifsicle';
             }
-            exec('nice cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . ' -- ' . escapeshellarg($path) . " -O3 --careful --conserve-memory --colors=100 --no-ignore-errors --no-warnings --crop-transparency --no-comments --no-extensions --no-names --resize-fit 1920x1920 " . escapeshellarg($tempFile) . " -o " . escapeshellarg($newFileTemp), $void, $response);
+            exec('nice cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . ' -- ' . escapeshellarg($path) . ' -O3 --careful --conserve-memory --colors=100 --no-ignore-errors --no-warnings --crop-transparency --no-comments --no-extensions --no-names --resize-fit 1920x1920 ' . escapeshellarg($tempFile) . ' -o ' . escapeshellarg($newFileTemp), $void, $response);
 
             if ($response == 0) {
                 echo PHP_EOL . 'gifsicle was successful';
@@ -171,7 +171,7 @@ class preserveMedia
             if ($binNotFound !== 0) {
                 $path = '/usr/bin/magick';
             }
-            exec('nice ' . $path . " " . escapeshellarg($tempFile) . " -resize 1920x1920 -quality 60 -fuzz 7% " . escapeshellarg($newFileTemp), $void, $response);
+            exec('nice ' . $path . ' ' . escapeshellarg($tempFile) . ' -resize 1920x1920 -quality 60 -fuzz 7% ' . escapeshellarg($newFileTemp), $void, $response);
             $is = getimagesize($newFileTemp);
             if ($response == 0) {
                 echo PHP_EOL . 'convert was successful';
