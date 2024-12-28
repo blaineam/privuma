@@ -152,7 +152,7 @@ class processMedia
                                     '',
                                     $mediaPreservationPath
                                 ) . '.jpg';
-							$cmediapath = escapeshellarg($mediaPath);
+                            $cmediapath = escapeshellarg($mediaPath);
                             exec(
                                 "nice convert '{$cmediapath}[0]' -monitor -sampling-factor 4:2:0 -strip -interlace JPEG -colorspace sRGB -resize 1000 -compress JPEG -quality 70 '$dlThumbDest'"
                             );
@@ -261,7 +261,7 @@ class processMedia
                 return;
             }
 
-            $mediaFile = new mediaFile($correctedFilename, $data['album'], null, isset($data['path']) ? md5_file($data['path']) : null );
+            $mediaFile = new mediaFile($correctedFilename, $data['album'], null, isset($data['path']) ? md5_file($data['path']) : null);
             $existingFile = $mediaFile->realPath();
             echo PHP_EOL . 'Loaded MediaFile: ' . $mediaFile->path();
             if (isset($data['path'])) {
@@ -296,7 +296,7 @@ class processMedia
                             echo PHP_EOL . 'Preservation succcessful for missing database entry: ' . privuma::getDataFolder() . DIRECTORY_SEPARATOR . $mediaFile->path();
                         }
                     }
-                    
+
                     unlink($data['path']);
                     echo PHP_EOL .
                         'Existing MediaFile located at: ' .
