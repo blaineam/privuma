@@ -1082,10 +1082,10 @@ function run()
             strpos($_GET['media'], 'h-') === 0
         ) {
             $originalExt = pathinfo($_GET['media'], PATHINFO_EXTENSION);
-            $hash = str_replace('h-', '', strlen($originalExt) > 0 ? basename($_GET['media'], ".".$originalExt) : $_GET['media']);
+            $hash = str_replace('h-', '', strlen($originalExt) > 0 ? basename($_GET['media'], '.' . $originalExt) : $_GET['media']);
             $mediaFileUrl = (new mediaFile('foo', 'bar', null, $hash))->source();
-            
-            $destExt = pathinfo(basename(explode("?", $mediaFileUrl)[0]), PATHINFO_EXTENSION);
+
+            $destExt = pathinfo(basename(explode('?', $mediaFileUrl)[0]), PATHINFO_EXTENSION);
             if ($destExt !== $originalExt) {
                 $thumb = (new mediaFile('foo', 'bar', null, $hash))->record()['thumbnail'];
                 if (strlen($thumb) > 5) {

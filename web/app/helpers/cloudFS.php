@@ -574,6 +574,7 @@ class cloudFS
                 '--retries 3',
                 '--checkers 1',
                 '--transfers 1',
+                '--fast-list',
                 '--use-mmap',
                 '--buffer-size 0M',
                 $command,

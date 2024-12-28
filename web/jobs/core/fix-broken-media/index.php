@@ -35,9 +35,9 @@ foreach (array_chunk($results, 2000) as $key => $chunk) {
             if (
                 $fileMissing && $connectionOk
             ) {
-                $delete_stmt = $conn->prepare('delete FROM media WHERE id = ?');
-                $delete_stmt->execute([$row['id']]);
-                echo PHP_EOL . $delete_stmt->rowCount() . ' - Deleted missing remote media: ' . $album . '/' . $filename;
+                //$delete_stmt = $conn->prepare('delete FROM media WHERE id = ?');
+                //$delete_stmt->execute([$row['id']]);
+                echo PHP_EOL . ' - Found to be Deleted for missing remote media: ' . $album . '/' . $filename; //  . $delete_stmt->rowCount()
             }
         }
     }
