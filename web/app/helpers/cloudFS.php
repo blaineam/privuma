@@ -316,17 +316,20 @@ class cloudFS
     {
         if ($this->is_file($path)) {
             try {
+                $dir = dirname($path);
+                $fpath = $this->formatPath($dir);
+                $parts = explode(
+                    ':',
+                    $fpath
+                );
+                $lpart = end(
+                    $parts
+                );
                 return explode(' ', $this->execute('md5sum', $path, null, false, true, [
                     '--sftp-path-override',
                     $this->env->get('RCLONE_SFTP_PREFIX')
                     . DIRECTORY_SEPARATOR
-                    . ltrim(
-                        end(
-                            explode(
-                                ':',
-                                $this->formatPath(dirname($path))
-                            )
-                        ),
+                    . ltrim($lpart,
                         DIRECTORY_SEPARATOR
                     )
                 ]))[0];
@@ -569,7 +572,7 @@ class cloudFS
                 '--log-level ERROR',
                 '--s3-no-check-bucket',
                 '--s3-no-head',
-                '--s3-no-head-object',
+                // '--s3-no-head-object', -- Cannot be used for single file operations
                 '--ignore-checksum',
                 '--size-only',
                 '--retries 3',
