@@ -569,6 +569,7 @@ class cloudFS
                 '--log-level ERROR',
                 '--s3-no-check-bucket',
                 '--s3-no-head',
+                '--s3-no-head-object',
                 '--ignore-checksum',
                 '--size-only',
                 '--retries 3',

@@ -141,7 +141,7 @@ $mobiledata = json_encode(
 
 echo PHP_EOL . 'All Database Lookup Operations have been completed.';
 
-$viewerHTML = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "viewer" . DIRECTORY_SEPARATOR . "index.html");
+$viewerHTML = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'viewer' . DIRECTORY_SEPARATOR . 'index.html');
 
 $viewerHTML = str_replace(
     '{{ENDPOINT}}',
