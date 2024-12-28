@@ -118,7 +118,7 @@ function condenseMetaData($item)
                       substr(trimExtraNewLines($item['description']), 0, 256)
                   ),
                   sanitizeLine($item['favorites']),
-                  sanitizeLine(implode(', ', array_slice($item['tags'], 0, 20))),
+                  sanitizeLine(implode(', ', array_slice($item['tags'], 0, 60))),
                   //substr(trimExtraNewLines($item['comments']), 0, 256),
                 ])
             ),
@@ -215,8 +215,8 @@ $dlData = array_filter($dlData, function ($item) use (
     );
     $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
     $thumbnailPreserve = $item['hash'] . '.jpg';
-    return !array_key_exists($preserve, $previouslyDownloadedMedia) &&
-      !array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia);
+    return !array_key_exists($preserve, $previouslyDownloadedMedia) || (str_contains($preserve, '.mp4') &&
+      !array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia));
 });
 
 echo PHP_EOL . 'Found ' . count($dlData) . ' new media items to be downloaded';
