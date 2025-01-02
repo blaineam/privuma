@@ -266,7 +266,7 @@ foreach ($dlData as $item) {
       (new mediaFile($item['filename'], $item['album']))->path();
     $path = $privuma->getOriginalPath($path) ?: $path;
     $ext = pathinfo($path, PATHINFO_EXTENSION);
-    $thumbnailPath = dirname($path) . DIRECTORY_SEPARATOR . basename($path, '.'.$ext) . ".jpg";
+    $thumbnailPath = dirname($path) . DIRECTORY_SEPARATOR . basename($path, '.' . $ext) . '.jpg';
     if (!$ops->is_file($preserve)) {
         if (!isset($item['url'])) {
             if (
