@@ -2,6 +2,7 @@
 namespace privuma\helpers;
 
 use Exception;
+use resource;
 use privuma\privuma;
 
 class cloudFS
@@ -209,10 +210,21 @@ class cloudFS
         return mb_strlen($contents, '8bit');
     }
 
-    public function file_get_contents(string $path)
+    public function file_get_contents(string $path, bool $use_include_path = false, ?resource $context = null, int $offset = 0, ?int $length = null)
     {
+        if ($use_include_path !== false) {
+            throw new Exception("NOT IMPLEMENTED");
+        }
+        
+        if (!is_null($context)) {
+            throw new Exception("NOT IMPLEMENTED");
+        }
+        
         if ($this->is_file($path)) {
-            return $this->execute('cat', $path);
+            return $this->execute('cat', $path, null, false, true, [
+                (($offset === 0) ? '' : ('--offset ' . $offset)),
+                (is_null($length) ? '' : ('--count ' . $length)),
+            ]);
         }
         return false;
     }

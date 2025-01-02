@@ -261,7 +261,7 @@ class processMedia
                 return;
             }
 
-            $mediaFile = new mediaFile($correctedFilename, $data['album'], null, isset($data['path']) ? md5_file($data['path']) : null);
+            $mediaFile = new mediaFile($correctedFilename, $data['album']); // , null, isset($data['path']) ? md5_file($data['path']) : null
             $existingFile = $mediaFile->realPath();
             echo PHP_EOL . 'Loaded MediaFile: ' . $mediaFile->path();
             if (isset($data['path'])) {
