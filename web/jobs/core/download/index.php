@@ -264,7 +264,9 @@ foreach ($dlData as $item) {
       privuma::getDataFolder() .
       DIRECTORY_SEPARATOR .
       (new mediaFile($item['filename'], $item['album']))->path();
-    $thumbnailPath = str_replace('.mp4', '.jpg', $path);
+    $path = $privuma->getOriginalPath($path) ?: $path;
+    $ext = pathinfo($path, PATHINFO_EXTENSION);
+    $thumbnailPath = dirname($path) . DIRECTORY_SEPARATOR . basename($path, '.'.$ext) . ".jpg";
     if (!$ops->is_file($preserve)) {
         if (!isset($item['url'])) {
             if (
