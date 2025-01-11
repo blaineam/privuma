@@ -12,6 +12,18 @@ services:
    restart: always
    devices:
      - /dev/net/tun:/dev/net/tun
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "8989:8989"
+      - "3789:3789"
+    env_file:
+      - "web/config/.env"
+    restart: always
+    devices:
+      - /dev/net/tun:/dev/net/tun
   web:
     build: ./docker/images/nginx
     container_name: privuma_nginx
@@ -147,6 +159,8 @@ services:
 #    image: rclone/rclone:latest
 #    container_name: privuma_cloudfs_http_quadary
 #    restart: always
+#    ports:
+#      - 8994:8994
 #    volumes:
 #      - ./web/config/rclone:/config/rclone
 #    user: "${UID}:${GID}"
