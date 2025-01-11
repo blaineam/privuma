@@ -12,8 +12,6 @@ use privuma\helpers\cloudFS;
 
 use privuma\helpers\dotenv;
 
-use privuma\helpers\mediaFile;
-
 use PDO;
 use privuma\queue\QueueManager;
 
@@ -296,14 +294,14 @@ class privuma
 
         return implode(DIRECTORY_SEPARATOR, $stack);
     }
-    
+
     public function getOriginalPath($path, $depth = 0, &$checked = [])
     {
         $ops = self::getCloudFS();
         if ($depth >= 10) {
             return false;
         }
-        
+
         $checked[$path] = null;
         $output = $ops->file_get_contents($path, false, null, 0, 1000);
         $ext = pathinfo($output, PATHINFO_EXTENSION);
@@ -320,9 +318,9 @@ class privuma
             $checked[$path] = true;
             return $path;
         }
-        
+
         $testPath = $output;
-        
+
         $testPath = $output;
 
         if (array_key_exists($testPath, $checked)) {
