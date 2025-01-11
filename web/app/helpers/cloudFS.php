@@ -2,6 +2,7 @@
 namespace privuma\helpers;
 
 use Exception;
+use resource;
 use privuma\privuma;
 
 class cloudFS
@@ -209,10 +210,21 @@ class cloudFS
         return mb_strlen($contents, '8bit');
     }
 
-    public function file_get_contents(string $path)
+    public function file_get_contents(string $path, bool $use_include_path = false, ?resource $context = null, int $offset = 0, ?int $length = null)
     {
+        if ($use_include_path !== false) {
+            throw new Exception("NOT IMPLEMENTED");
+        }
+        
+        if (!is_null($context)) {
+            throw new Exception("NOT IMPLEMENTED");
+        }
+        
         if ($this->is_file($path)) {
-            return $this->execute('cat', $path);
+            return $this->execute('cat', $path, null, false, true, [
+                (($offset === 0) ? '' : ('--offset ' . $offset)),
+                (is_null($length) ? '' : ('--count ' . $length)),
+            ]);
         }
         return false;
     }
@@ -316,17 +328,20 @@ class cloudFS
     {
         if ($this->is_file($path)) {
             try {
+                $dir = dirname($path);
+                $fpath = $this->formatPath($dir);
+                $parts = explode(
+                    ':',
+                    $fpath
+                );
+                $lpart = end(
+                    $parts
+                );
                 return explode(' ', $this->execute('md5sum', $path, null, false, true, [
                     '--sftp-path-override',
                     $this->env->get('RCLONE_SFTP_PREFIX')
                     . DIRECTORY_SEPARATOR
-                    . ltrim(
-                        end(
-                            explode(
-                                ':',
-                                $this->formatPath(dirname($path))
-                            )
-                        ),
+                    . ltrim($lpart,
                         DIRECTORY_SEPARATOR
                     )
                 ]))[0];
@@ -569,11 +584,13 @@ class cloudFS
                 '--log-level ERROR',
                 '--s3-no-check-bucket',
                 '--s3-no-head',
+                // '--s3-no-head-object', -- Cannot be used for single file operations
                 '--ignore-checksum',
                 '--size-only',
                 '--retries 3',
                 '--checkers 1',
                 '--transfers 1',
+                '--fast-list',
                 '--use-mmap',
                 '--buffer-size 0M',
                 $command,
