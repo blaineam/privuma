@@ -297,7 +297,8 @@ class privuma
         return implode(DIRECTORY_SEPARATOR, $stack);
     }
     
-    public function getOriginalPath($path, $depth = 0, &$checked = []) {
+    public function getOriginalPath($path, $depth = 0, &$checked = [])
+    {
         $ops = self::getCloudFS();
         if ($depth >= 10) {
             return false;
@@ -310,12 +311,11 @@ class privuma
             $checked[$path] = false;
             return false;
         }
-        
+
         if (strlen($output) === 0) {
             $checked[$path] = false;
             return false;
         }
-        
         if (!in_array(strtolower($ext), ['jpg', 'jpeg', 'gif', 'png', 'webm', 'mp4'])) {
             $checked[$path] = true;
             return $path;
@@ -323,6 +323,8 @@ class privuma
         
         $testPath = $output;
         
+        $testPath = $output;
+
         if (array_key_exists($testPath, $checked)) {
             $result = $checked[$testPath] ?? false;
             if ((is_null($result) || $result === false) && strlen($testPath) > 5) {
@@ -331,7 +333,6 @@ class privuma
             }
             return $testPath;
         }
-        
         return self::getInstance()->getOriginalPath($testPath, $depth++, $checked);
     }
 }
