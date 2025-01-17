@@ -118,9 +118,9 @@ class preserveMedia
         rename($newFileTemp, $newFileTemp . '.mp4');
         $newFileTemp = $newFileTemp . '.mp4';
         // h624
-        //$cmd = "$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $file . "' -c:v " . $ffmpegVideoCodec . " -r 24 -crf 24 -c:a aac -movflags +faststart -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFileTemp . "'";
+        //$cmd = "$ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i " . escapeshellarg($file) . " -c:v " . $ffmpegVideoCodec . " -r 24 -crf 24 -c:a aac -movflags +faststart -profile:v baseline -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" " . escapeshellarg($newFileTemp);
         // x265
-        $cmd = 'nice cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . " -- $ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i '" . $file . "' -c:v libx265 -x265-params log-level=error -r 24 -crf 26 -c:a aac -b:a 96k -tag:v hvc1 -movflags +faststart -preset ultrafast -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" '" . $newFileTemp . "'";
+        $cmd = 'nice cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . " -- $ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -fflags +genpts -i " . escapeshellarg($file) . " -c:v libx265 -x265-params log-level=error -r 24 -crf 26 -c:a aac -b:a 96k -tag:v hvc1 -movflags +faststart -preset ultrafast -level 3.0 -pix_fmt yuv420p -vf \"scale='min(1920,iw+mod(iw,2))':'min(1080,ih+mod(ih,2)):flags=neighbor'\" " . escapeshellarg($newFileTemp);
         echo PHP_EOL . 'Runnning command: ' . $cmd;
         exec($cmd, $void, $response);
 
@@ -155,7 +155,7 @@ class preserveMedia
             if ($binNotFound !== 0) {
                 $path = '/usr/bin/gifsicle';
             }
-            exec('nice cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . ' -- ' . $path . " -O3 --careful --conserve-memory --colors=100 --no-ignore-errors --no-warnings --crop-transparency --no-comments --no-extensions --no-names --resize-fit 1920x1920 '" . $tempFile . "' -o '" . $newFileTemp . "'", $void, $response);
+            exec('nice cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . ' -- ' . escapeshellarg($path) . ' -O3 --careful --conserve-memory --colors=100 --no-ignore-errors --no-warnings --crop-transparency --no-comments --no-extensions --no-names --resize-fit 1920x1920 ' . escapeshellarg($tempFile) . ' -o ' . escapeshellarg($newFileTemp), $void, $response);
 
             if ($response == 0) {
                 echo PHP_EOL . 'gifsicle was successful';
@@ -171,7 +171,7 @@ class preserveMedia
             if ($binNotFound !== 0) {
                 $path = '/usr/bin/magick';
             }
-            exec('nice ' . $path . " '" . $tempFile . "' -resize 1920x1920 -quality 60 -fuzz 7% '" . $newFileTemp . "'", $void, $response);
+            exec('nice ' . $path . ' ' . escapeshellarg($tempFile) . ' -resize 1920x1920 -quality 60 -fuzz 7% ' . escapeshellarg($newFileTemp), $void, $response);
             $is = getimagesize($newFileTemp);
             if ($response == 0) {
                 echo PHP_EOL . 'convert was successful';
