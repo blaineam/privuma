@@ -1,17 +1,17 @@
 services:
   gluetun:
-   image: qmcgaw/gluetun
-   container_name: gluetun
-   cap_add:
-     - NET_ADMIN
-   ports:
-     - "8989:8989"
-     - "3789:3789"
-   env_file:
-     - "web/config/.env"
-   restart: always
-   devices:
-     - /dev/net/tun:/dev/net/tun
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "8989:8989"
+      - "3789:3789"
+    env_file:
+      - "web/config/.env"
+    restart: always
+    devices:
+      - /dev/net/tun:/dev/net/tun
   web:
     build: ./docker/images/nginx
     container_name: privuma_nginx
@@ -154,13 +154,13 @@ services:
 #      - ./web/config/rclone:/config/rclone
 #    user: $DOCKER_USER
 #    command: serve http --read-only --no-checksum --no-modtime  --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8994 --user ${CLOUDFS_HTTP_QUADARY_USER} --pass ${CLOUDFS_HTTP_QUADARY_PASS} ${CLOUDFS_HTTP_QUADARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --fast-list  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
-  # cloudfs-s3:
-  #   image: rclone/rclone:beta
-  #   container_name: privuma_cloudfs_s3
-  #   restart: always
-  #   volumes:
-  #     - ./web/config/rclone:/config/rclone
-  #   user: $DOCKER_USER
-  #   ports:
-  #     - "8994:80"
-  #   command: serve s3 --auth-key ${CLOUDFS_S3_ACCESS_KEY},${CLOUDFS_S3_SECRET_KEY} --read-only --no-checksum --no-modtime --addr :80 ${CLOUDFS_S3_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+# cloudfs-s3:
+#   image: rclone/rclone:beta
+#   container_name: privuma_cloudfs_s3
+#   restart: always
+#   volumes:
+#     - ./web/config/rclone:/config/rclone
+#   user: $DOCKER_USER
+#   ports:
+#     - "8994:80"
+#   command: serve s3 --auth-key ${CLOUDFS_S3_ACCESS_KEY},${CLOUDFS_S3_SECRET_KEY} --read-only --no-checksum --no-modtime --addr :80 ${CLOUDFS_S3_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
