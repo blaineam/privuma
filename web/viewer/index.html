@@ -663,7 +663,6 @@
           if (!orMatch && query_parts.anys.length > 0) {
             return { score: 0, matches: [] };
           }
-          
           let missimgAndMatch = false;
           for (let all of query_parts.alls) {
             if (
@@ -675,7 +674,6 @@
               matches.push(value.join(" ").indexOf(all));
             }
           }
-
           if (missimgAndMatch && query_parts.alls.length > 0) {
             return { score: 0, matches: [] };
           }
@@ -716,10 +714,7 @@
     </script>
   </head>
   <body>
-    <div
-      id="logout"
-      onclick="logout()"
-    >
+    <div id="logout" onclick="logout()">
       <svg
         fill="#ffffff"
         height="24px"
@@ -834,7 +829,7 @@
         window.localStorage.removeItem("offline-viewer-pass");
         window.location.reload();
       }
-
+      
       window.endpoint = `{{ENDPOINT}}`;
       window.local = true;
       if (window.endpoint.includes("{ENDPOINT}")) {
@@ -1470,7 +1465,6 @@
 
               return b["time"] - a["time"];
             });
-
             preventSleep();
             Promise.allSettled(
               res.map(function (item) {
