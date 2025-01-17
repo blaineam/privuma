@@ -48,7 +48,9 @@ jobs:
 
       - name: Run Prettier
         run: npm run format
-
+      
+      - name: Pull Remote Changes
+        run: git pull
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v2.3.0
         with:
