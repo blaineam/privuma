@@ -370,6 +370,9 @@ echo '<html>
                 }
                 
 								a[data-fancybox] img {
+                  image-rendering: pixelated;
+                  image-rendering: -moz-crisp-edges;
+                  image-rendering: crisp-edges;
 									object-fit:cover;
 										float:left;
 										width:100px;
@@ -482,6 +485,9 @@ echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.mi
            imageData.data[i * 4 + 3] = 255;
        }
 
+        ctx.imageSmoothingEnabled = false;
+        ctx.mozImageSmoothingEnabled = false;
+        ctx.webkitImageSmoothingEnabled = false;
        ctx.putImageData(imageData, 0, 0);
        return canvas.toDataURL();
    }

@@ -48,7 +48,7 @@ function processDir($dir, $sync)
                     if (!$ops->is_dir(dirname($preserve))) {
                         $ops->mkdir(dirname($preserve));
                     }
-                    if (!$ops->is_file($preserve)) {
+                    if (!$ops->is_file($preserve) && !$mediaFile->record()) {
                         echo PHP_EOL . 'Queue Processing of media file: ' . $preserve;
                         $privuma->getQueueManager()->enqueue(json_encode([
                             'type' => 'processMedia',
