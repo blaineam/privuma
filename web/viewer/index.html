@@ -1116,7 +1116,10 @@
            item.album = 'Favorites';
            item.time = window.alldata.filter((original) => original.album === 'Favorites' && original.hash === item.hash)[0]?.time ?? (new Date()).toISOString().replace("T"," ").substring(0, 19);
           return item;
-        });
+        }).filter((obj1, i, arr) => 
+          arr.findIndex(obj2 => (obj2.hash === obj1.hash)) === i
+        );
+        cachedFavorites.sort((a,b) => (a.time < b.time) ? 1 : ((b.time < a.time) ? -1 : 0));
         window.alldata = cachedFavorites.concat(window.alldata.filter((item) => item.album !== 'Favorites'));
       }
       
@@ -1406,15 +1409,17 @@
             delete window.currentAlbumPosition;
             syncPlayBackPositionsReal(false, () => {
               window.currentAlbumPosition = loadAlbumPosition(album);
-              if (window.currentAlbumPosition.src) {
+              if (window.currentAlbumPosition && window.currentAlbumPosition.src) {
                 let mediaLink = $(
                   'a[data-filehash="' + window.currentAlbumPosition.src + '"',
                 );
                 mediaLink.get(0).scrollIntoView();
                 mediaLink.click();
                 let videoElement = document.getElementsByTagName("video")[0];
-                videoElement.currentTime =
-                  window.currentAlbumPosition.currentTime ?? 0;
+                if (videoElement) {
+                  videoElement.currentTime =
+                    window.currentAlbumPosition.currentTime ?? 0;
+                }
               }
             });
             res = alldata.filter((media) => media.album === album);
@@ -1584,7 +1589,7 @@
                   },
                 );
                 processLazyLoad();
-                if (window.currentAlbumPosition.src) {
+                if (window.currentAlbumPosition && window.currentAlbumPosition.src) {
                   let mediaLink = $(
                     'a[data-filehash="' + window.currentAlbumPosition.src + '"',
                   );
