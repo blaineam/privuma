@@ -1,16 +1,16 @@
 services:
   gluetun:
-   image: qmcgaw/gluetun
-   container_name: gluetun
-   cap_add:
-     - NET_ADMIN
-   ports:
-     - "${TS_IP:?error}:8989:8989"
-   env_file:
-     - "web/config/.env"
-   restart: always
-   devices:
-     - /dev/net/tun:/dev/net/tun
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "${TS_IP:?error}:8989:8989"
+    env_file:
+      - "web/config/.env"
+    restart: always
+    devices:
+      - /dev/net/tun:/dev/net/tun
   web:
     build: ./docker/images/nginx
     container_name: privuma_nginx
@@ -103,12 +103,12 @@ services:
       - "${TS_IP:?error}:3306:3306"
       - "172.18.0.1:3306:3306"
     healthcheck:
-        test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
-        start_period: 1m
-        start_interval: 10s
-        interval: 1m
-        timeout: 5s
-        retries: 3
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 1m
+      start_interval: 10s
+      interval: 1m
+      timeout: 5s
+      retries: 3
     volumes:
       - ./docker/db:/var/lib/mysql
       - ./docker/etc/mariadb/custom.cnf:/etc/mysql/conf.d/custom.cnf

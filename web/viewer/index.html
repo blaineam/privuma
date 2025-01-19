@@ -1117,16 +1117,32 @@
         if (recentCurrentFavorite > recentCachedFavorite) {
           return;
         }
-        let cachedFavorites = window.alldata.filter((item) => item.album !== 'Favorites' && cachedHashes.includes(item.hash)).map((item) => {
-          item.filename = item.album + '-----' + item.filename;
-           item.album = 'Favorites';
-           item.time = window.alldata.filter((original) => original.album === 'Favorites' && original.hash === item.hash)[0]?.time ?? (new Date()).toISOString().replace("T"," ").substring(0, 19);
-          return item;
-        }).filter((obj1, i, arr) => 
-          arr.findIndex(obj2 => (obj2.hash === obj1.hash)) === i
+        let cachedFavorites = window.alldata
+          .filter(
+            (item) =>
+              item.album !== "Favorites" && cachedHashes.includes(item.hash),
+          )
+          .map((item) => {
+            item.filename = item.album + "-----" + item.filename;
+            item.album = "Favorites";
+            item.time =
+              window.alldata.filter(
+                (original) =>
+                  original.album === "Favorites" && original.hash === item.hash,
+              )[0]?.time ??
+              new Date().toISOString().replace("T", " ").substring(0, 19);
+            return item;
+          })
+          .filter(
+            (obj1, i, arr) =>
+              arr.findIndex((obj2) => obj2.hash === obj1.hash) === i,
+          );
+        cachedFavorites.sort((a, b) =>
+          a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
         );
-        cachedFavorites.sort((a,b) => (a.time < b.time) ? 1 : ((b.time < a.time) ? -1 : 0));
-        window.alldata = cachedFavorites.concat(window.alldata.filter((item) => item.album !== 'Favorites'));
+        window.alldata = cachedFavorites.concat(
+          window.alldata.filter((item) => item.album !== "Favorites"),
+        );
       }
 
       $.fancybox.defaults.hash = false;
@@ -1427,7 +1443,10 @@
             delete window.currentAlbumPosition;
             syncPlayBackPositionsReal(false, () => {
               window.currentAlbumPosition = loadAlbumPosition(album);
-              if (window.currentAlbumPosition && window.currentAlbumPosition.src) {
+              if (
+                window.currentAlbumPosition &&
+                window.currentAlbumPosition.src
+              ) {
                 let mediaLink = $(
                   'a[data-filehash="' + window.currentAlbumPosition.src + '"',
                 );
@@ -1607,7 +1626,10 @@
                   },
                 );
                 processLazyLoad();
-                if (window.currentAlbumPosition && window.currentAlbumPosition.src) {
+                if (
+                  window.currentAlbumPosition &&
+                  window.currentAlbumPosition.src
+                ) {
                   let mediaLink = $(
                     'a[data-filehash="' + window.currentAlbumPosition.src + '"',
                   );
