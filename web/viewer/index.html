@@ -829,7 +829,7 @@
         window.localStorage.removeItem("offline-viewer-pass");
         window.location.reload();
       }
-      
+
       window.endpoint = `{{ENDPOINT}}`;
       window.local = true;
       if (window.endpoint.includes("{ENDPOINT}")) {
@@ -1090,16 +1090,20 @@
 
         return tokens;
       }
-      
+
       function cacheFavoriteHashes() {
-        let hashes = window.alldata.filter((item) => item.album === 'Favorites').map((item) => item.hash);
+        let hashes = window.alldata
+          .filter((item) => item.album === "Favorites")
+          .map((item) => item.hash);
         if (hashes.length <= 0) {
           return;
         }
-        hashes.unshift(window.alldata.filter((item) => item.album === 'Favorites')[0].time);
+        hashes.unshift(
+          window.alldata.filter((item) => item.album === "Favorites")[0].time,
+        );
         window.localStorage.setItem("FHC", hashes.join("|"));
       }
-      
+
       function restoreFavoritesFromCache() {
         let cachedHashes = window.localStorage.getItem("FHC");
         if (cachedHashes == null) {
@@ -1107,7 +1111,9 @@
         }
         cachedHashes = cachedHashes.split("|");
         let recentCachedFavorite = cachedHashes.shift();
-        let recentCurrentFavorite = window.alldata.filter((item) => item.album === 'Favorites')[0].time;
+        let recentCurrentFavorite = window.alldata.filter(
+          (item) => item.album === "Favorites",
+        )[0].time;
         if (recentCurrentFavorite > recentCachedFavorite) {
           return;
         }
@@ -1122,7 +1128,7 @@
         cachedFavorites.sort((a,b) => (a.time < b.time) ? 1 : ((b.time < a.time) ? -1 : 0));
         window.alldata = cachedFavorites.concat(window.alldata.filter((item) => item.album !== 'Favorites'));
       }
-      
+
       $.fancybox.defaults.hash = false;
       $.fancybox.defaults.btnTpl.favorite =
         '<button data-fancybox-favorite class="fancybox-button fancybox-button--favorite">&hearts;</button>';
@@ -1132,24 +1138,36 @@
           .current.$thumb.data("src")
           .split("/")
           .reverse()[0]
-          .split(".")[0];		
-		let favorited = window.alldata.filter((item) => {return item.album === 'Favorites' && item.hash === atob(hash); }).length > 0;
+          .split(".")[0];
+        let favorited =
+          window.alldata.filter((item) => {
+            return item.album === "Favorites" && item.hash === atob(hash);
+          }).length > 0;
         let tokens = rollingTokens(passphrase);
         let token = tokens[Math.floor(tokens.length / 2)];
         let call = `${window.endpoint}?favorite=${hash}&token=${token}`;
         $.ajax(call)
           .then((data) => {
             toast.info(data);
-			$(".fancybox-button--favorite").text(!favorited ? "💔" : "❤️");
-			if (!favorited) {
-			   let original = window.alldata.filter((item) => {return item.album !== 'Favorites' && item.hash === atob(hash); })[0];
-			   original.filename = original.album + '-----' + original.filename;
-			   original.album = 'Favorites';
-			   original.time = (new Date()).toISOString().replace("T"," ").substring(0, 19);;
-			   window.alldata.unshift(original);
-			} else {
-				window.alldata = window.alldata.filter((item) => {return !(item.album === 'Favorites' && item.hash === atob(hash)); });
-			}
+            $(".fancybox-button--favorite").text(!favorited ? "💔" : "❤️");
+            if (!favorited) {
+              let original = window.alldata.filter((item) => {
+                return item.album !== "Favorites" && item.hash === atob(hash);
+              })[0];
+              original.filename = original.album + "-----" + original.filename;
+              original.album = "Favorites";
+              original.time = new Date()
+                .toISOString()
+                .replace("T", " ")
+                .substring(0, 19);
+              window.alldata.unshift(original);
+            } else {
+              window.alldata = window.alldata.filter((item) => {
+                return !(
+                  item.album === "Favorites" && item.hash === atob(hash)
+                );
+              });
+            }
             cacheFavoriteHashes();
           })
           .catch(() => {
@@ -1210,7 +1228,7 @@
       }
 
       function runApp() {
-				document.body.classList.add("authed");
+        document.body.classList.add("authed");
         loadMediaTypeSelections();
         var delim = "1--57--2";
         window.alldata = window.mobileCheck()
@@ -1794,13 +1812,18 @@
             let element = $('.gallerypicture[href="' + slide.src + '"]');
             let targetsrc =
               slide.src.length > 0 ? slide.src : element.data("src");
-			let hash = atob($.fancybox
-              .getInstance()
-              .current.$thumb.data("src")
-              .split("/")
-              .reverse()[0]
-              .split(".")[0]);
-            let favorited = alldata.filter((item) => {return item.album === 'Favorites' && item.hash === hash; }).length > 0;
+            let hash = atob(
+              $.fancybox
+                .getInstance()
+                .current.$thumb.data("src")
+                .split("/")
+                .reverse()[0]
+                .split(".")[0],
+            );
+            let favorited =
+              alldata.filter((item) => {
+                return item.album === "Favorites" && item.hash === hash;
+              }).length > 0;
             $(".fancybox-button--favorite").text(favorited ? "💔" : "❤️");
             if ($("video").length == 0) {
               saveAlbumPosition(
