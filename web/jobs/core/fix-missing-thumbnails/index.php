@@ -24,17 +24,18 @@ if (isset($_GET['album'])) {
     $album = " and album = {$album} ";
 }
 
-$select_results = $conn->query("SELECT id, album, filename FROM media where filename like '%.mp4' and url is null and album != 'Favorites' {$album} order by id desc");
+$select_results = $conn->query("SELECT id, album, filename FROM media where (filename like '%.mp4' or filename like '%.webm') and url is null and album != 'Favorites' {$album} order by id desc");
 $results = $select_results->fetchAll(PDO::FETCH_ASSOC);
 echo PHP_EOL . 'Checking ' . count($results) . ' database records';
 foreach (array_chunk($results, 2000) as $key => $chunk) {
     foreach ($chunk as $key => $row) {
         $album = $row['album'];
-        $filename = str_replace('.mp4', '.jpg', $row['filename']);
+        $filename = $row['filename'];
         if (!is_null($album) && !is_null($filename)) {
             print_r('🔍 ');
-            $videoPath = privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename;
-            $thumbnailPath = str_replace('.mp4', '.jpg', $videoPath);
+            $mediaFile = new mediaFile($filename, $album);
+            $videoPath = $mediaFile->realPath();
+            $thumbnailPath = str_replace('.webm', '.jpg', str_replace('.mp4', '.jpg', $videoPath));
             $videoExists = $ops->is_file($videoPath);
             $fileMissing = !$ops->is_file($thumbnailPath);
             $connectionOk = count($ops->scandir(privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER)) > 0;

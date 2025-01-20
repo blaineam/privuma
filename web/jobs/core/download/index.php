@@ -118,7 +118,7 @@ function condenseMetaData($item)
                       substr(trimExtraNewLines($item['description']), 0, 256)
                   ),
                   sanitizeLine($item['favorites']),
-                  sanitizeLine(implode(', ', array_slice($item['tags'], 0, 20))),
+                  sanitizeLine(implode(', ', array_slice($item['tags'], 0, 60))),
                   //substr(trimExtraNewLines($item['comments']), 0, 256),
                 ])
             ),
@@ -141,7 +141,7 @@ $mobiledata = json_encode(
 
 echo PHP_EOL . 'All Database Lookup Operations have been completed.';
 
-$viewerHTML = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "viewer" . DIRECTORY_SEPARATOR . "index.html");
+$viewerHTML = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'viewer' . DIRECTORY_SEPARATOR . 'index.html');
 
 $viewerHTML = str_replace(
     '{{ENDPOINT}}',
@@ -215,8 +215,8 @@ $dlData = array_filter($dlData, function ($item) use (
     );
     $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
     $thumbnailPreserve = $item['hash'] . '.jpg';
-    return !array_key_exists($preserve, $previouslyDownloadedMedia) &&
-      !array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia);
+    return !array_key_exists($preserve, $previouslyDownloadedMedia) || (str_contains($preserve, '.mp4') &&
+      !array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia));
 });
 
 echo PHP_EOL . 'Found ' . count($dlData) . ' new media items to be downloaded';
@@ -264,7 +264,9 @@ foreach ($dlData as $item) {
       privuma::getDataFolder() .
       DIRECTORY_SEPARATOR .
       (new mediaFile($item['filename'], $item['album']))->path();
-    $thumbnailPath = str_replace('.mp4', '.jpg', $path);
+    $path = $privuma->getOriginalPath($path) ?: $path;
+    $ext = pathinfo($path, PATHINFO_EXTENSION);
+    $thumbnailPath = dirname($path) . DIRECTORY_SEPARATOR . basename($path, '.' . $ext) . '.jpg';
     if (!$ops->is_file($preserve)) {
         if (!isset($item['url'])) {
             if (

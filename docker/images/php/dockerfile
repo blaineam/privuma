@@ -130,7 +130,7 @@ RUN apt-get remove --autoremove --purge -y gcc make cmake autoconf g++ yasm pkg-
 RUN apt-get clean
 
 ARG USERID=1000
-RUN usermod -u ${USERID} www-data
+RUN usermod -u ${USERID} www-data; exit 0
 
 RUN chsh -s /bin/bash www-data
 
@@ -146,7 +146,7 @@ FROM cenode/privuma-php AS prod
 
 ARG USERID=1000
 # Set php user id to host id
-RUN usermod -u ${USERID} www-data
+RUN usermod -u ${USERID} www-data; exit 0
 RUN chsh -s /bin/bash www-data
 
 ARG PHP_PORT=9701
