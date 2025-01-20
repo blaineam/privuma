@@ -3,6 +3,7 @@ node_modules
 @eaDir
 **/*.sql
 *.sql
+**/*.csv
 .env
 .auth
 web/.auth
@@ -32,3 +33,4 @@ web/ZGF0YQ==
 web/sync
 cron.log
 web/mediadirs.json
+dupes.json

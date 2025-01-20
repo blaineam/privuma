@@ -1,15 +1,28 @@
+networks:
+  internal:
+    driver: bridge
+    name: internal
+    ipam:
+        driver: default
+        config:
+              - subnet: 172.20.0.0/24
+                gateway: 172.20.0.1
 services:
   gluetun:
-    image: qmcgaw/gluetun
-    container_name: gluetun
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "8989:8989"
-      - "3789:3789"
-    env_file:
-      - "web/config/.env"
-    restart: always
+   image: qmcgaw/gluetun
+   container_name: gluetun
+   cap_add:
+     - NET_ADMIN
+   ports:
+     - "${TS_IP:?error}:8989:8989"
+   networks:
+     internal:
+       ipv4_address: 172.20.0.100
+   env_file:
+     - "web/config/.env"
+   restart: always
+   devices:
+     - /dev/net/tun:/dev/net/tun
   web:
     build: ./docker/images/nginx
     container_name: privuma_nginx
@@ -37,7 +50,7 @@ services:
     build:
       context: ./docker/images/php
       args:
-        USERID: 1003
+        USERID: 0
         PHP_PORT: 9701
       target: prod
     # image: cenode/privuma-php
@@ -50,9 +63,11 @@ services:
       - ./docker/etc/php/php.ini:/usr/local/etc/php/conf.d/z-php.ini:ro
       - ./docker/etc/php/zz-overrides.ini:/usr/local/etc/php/conf.d/zz-overrides.ini:ro
       - ./docker/etc/php/zzz-overrides.conf:/usr/local/etc/php-fpm.d/zzz-overrides.conf:ro
+      - "./web/config/rclone/:/root/.config/rclone/"
+      - "./web/app/output/cache/rclone/:/root/.cache/rclone/"
       - "./web/:/var/www/html/"
     depends_on:
-      # - db
+      - db
       - gluetun
     network_mode: "service:gluetun"
     deploy:
@@ -64,7 +79,7 @@ services:
     build:
       context: ./docker/images/php
       args:
-        USERID: 1003
+        USERID: 0
         PHP_PORT: 9702
       target: prod
     # image: cenode/privuma-php
@@ -77,17 +92,19 @@ services:
     volumes:
       - ./docker/etc/php/zz-overrides.ini:/usr/local/etc/php/conf.d/zz-overrides.ini:ro
       - ./docker/etc/php/zzz-overrides.conf:/etc/php-fpm.d/zzz-overrides.conf:ro
+      - "./web/config/rclone/:/root/.config/rclone/"
+      - "./web/app/output/cache/rclone/:/root/.cache/rclone/"
       - "./web/:/var/www/html/"
       - "./cron.log:/var/log/cron.log"
     depends_on:
-      # - db
+      - db
       - gluetun
     network_mode: "service:gluetun"
     deploy:
       resources:
         limits:
           cpus: "2.0"
-          memory: 2G
+          memory: 3G
   db:
     image: mariadb
     restart: always
@@ -95,10 +112,17 @@ services:
     env_file:
       - "web/config/.env"
     ports:
-      - 3306:3306
-    # network_mode: "service:gluetun"
-    # depends_on:
-    #   - gluetun
+      - "${TS_IP:?error}:3306:3306"
+    networks:
+      internal:
+        ipv4_address: 172.20.0.99
+    healthcheck:
+        test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+        start_period: 1m
+        start_interval: 10s
+        interval: 1m
+        timeout: 5s
+        retries: 3
     volumes:
       - ./docker/db:/var/lib/mysql
       - ./docker/etc/mariadb/custom.cnf:/etc/mysql/conf.d/custom.cnf
@@ -114,50 +138,28 @@ services:
     restart: always
     volumes:
       - ./web/config/rclone:/config/rclone
-    user: "${UID}:${GID}"
+    user: $DOCKER_USER
     depends_on:
       - gluetun
     network_mode: "service:gluetun"
-    command: serve http --read-only --no-checksum --no-modtime --addr :8991 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+    command: serve http --read-only --no-checksum --no-modtime --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8991 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
   cloudfs-http-secondary:
     image: rclone/rclone:latest
     container_name: privuma_cloudfs_http_secondary
     restart: always
     volumes:
       - ./web/config/rclone:/config/rclone
-    user: "${UID}:${GID}"
+    user: $DOCKER_USER
     depends_on:
       - gluetun
     network_mode: "service:gluetun"
-    command: serve http --read-only --no-checksum --no-modtime --addr :8992 ${CLOUDFS_HTTP_SECONDARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G  --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+    command: serve http --read-only --no-checksum --no-modtime --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8992 ${CLOUDFS_HTTP_SECONDARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G  --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
   cloudfs-http-tertiary:
     image: rclone/rclone:latest
     container_name: privuma_cloudfs_http_teriary
     restart: always
     volumes:
       - ./web/config/rclone:/config/rclone
-    user: "${UID}:${GID}"
-    depends_on:
-      - gluetun
+    user: $DOCKER_USER
     network_mode: "service:gluetun"
-    command: serve http --read-only --no-checksum --no-modtime --addr :8993 ${CLOUDFS_HTTP_TERTIARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
-  cloudfs-http-quadary:
-    image: rclone/rclone:latest
-    container_name: privuma_cloudfs_http_quadary
-    restart: always
-    ports:
-      - 8994:8994
-    volumes:
-      - ./web/config/rclone:/config/rclone
-    user: "${UID}:${GID}"
-    command: serve http --read-only --no-checksum --no-modtime --addr :8994 --user ${CLOUDFS_HTTP_QUADARY_USER} --pass ${CLOUDFS_HTTP_QUADARY_PASS} ${CLOUDFS_HTTP_QUADARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
-  # cloudfs-s3:
-  #   image: rclone/rclone:beta
-  #   container_name: privuma_cloudfs_s3
-  #   restart: always
-  #   volumes:
-  #     - ./web/config/rclone:/config/rclone
-  #   user: "${UID}:${GID}"
-  #   ports:
-  #     - "8994:80"
-  #   command: serve s3 --auth-key ${CLOUDFS_S3_ACCESS_KEY},${CLOUDFS_S3_SECRET_KEY} --read-only --no-checksum --no-modtime --addr :80 ${CLOUDFS_S3_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+    command: serve http --read-only --no-checksum --no-modtime --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8993 ${CLOUDFS_HTTP_TERTIARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --fast-list  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
