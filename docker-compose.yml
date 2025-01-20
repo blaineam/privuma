@@ -3,26 +3,26 @@ networks:
     driver: bridge
     name: internal
     ipam:
-        driver: default
-        config:
-              - subnet: 172.20.0.0/24
-                gateway: 172.20.0.1
+      driver: default
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1
 services:
   gluetun:
-   image: qmcgaw/gluetun
-   container_name: gluetun
-   cap_add:
-     - NET_ADMIN
-   ports:
-     - "${TS_IP:?error}:8989:8989"
-   networks:
-     internal:
-       ipv4_address: 172.20.0.100
-   env_file:
-     - "web/config/.env"
-   restart: always
-   devices:
-     - /dev/net/tun:/dev/net/tun
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "${TS_IP:?error}:8989:8989"
+    networks:
+      internal:
+        ipv4_address: 172.20.0.100
+    env_file:
+      - "web/config/.env"
+    restart: always
+    devices:
+      - /dev/net/tun:/dev/net/tun
   web:
     build: ./docker/images/nginx
     container_name: privuma_nginx
@@ -117,12 +117,12 @@ services:
       internal:
         ipv4_address: 172.20.0.99
     healthcheck:
-        test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
-        start_period: 1m
-        start_interval: 10s
-        interval: 1m
-        timeout: 5s
-        retries: 3
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 1m
+      start_interval: 10s
+      interval: 1m
+      timeout: 5s
+      retries: 3
     volumes:
       - ./docker/db:/var/lib/mysql
       - ./docker/etc/mariadb/custom.cnf:/etc/mysql/conf.d/custom.cnf
