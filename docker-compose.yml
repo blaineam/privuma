@@ -98,6 +98,7 @@ services:
       - "./cron.log:/var/log/cron.log"
     depends_on:
       - db
+      - cloudfs-http
       - gluetun
     network_mode: "service:gluetun"
     deploy:
