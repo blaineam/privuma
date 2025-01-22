@@ -97,6 +97,15 @@ class preserveMedia
         $ext = !empty(pathinfo($file, PATHINFO_EXTENSION)) ? pathinfo($file, PATHINFO_EXTENSION): $mimeExt;
         $preserveExt = pathinfo($preserve, PATHINFO_EXTENSION);
 
+        if (in_array(strtoupper($ext), ['GIF', 'JPG', 'JPEG', 'PNG', 'MP4'])) {
+            echo PHP_EOL."Skipping Compression";
+            return $this->ops->rename($file, $preserve, false);
+        } else {
+            echo PHP_EOL."Skipping unsupported file format while conversions are disabled: {$ext}";
+            return false;
+        }
+        
+
         if (in_array(strtoupper($ext), $allowedPhotos) || in_array(strtoupper($preserveExt), $allowedPhotos)) {
             return $this->compressPhoto($file, $preserve);
         } elseif (in_array(strtoupper($ext), $allowedVideos) || in_array(strtoupper($preserveExt), $allowedVideos)) {
