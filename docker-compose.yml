@@ -1,0 +1,168 @@
+networks:
+  internal:
+    driver: bridge
+    name: internal
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1
+services:
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "${TS_IP:?error}:8989:8989"
+    networks:
+      internal:
+        ipv4_address: 172.20.0.100
+    env_file:
+      - "web/config/.env"
+    restart: always
+    devices:
+      - /dev/net/tun:/dev/net/tun
+  web:
+    build: ./docker/images/nginx
+    container_name: privuma_nginx
+    volumes:
+      - "./docker/etc/nginx/default.conf:/etc/nginx/conf.d/default.conf"
+      - "./docker/etc/nginx/default.template.conf:/etc/nginx/conf.d/default.template:ro"
+      - "${TS_CERT:?error}:/var/ssl.cert:ro"
+      - "${TS_KEY:?error}:/var/ssl.key:ro"
+      # - "../../services/tailscale/certs/certificate.crt:/var/ssl.cert:ro"
+      # - "../../services/tailscale/certs/certificate.key:/var/ssl.key:ro"
+      - ./docker/etc/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - "./web/:/var/www/html/:ro"
+    environment:
+      - NGINX_HOST=${NGINX_HOST}
+    command: /bin/sh -c "envsubst '$$NGINX_HOST' < /etc/nginx/conf.d/default.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+    restart: always
+    depends_on:
+      - php-web
+      - gluetun
+    network_mode: "service:gluetun"
+    deploy:
+      resources:
+        limits:
+         # cpus: "1.0"
+          memory: 2G
+  php-web:
+    build:
+      context: ./docker/images/php
+      args:
+        USERID: 0
+        PHP_PORT: 9701
+      target: prod
+    # image: cenode/privuma-php
+    restart: always
+    container_name: privuma_php_web
+    env_file:
+      - "web/config/.env"
+    command: bash -c "echo "" > /etc/cron.d/privuma && php-fpm"
+    volumes:
+      - ./docker/etc/php/php.ini:/usr/local/etc/php/conf.d/z-php.ini:ro
+      - ./docker/etc/php/zz-overrides.ini:/usr/local/etc/php/conf.d/zz-overrides.ini:ro
+      - ./docker/etc/php/zzz-overrides.conf:/usr/local/etc/php-fpm.d/zzz-overrides.conf:ro
+      - "./web/config/rclone/:/root/.config/rclone/"
+      - "./web/app/output/cache/rclone/:/root/.cache/rclone/"
+      - "./web/:/var/www/html/"
+    depends_on:
+      - db
+      - gluetun
+    network_mode: "service:gluetun"
+    deploy:
+      resources:
+        limits:
+        #  cpus: "1.0"
+          memory: 2G
+  php-cron:
+    build:
+      context: ./docker/images/php
+      args:
+        USERID: 0
+        PHP_PORT: 9702
+      target: prod
+    # image: cenode/privuma-php
+    #security_opt:
+    #  - seccomp:seccomp.json
+    restart: always
+    container_name: privuma_php_cron
+    env_file:
+      - "web/config/.env"
+    volumes:
+      - ./docker/etc/php/zz-overrides.ini:/usr/local/etc/php/conf.d/zz-overrides.ini:ro
+      - ./docker/etc/php/zzz-overrides.conf:/etc/php-fpm.d/zzz-overrides.conf:ro
+      - "./web/config/rclone/:/root/.config/rclone/"
+      - "./web/app/output/cache/rclone/:/root/.cache/rclone/"
+      - "./web/:/var/www/html/"
+      - "./cron.log:/var/log/cron.log"
+    depends_on:
+      - db
+      - cloudfs-http
+      - gluetun
+    network_mode: "service:gluetun"
+    deploy:
+      resources:
+        limits:
+         # cpus: "2.0"
+          memory: 3G
+  db:
+    image: mariadb
+    restart: always
+    container_name: privuma_db
+    env_file:
+      - "web/config/.env"
+    ports:
+      - "${TS_IP:?error}:3306:3306"
+    networks:
+      internal:
+        ipv4_address: 172.20.0.99
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 1m
+      # start_interval: 10s
+      interval: 1m
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ./docker/db:/var/lib/mysql
+      - ./docker/etc/mariadb/custom.cnf:/etc/mysql/conf.d/custom.cnf
+      - ./docker/images/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
+    deploy:
+      resources:
+        limits:
+         # cpus: "1.0"
+          memory: 1G
+  cloudfs-http:
+    image: rclone/rclone:latest
+    container_name: privuma_cloudfs_http
+    restart: always
+    volumes:
+      - ./web/config/rclone:/config/rclone
+    user: $DOCKER_USER
+    depends_on:
+      - gluetun
+    network_mode: "service:gluetun"
+    command: serve http --read-only --no-checksum --no-modtime --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8991 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+  cloudfs-http-secondary:
+    image: rclone/rclone:latest
+    container_name: privuma_cloudfs_http_secondary
+    restart: always
+    volumes:
+      - ./web/config/rclone:/config/rclone
+    user: $DOCKER_USER
+    depends_on:
+      - gluetun
+    network_mode: "service:gluetun"
+    command: serve http --read-only --no-checksum --no-modtime --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8992 ${CLOUDFS_HTTP_SECONDARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G  --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+  cloudfs-http-tertiary:
+    image: rclone/rclone:latest
+    container_name: privuma_cloudfs_http_teriary
+    restart: always
+    volumes:
+      - ./web/config/rclone:/config/rclone
+    user: $DOCKER_USER
+    network_mode: "service:gluetun"
+    command: serve http --read-only --no-checksum --no-modtime --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8993 ${CLOUDFS_HTTP_TERTIARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz} --dir-cache-time 1m --fast-list  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M

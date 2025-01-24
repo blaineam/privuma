@@ -1,0 +1,8 @@
+{
+  "https://deovrsite.com/deovr": {
+    "name": "DeoVR Site",
+    "search": ["words found in title of media on site"],
+    "login": "site username(optional)",
+    "password": "site password(optional)"
+  }
+}

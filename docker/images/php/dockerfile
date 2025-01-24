@@ -1,0 +1,158 @@
+FROM php:8.1-fpm AS base
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Install dependencies
+RUN apt-get update; apt-get upgrade -y ; apt-get install -y \
+    build-essential \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    locales \
+    libzip-dev \
+    libmcrypt-dev \
+    libonig-dev \
+    zlib1g-dev \
+    zip \
+    jpegoptim optipng pngquant gifsicle \
+    vim \
+    unzip \
+    git \
+    graphviz \
+    curl \
+    supervisor \
+    htop \
+    percona-toolkit \
+    cpulimit
+
+# Install ffmpeg
+RUN apt-get update && apt-get install -y ffmpeg
+
+RUN apt-get update && \
+    apt-get install -y libcurl4-openssl-dev
+
+# Install php extensions
+RUN docker-php-ext-install gd mysqli pdo_mysql zip exif pcntl
+
+# Enable PHP Semaphores
+RUN docker-php-ext-configure sysvmsg --enable-sysvmsg; \
+    docker-php-ext-configure sysvsem --enable-sysvsem; \
+    docker-php-ext-configure sysvshm --enable-sysvshm; \
+    docker-php-ext-install sysvmsg sysvsem sysvshm
+
+
+# Install Imagemagick
+ARG IM_VERSION=7.1.0-8
+ARG LIB_HEIF_VERSION=1.12.0
+ARG LIB_AOM_VERSION=3.1.2
+ARG LIB_WEBP_VERSION=1.2.1
+RUN apt-get -y update && \
+    # apt-get -y upgrade && \
+    apt-get install -y git make gcc pkg-config autoconf g++ \
+    # libaom
+    yasm cmake \
+    # libheif
+    libde265-0 libde265-dev libjpeg62-turbo libjpeg62-turbo-dev x265 libx265-dev libtool \
+    # IM
+    libpng16-16 libpng-dev libjpeg62-turbo libjpeg62-turbo-dev libgomp1 ghostscript libxml2-dev libxml2-utils libtiff-dev libfontconfig1-dev libfreetype6-dev && \
+    # Building libwebp
+    git clone https://chromium.googlesource.com/webm/libwebp && \
+    cd libwebp && git checkout v${LIB_WEBP_VERSION} && \
+    ./autogen.sh && ./configure --enable-shared --enable-libwebpdecoder --enable-libwebpdemux --enable-libwebpmux --enable-static=no && \
+    make && make install && \
+    ldconfig /usr/local/lib && \
+    cd ../ && rm -rf libwebp && \
+    # Building libaom
+    git clone https://aomedia.googlesource.com/aom && \
+    cd aom && git checkout v${LIB_AOM_VERSION} && cd .. && \
+    mkdir build_aom && \
+    cd build_aom && \
+    cmake ../aom/ -DENABLE_TESTS=0 -DBUILD_SHARED_LIBS=1 && make && make install && \
+    ldconfig /usr/local/lib && \
+    cd .. && \
+    rm -rf aom && \
+    rm -rf build_aom && \
+    # Building libheif
+    curl -L https://github.com/strukturag/libheif/releases/download/v${LIB_HEIF_VERSION}/libheif-${LIB_HEIF_VERSION}.tar.gz -o libheif.tar.gz && \
+    tar -xzvf libheif.tar.gz && cd libheif-${LIB_HEIF_VERSION}/ && ./autogen.sh && ./configure && make && make install && cd .. && \
+    ldconfig /usr/local/lib && \
+    rm -rf libheif-${LIB_HEIF_VERSION} && rm libheif.tar.gz && \
+    # Building ImageMagick
+    git clone https://github.com/ImageMagick/ImageMagick.git && \
+    cd ImageMagick && git checkout ${IM_VERSION} && \
+    ./configure --without-magick-plus-plus --disable-docs --disable-static --with-libtiff && \
+    make && make install && \
+    ldconfig /usr/local/lib && \
+    rm -rf /ImageMagick
+
+# Install Imagick php extension
+RUN pecl install imagick && \
+    docker-php-ext-enable imagick
+
+# Install python an dependencies
+RUN apt-get update && apt-get install --fix-missing -y python3 python3-pip && \
+pip3 install beautifulsoup4 --break-system-packages && \
+pip3 install requests --break-system-packages && \
+pip3 install tqdm --break-system-packages && \
+pip3 install --upgrade yt-dlp --break-system-packages && \
+pip3 install requests-doh --break-system-packages && \
+pip3 install 'gdown>=5.1.0' --break-system-packages
+
+RUN apt-get install -y  libimage-exiftool-perl ocrmypdf wget
+
+RUN apt-get install -y megatools
+
+RUN apt-get -y update \
+    && apt-get install -y libicu-dev \
+    && docker-php-ext-configure intl \
+    && docker-php-ext-install intl
+
+RUN  sed -i 's%  <policy domain="coder" rights="none" pattern="PDF" />%  <policy domain="coder" rights="read|write" pattern="PDF" />%g' /usr/local/etc/ImageMagick-7/policy.xml && \
+      sed -i 's% <policy domain="resource" name="disk" value="1GiB"/>% <policy domain="resource" name="disk" value="8GiB"/>%g' /usr/local/etc/ImageMagick-7/policy.xml && \
+      sed -i 's% <policy domain="resource" name="area" value="128MP"/>% <policy domain="resource" name="area" value="512MP"/>%g' /usr/local/etc/ImageMagick-7/policy.xml && \
+      sed -i 's% <policy domain="resource" name="memory" value="256MiB"/>% <policy domain="resource" name="memory" value="1GiB"/>%g' /usr/local/etc/ImageMagick-7/policy.xml
+
+RUN apt-get install -y default-jdk
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+
+RUN cd /usr/local/ \
+		&& git clone https://github.com/ruffle-rs/ruffle.git ruffle
+RUN cd /usr/local/ruffle \
+		&& /root/.cargo/bin/cargo build --release --package=exporter --bin=exporter \
+		&& /usr/local/ruffle/target/release/exporter --version
+
+# Cleanup extra packages
+RUN apt-get remove --autoremove --purge -y gcc make cmake autoconf g++ yasm pkg-config libpng-dev libjpeg62-turbo-dev libde265-dev libx265-dev libxml2-dev libtiff-dev libfontconfig1-dev libfreetype6-dev
+
+# Clear cache
+RUN apt-get clean
+
+ARG USERID=1000
+RUN usermod -u ${USERID} www-data; exit 0
+
+RUN chsh -s /bin/bash www-data
+
+RUN export PATH="$PATH:/usr/local/bin/" && ln -s /usr/local/bin/php /usr/bin/php
+
+RUN echo 'request_terminate_timeout = 10s' >> /usr/local/etc/php-fpm.d/zz-docker.conf
+
+RUN curl https://rclone.org/install.sh | bash
+
+CMD bash -c "php-fpm"
+
+FROM cenode/privuma-php AS prod
+
+ARG USERID=1000
+# Set php user id to host id
+RUN usermod -u ${USERID} www-data; exit 0
+RUN chsh -s /bin/bash www-data
+
+ARG PHP_PORT=9701
+RUN sed -i "s/9000/${PHP_PORT}/g" /usr/local/etc/php-fpm.d/www.conf
+RUN sed -i "s/9000/${PHP_PORT}/g" /usr/local/etc/php-fpm.d/zz-docker.conf
+
+EXPOSE ${PHP_PORT}
+
+RUN mkdir /var/www/.cache && chown www-data /var/www/.cache
