@@ -53,21 +53,27 @@ if (count($blocklist) > 0) {
                         (
                             album in ('" . implode("', '", $blockedComicAlbums) . "')
                             or upper(
-                            concat(
-                                album,
-                                filename,
-                                substring_index(
-                                    coalesce(
-                                        metadata,
-                                        ''
-                                    ),
-                                    '\nComments: ',
-                                    1
+                                concat(
+                                    album,
+                                    filename,
+                                    substring_index(
+                                        coalesce(
+                                            metadata,
+                                            ''
+                                        ),
+                                        '\nComments: ',
+                                        1
+                                    )
                                 )
-                            )
-                        ) regexp '" . implode('|', $blocklist) . "'
-                    )
+                            ) regexp '" . implode('|', $blocklist) . "'
+                        )
                     then 1
+                    else 0
+                end;
+            ";
+            $blockingQuery2 = "
+                update media set blocked = case
+                    when hash in (select hash from media where blocked = 1) then 1
                     else 0
                 end;
             ";
@@ -75,6 +81,8 @@ if (count($blocklist) > 0) {
         . 'Set Blocked column for: '
         . $conn->query(
             $blockingQuery
+        )->rowCount() + $conn->query(
+            $blockingQuery2
         )->rowCount()
         . ' rows';
 }

@@ -49,7 +49,7 @@ foreach (array_diff(array_merge(scandir($coreJobsDir), scandir($pluginsJobsDir))
     }
 
     if ($REFRESH) {
-        $args .= ' ignoreDatabase=1 ';
+        $args .= ' refresh=1 ';
         if (file_exists($jobDir . 'successful-run.cache')) {
             echo PHP_EOL . 'Resetting last run time';
             unlink($jobDir . 'successful-run.cache');
