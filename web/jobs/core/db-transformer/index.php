@@ -71,12 +71,12 @@ if (count($blocklist) > 0) {
                     else 0
                 end;
             ";
-            $blockingQuery2 = "
+    $blockingQuery2 = '
                 update media set blocked = case
                     when hash in (select hash from media where blocked = 1) then 1
                     else 0
                 end;
-            ";
+            ';
     echo PHP_EOL
         . 'Set Blocked column for: '
         . $conn->query(
