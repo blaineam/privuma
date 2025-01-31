@@ -51,8 +51,8 @@ function findMedia($path)
         $json = file_get_contents($cachePath);
         $scan = json_decode($json, true);
         $target = $ops->encode($DEOVR_DATA_DIRECTORY) . DIRECTORY_SEPARATOR;
-        $opsNoEncode->file_put_contents($target . "deovr-fs.json", $json);
-        $opsNoEncode->copy(__DIR__ . DIRECTORY_SEPARATOR . "vr-viewer.html", $target . "index.html", false);
+        $opsNoEncode->file_put_contents($target . 'deovr-fs.json', $json);
+        $opsNoEncode->copy(__DIR__ . DIRECTORY_SEPARATOR . 'vr-viewer.html', $target . 'index.html', false);
     } else {
         $scan = $ops->scandir($path, true, true);
         if ($scan === false) {
@@ -61,11 +61,10 @@ function findMedia($path)
             $json = json_encode($scan, JSON_INVALID_UTF8_IGNORE + JSON_THROW_ON_ERROR);
             file_put_contents($cachePath, $json);
             $target = $ops->encode($DEOVR_DATA_DIRECTORY) . DIRECTORY_SEPARATOR;
-            $opsNoEncode->file_put_contents($target . "deovr-fs.json", $json);
-            $opsNoEncode->copy(__DIR__ . DIRECTORY_SEPARATOR . "vr-viewer.html", $target . "index.html", false);
+            $opsNoEncode->file_put_contents($target . 'deovr-fs.json', $json);
+            $opsNoEncode->copy(__DIR__ . DIRECTORY_SEPARATOR . 'vr-viewer.html', $target . 'index.html', false);
         }
-      }
-      
+    }
 
     $output = [];
     foreach ($scan as $id => $obj) {
