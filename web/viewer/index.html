@@ -280,7 +280,7 @@
           value: value,
           expiry: now.getTime() + ttl,
         };
-        localStorage.setItem(key, JSON.stringify(item));
+        localStorage.setItem(key, btoa(JSON.stringify(item)));
       }
 
       function getWithExpiry(key) {
@@ -288,7 +288,7 @@
         if (!itemStr) {
           return null;
         }
-        const item = JSON.parse(itemStr);
+        const item = JSON.parse(atob(itemStr));
         const now = new Date();
         if (now.getTime() > item.expiry) {
           localStorage.removeItem(key);
@@ -1114,7 +1114,8 @@
         let recentCurrentFavorite = window.alldata.filter(
           (item) => item.album === "Favorites",
         )[0].time;
-        if (recentCurrentFavorite > recentCachedFavorite) {
+        if (recentCurrentFavorite >= recentCachedFavorite) {
+          window.localStorage.removeItem("FHC");
           return;
         }
         let cachedFavorites = window.alldata
@@ -1123,15 +1124,16 @@
               item.album !== "Favorites" && cachedHashes.includes(item.hash),
           )
           .map((item) => {
-            item.filename = item.album + "-----" + item.filename;
-            item.album = "Favorites";
-            item.time =
+            let clone = JSON.parse(JSON.stringify(item));
+            clone.filename = clone.album + "-----" + clone.filename;
+            clone.album = "Favorites";
+            clone.time =
               window.alldata.filter(
                 (original) =>
-                  original.album === "Favorites" && original.hash === item.hash,
+                  original.album === "Favorites" && original.hash === clone.hash,
               )[0]?.time ??
               new Date().toISOString().replace("T", " ").substring(0, 19);
-            return item;
+            return clone;
           })
           .filter(
             (obj1, i, arr) =>
@@ -1165,11 +1167,12 @@
         $.ajax(call)
           .then((data) => {
             toast.info(data);
-            $(".fancybox-button--favorite").text(!favorited ? "💔" : "❤️");
-            if (!favorited) {
-              let original = window.alldata.filter((item) => {
+            favorited = data.includes('add');
+            $(".fancybox-button--favorite").text(favorited ? "💔" : "❤️");
+            if (favorited) {
+              let original = JSON.parse(JSON.stringify(window.alldata.filter((item) => {
                 return item.album !== "Favorites" && item.hash === atob(hash);
-              })[0];
+              })[0]));
               original.filename = original.album + "-----" + original.filename;
               original.album = "Favorites";
               original.time = new Date()
