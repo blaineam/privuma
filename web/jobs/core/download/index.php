@@ -81,11 +81,16 @@ function trimExtraNewLines($string)
 
 function parseMetaData($item)
 {
+    $dateValue = explode(PHP_EOL, explode('Date: ', $item)[1] ?? '')[0];
+    $intval = filter_var($dateValue, FILTER_VALIDATE_INT);
+    if ($intval) {
+      $dateValue = "@".substr($dateValue, 0, 10);
+    }
     return [
       'title' => explode(PHP_EOL, explode('Title: ', $item)[1] ?? '')[0],
       'author' => explode(PHP_EOL, explode('Author: ', $item)[1] ?? '')[0],
       'date' => new DateTime(
-          explode(PHP_EOL, explode('Date: ', $item)[1] ?? '')[0]
+          $dateValue
       ),
       'rating' => (int) explode(PHP_EOL, explode('Rating: ', $item)[1] ?? '')[0],
       'favorites' => (int) explode(
