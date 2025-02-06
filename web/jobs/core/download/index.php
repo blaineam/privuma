@@ -84,7 +84,7 @@ function parseMetaData($item)
     $dateValue = explode(PHP_EOL, explode('Date: ', $item)[1] ?? '')[0];
     $intval = filter_var($dateValue, FILTER_VALIDATE_INT);
     if ($intval) {
-      $dateValue = "@".substr($dateValue, 0, 10);
+        $dateValue = '@' . substr($dateValue, 0, 10);
     }
     return [
       'title' => explode(PHP_EOL, explode('Title: ', $item)[1] ?? '')[0],
