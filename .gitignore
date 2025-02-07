@@ -6,6 +6,7 @@ node_modules
 **/*.csv
 .env
 .auth
+tools/*.sh
 web/.auth
 .gitmodules
 web/data/**
@@ -34,3 +35,4 @@ web/sync
 cron.log
 web/mediadirs.json
 dupes.json
+*.wg*.conf
