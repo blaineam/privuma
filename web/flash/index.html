@@ -10724,16 +10724,22 @@
       });
     </script>
     <script>
+      function loadExt() {
+        $("#search").val("");
+        window.localStorage.setItem("TWF0dXJl", "true");
+        setupPage(atob("TWF0dXJl"));
+        $(`a[data-fancybox]`).show();
+      }
+      
+      loadExt();
+    
       $("#search").keypress((event) => {
         if (event.which === 13) {
           if (
             $("#search").val() ===
             atob("SSBhbSBvZiBhZ2UgdG8gdmlldyBNYXR1cmUgY29udGVudA==")
           ) {
-            $("#search").val("");
-            window.localStorage.setItem("TWF0dXJl", "true");
-            setupPage(atob("TWF0dXJl"));
-            $(`a[data-fancybox]`).show();
+            loadExt()
             return;
           }
           if ($("#search").val().length <= 2) {
