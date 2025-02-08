@@ -47,12 +47,82 @@ function findMedia($path)
     $cacheStillRecent = $currentTime - $lastRan < 90 * 24 * 60 * 60;
     $scan = ['.', '..'];
 
+    function _group_by($array, $key) {
+        $return = array();
+        foreach($array as $val) {
+            $return[$val[$key]][] = $val;
+        }
+        return $return;
+    }
+    
+    function get_deovr_download($scan, $isHeresphere = false) {
+      $videos = array_filter($scan, function($item) { return $item['MimeType'] === 'video/mp4'; });
+      usort($videos, function($a, $b) {
+        return ($a['ModTime'] === $b['ModTime']) ? 0 :  (($a['ModTime'] < $b['ModTime']) ? 1 : -1);
+      });
+      $structured = array_map(function($item) use ($isHeresphere) {
+        $prefix = !$isHeresphere ? privuma::getEnv("DEOVR_DOWNLOAD_MEDIA_PREFIX") : "";
+        return [
+          "scene" => dirname($item['Path']),
+          "video_url" => $prefix . cloudFS::encode($item['Path']),
+          "videoSrc" => $prefix . cloudFS::encode($item['Path']),
+          "thumbnailUrl" => $prefix . cloudFS::encode(str_replace(".mp4", ".jpg", $item['Path'])),
+          "thumbnailImage" => $prefix . cloudFS::encode(str_replace(".mp4", ".jpg", $item['Path'])),
+          "title" => basename($item['Path'], '.mp4'),
+          "skipIntro" => 0,
+          ...get3dAttrs(basename($item['Path'], '.mp4')),
+          'encodings' =>
+              [
+                  [
+              'name' => 'h265',
+              'videoSources' => [
+                  [
+                  'resolution' => getResolution(basename($item['Path'], '.mp4')),
+                  'url' => $prefix . cloudFS::encode($item['Path'])
+                  ]
+              ]
+              ]
+          ],
+          'media' =>
+              [
+                  [
+              'name' => 'h265',
+              'sources' => [
+                  [
+                  'resolution' => getResolution(basename($item['Path'], '.mp4')),
+                  'url' => $prefix . cloudFS::encode($item['Path'])
+                  ]
+              ]
+              ]
+          ],
+        ];
+      }, $videos);
+      return json_encode([
+        (($isHeresphere) ? "library" : "scenes") => array_values(array_map(function($item) {
+          return [
+            "name" => reset($item)['scene'],
+            "list" => $item,
+          ];
+        }, _group_by($structured, 'scene'))),
+        (($isHeresphere) ? "access" : "authorized") => 1
+      ]
+      );
+    }
+    
     if (is_file($cachePath) && $cacheStillRecent) {
         $json = file_get_contents($cachePath);
         $scan = json_decode($json, true);
         $target = $ops->encode($DEOVR_DATA_DIRECTORY) . DIRECTORY_SEPARATOR;
         $opsNoEncode->file_put_contents($target . 'deovr-fs.json', $json);
-        $opsNoEncode->copy(__DIR__ . DIRECTORY_SEPARATOR . 'vr-viewer.html', $target . 'index.html', false);
+        $opsNoEncode->file_put_contents($target . 'deovr.json', get_deovr_download($scan));
+        $opsNoEncode->file_put_contents($target . 'heresphere', get_deovr_download($scan, true));
+        $viewerHTML = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'vr-viewer.html');
+        $viewerHTML = str_replace(
+            '{{DEOVR_DOWNLOAD_MEDIA_PREFIX}}',
+            privuma::getEnv('DEOVR_DOWNLOAD_MEDIA_PREFIX'),
+            $viewerHTML
+        );
+        $opsNoEncode->file_put_contents($target . 'index.html', $viewerHTML);
     } else {
         $scan = $ops->scandir($path, true, true);
         if ($scan === false) {
@@ -62,9 +132,20 @@ function findMedia($path)
             file_put_contents($cachePath, $json);
             $target = $ops->encode($DEOVR_DATA_DIRECTORY) . DIRECTORY_SEPARATOR;
             $opsNoEncode->file_put_contents($target . 'deovr-fs.json', $json);
-            $opsNoEncode->copy(__DIR__ . DIRECTORY_SEPARATOR . 'vr-viewer.html', $target . 'index.html', false);
+            $opsNoEncode->file_put_contents($target . 'deovr.json', get_deovr_download($scan));
+            $opsNoEncode->file_put_contents($target . 'heresphere', get_deovr_download($scan, true));
+            $viewerHTML = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'vr-viewer.html');
+            
+            $viewerHTML = str_replace(
+                '{{DEOVR_DOWNLOAD_MEDIA_PREFIX}}',
+                privuma::getEnv('DEOVR_DOWNLOAD_MEDIA_PREFIX'),
+                $viewerHTML
+            );
+            $opsNoEncode->file_put_contents($target . 'index.html', $viewerHTML);
         }
     }
+
+
 
     $output = [];
     foreach ($scan as $id => $obj) {
@@ -77,7 +158,7 @@ function findMedia($path)
                 $filename = basename($obj['Name'], '.' . $ext);
                 $thumbnailPath = $path . '/' . $filename . '.jpg';
                 //if($ops->is_file($thumbnailPath)) {
-                if (!is_array($output[$dir])) {
+                if (!is_array($output[$dir] ?? false)) {
                     $output[$dir] = [
                         'name' => $dir === '.' ? 'Privuma' : $dir,
                         'list' => [],
@@ -698,7 +779,7 @@ if ($responseTypeJson) {
         echo '<div data-tab-content id="' . urlencode($scene['name']) . '" class="' . ($index === 0 ? 'active' : '') . '"><h2>' . $scene['name'] . '</h2>';
         foreach ($scene['list'] as $item) {
             $ua = strtolower($_SERVER['HTTP_USER_AGENT']);
-            if (stripos($ua, 'x11') !== false) {
+            if (isset($_GET["native"]) && stripos($ua, 'x11') !== false) {
                 echo ' <a data-gallery-link="true" href="' . $item['videoSrc'] . '"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
             } else {
                 $hash = 'NONE';
@@ -716,6 +797,9 @@ if ($responseTypeJson) {
                 }
                 if ($item['stereoMode'] === 'sbs' && $item['screenType'] === 'sphere') {
                     $hash = '360_LR';
+                }
+                if ($hash === 'NONE' && $item['screenType'] === 'sphere') {
+                    $hash = '360';
                 }
                 echo ' <a data-gallery-link="true" data-fancybox="gallery"  data-type="iframe" href="#" data-src="' . $item['video_url'] . '&html=1#' . $hash . '"><img  loading="lazy" src="' . $item['thumbnailUrl'] . '" /></a> ';
             }
