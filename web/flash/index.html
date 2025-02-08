@@ -10630,6 +10630,7 @@
           window.ranFirst = false;
           for (var search in window.dataset) {
             if (
+              false &&
               window.localStorage.getItem("TWF0dXJl") !== "true" &&
               search == atob("TWF0dXJl")
             ) {
@@ -10731,7 +10732,6 @@
         $(`a[data-fancybox]`).show();
       }
       
-      loadExt();
     
       $("#search").keypress((event) => {
         if (event.which === 13) {
