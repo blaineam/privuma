@@ -549,7 +549,7 @@ if (isset($_GET['media']) && isset($_GET['id'])) {
                                     <body>
 
 
-  <div style="width:100%; height: calc( 100% - 25px ); display:block; position:absolute; margin:0; padding:0;top:0;left:0;"> <video poster="' . $thumbnailUrl . '" id="videojs-vr-player" class="video-js vjs-fill vjs-default-skin" playsinline controls>
+  <div style="width:100%; height: calc( 100% - 25px ); display:block; position:absolute; margin:0; padding:0;top:0;left:0;"> <video poster="' . $thumbnailUrl . '" loop id="videojs-vr-player" class="video-js vjs-fill vjs-default-skin" playsinline controls>
                                             <source type="video/mp4" src="' . $scenes['list'][$k]['encodings'][0]['videoSources'][0]['url'] . '">
                                         </video>
 
@@ -643,7 +643,7 @@ if (isset($_GET['media']) && isset($_GET['id'])) {
 
 
   <div style="width:100%; height: calc( 100% - 25px ); display:block; position:absolute; margin:0; padding:0;top:0;left:0;">
-                    <video poster="' . getProtectedUrlForMediaPath(dirname($mediaPath) . '/' . $filename . '.jpg') . '" id="videojs-vr-player" class="video-js vjs-fill vjs-default-skin" playsinline controls>
+                    <video poster="' . getProtectedUrlForMediaPath(dirname($mediaPath) . '/' . $filename . '.jpg') . '" loop id="videojs-vr-player" class="video-js vjs-fill vjs-default-skin" playsinline controls>
                         <source type="video/mp4" src="' . getProtectedUrlForMediaPath(dirname($mediaPath) . '/' . $filename . '.' . $ext, false, false) . '">
                     </video>
 																						</div>
