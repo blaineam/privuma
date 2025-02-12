@@ -1130,7 +1130,8 @@
             clone.time =
               window.alldata.filter(
                 (original) =>
-                  original.album === "Favorites" && original.hash === clone.hash,
+                  original.album === "Favorites" &&
+                  original.hash === clone.hash,
               )[0]?.time ??
               new Date().toISOString().replace("T", " ").substring(0, 19);
             return clone;
@@ -1167,12 +1168,18 @@
         $.ajax(call)
           .then((data) => {
             toast.info(data);
-            favorited = data.includes('add');
+            favorited = data.includes("add");
             $(".fancybox-button--favorite").text(favorited ? "💔" : "❤️");
             if (favorited) {
-              let original = JSON.parse(JSON.stringify(window.alldata.filter((item) => {
-                return item.album !== "Favorites" && item.hash === atob(hash);
-              })[0]));
+              let original = JSON.parse(
+                JSON.stringify(
+                  window.alldata.filter((item) => {
+                    return (
+                      item.album !== "Favorites" && item.hash === atob(hash)
+                    );
+                  })[0],
+                ),
+              );
               original.filename = original.album + "-----" + original.filename;
               original.album = "Favorites";
               original.time = new Date()
@@ -1358,39 +1365,40 @@
                 };
               });
           }
-          return Object.values(results
-            .filter((value, index, self) => {
-              let match = true;
-              desiredPath.split('---').forEach((part, ind) => {
+          return Object.values(
+            results
+              .filter((value, index, self) => {
+                let match = true;
+                desiredPath.split("---").forEach((part, ind) => {
+                  if (!match) {
+                    return;
+                  }
+                  match = value.album.split("---")[ind] === part;
+                });
                 if (!match) {
-                  return;
+                  return false;
                 }
-                match = value.album.split('---')[ind] === part;
-              });
-              if (!match) {
-                return false;
-              }
-              return match;
-            }).reduce((acc, current) => {
-                const targetCount = desiredPath.split('---').length;
-                const currentKey = current["album"].split("---").slice(0, targetCount + 1).join('---');
+                return match;
+              })
+              .reduce((acc, current) => {
+                const targetCount = desiredPath.split("---").length;
+                const currentKey = current["album"]
+                  .split("---")
+                  .slice(0, targetCount + 1)
+                  .join("---");
                 if (acc.hasOwnProperty(currentKey)) {
-                    return acc;
+                  return acc;
                 } else {
-                    acc[currentKey] = current;
-                    return acc;
+                  acc[currentKey] = current;
+                  return acc;
                 }
-            }, {}))
-            .map((item) => {
-              return {
-                ...item,
-                displayName: getItemDisplayName(
-                  item.album,
-                  desiredPath,
-                  search,
-                ),
-              };
-            });
+              }, {}),
+          ).map((item) => {
+            return {
+              ...item,
+              displayName: getItemDisplayName(item.album, desiredPath, search),
+            };
+          });
         }
 
         function getPathIndex(desiredPath) {
@@ -1424,7 +1432,9 @@
             return target.join("---");
           }
           if (displayNames.length == 1) {
-            return displayNames.includes(desiredPath.split("---").pop()) ? desiredPath : false;
+            return displayNames.includes(desiredPath.split("---").pop())
+              ? desiredPath
+              : false;
           }
           return false;
         }

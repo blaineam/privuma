@@ -48,7 +48,7 @@ services:
     deploy:
       resources:
         limits:
-         # cpus: "1.0"
+          # cpus: "1.0"
           memory: 2G
   php-web:
     build:
@@ -77,7 +77,7 @@ services:
     deploy:
       resources:
         limits:
-        #  cpus: "1.0"
+          #  cpus: "1.0"
           memory: 2G
   php-cron:
     build:
@@ -108,7 +108,7 @@ services:
     deploy:
       resources:
         limits:
-         # cpus: "2.0"
+          # cpus: "2.0"
           memory: 3G
   db:
     image: mariadb
@@ -134,7 +134,7 @@ services:
     deploy:
       resources:
         limits:
-         # cpus: "1.0"
+          # cpus: "1.0"
           memory: 1G
   cloudfs-http:
     image: rclone/rclone:latest
