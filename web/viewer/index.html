@@ -1,5 +1,5 @@
 <!doctype html>
-<meta charset="utf8" />
+<meta charset="utf-8" />
 <html>
   <head>
     <title>Privuma(Offline Web App)</title>
@@ -1360,7 +1360,15 @@
           }
           return results
             .filter((value, index, self) => {
-              if (!value.album.startsWith(desiredPath)) {
+              let match = true;
+              desiredPath.split('---').forEach((part, ind) => {
+                if (!match) {
+                  return;
+                }
+                match = value.album.split('---')[ind] === part;
+              });
+              
+              if (!match) {
                 return false;
               }
               return (
@@ -1422,14 +1430,8 @@
             target.pop();
             return target.join("---");
           }
-
           if (displayNames.length == 1) {
-            return desiredPath.split("---").pop() !== displayNames[0]
-              ? console.log([
-                  desiredPath.split("---").pop(),
-                  displayNames[0],
-                ]) && !1
-              : desiredPath;
+            return displayNames.includes(desiredPath.split("---").pop()) ? desiredPath : false;
           }
           return false;
         }
@@ -1479,7 +1481,7 @@
               let bext = b["filename"].split(".").pop();
               let atime = a["time"];
               let btime = b["time"];
-              if (album.includes("comic")) {
+              if (album.toLowerCase().includes("comic")) {
                 return a["filename"].localeCompare(b["filename"], undefined, {
                   numeric: true,
                   sensitivity: "base",
