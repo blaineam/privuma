@@ -1358,7 +1358,7 @@
                 };
               });
           }
-          return results
+          return Object.values(results
             .filter((value, index, self) => {
               let match = true;
               desiredPath.split('---').forEach((part, ind) => {
@@ -1367,27 +1367,20 @@
                 }
                 match = value.album.split('---')[ind] === part;
               });
-              
               if (!match) {
                 return false;
               }
-              return (
-                self
-                  .map(
-                    ({ album }) =>
-                      album
-                        .replace(desiredPath, "")
-                        .split("---")
-                        .filter((n) => n)[0],
-                  )
-                  .indexOf(
-                    value.album
-                      .replace(desiredPath, "")
-                      .split("---")
-                      .filter((n) => n)[0],
-                  ) === index
-              );
-            })
+              return match;
+            }).reduce((acc, current) => {
+                const targetCount = desiredPath.split('---').length;
+                const currentKey = current["album"].split("---").slice(0, targetCount + 1).join('---');
+                if (acc.hasOwnProperty(currentKey)) {
+                    return acc;
+                } else {
+                    acc[currentKey] = current;
+                    return acc;
+                }
+            }, {}))
             .map((item) => {
               return {
                 ...item,
