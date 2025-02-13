@@ -97,7 +97,8 @@ pip3 install requests --break-system-packages && \
 pip3 install tqdm --break-system-packages && \
 pip3 install --upgrade yt-dlp --break-system-packages && \
 pip3 install requests-doh --break-system-packages && \
-pip3 install 'gdown>=5.1.0' --break-system-packages
+pip3 install 'gdown>=5.1.0' --break-system-packages && \
+pip3 install gallery-dl --break-system-packages
 
 RUN apt-get install -y  libimage-exiftool-perl ocrmypdf wget
 

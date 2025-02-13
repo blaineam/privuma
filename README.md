@@ -23,13 +23,11 @@ Privuma is a multimedia deduplication, compression and access endpoint that work
    - .../privuma/dogs/goof.mp4
    - .../privuma/dogs/happy.gif
 
-## Use gphotos.wemiller.com
+## Building docker containers:
 
-If you navigate to the web app you can pass it your public endpoint and the AUTH_TOKEN you set in your `.env` file it will start loading the media from your Privuma instance. The gphotos.wemiller.com does not store your AUTH_TOKEN and it is only ever used for the initial handshake. All other communication is then handled with time based expired tokens.
-
-## Lux Shield on iOS
-
-Lux shield is a paid ios app that can also access a privuma endpoints media much the same way as the gphotos.wemiller.com site does.
+```bash
+docker buildx create --name mybuilder --use --bootstrap
+docker buildx build --push --platform linux/amd64,linux/arm64 --tag cenode/privuma-php:latest docker/images/php```
 
 ## Contribute
 
