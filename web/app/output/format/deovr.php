@@ -184,7 +184,6 @@ function findMedia($path)
     return $output;
 }
 
-
 if ((isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > 60 * 15)) || isset($_GET['logout'])) {
     // last request was more than 30 minutes ago
     session_unset();     // unset $_SESSION variable for the run-time
