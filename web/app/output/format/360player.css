@@ -2033,3 +2033,7 @@ button {
   object-position: 50%;
   object-fit: contain;
 }
+
+#VRButton[style] {
+  display: none !important;
+}

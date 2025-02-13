@@ -349,6 +349,11 @@ $htmlStyle = '
   .tab:hover {
     background-color: #73859f;
   }
+  
+  
+  #VRButton[style] {
+    display: none !important;
+  }
 
         </style>
 ';
