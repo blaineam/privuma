@@ -25,7 +25,7 @@ Privuma is a multimedia deduplication, compression and access endpoint that work
 
 ## Building docker containers:
 
-```bash
+````bash
 docker buildx create --name mybuilder --use --bootstrap
 docker buildx build --push --platform linux/amd64,linux/arm64 --tag cenode/privuma-php:latest docker/images/php```
 
@@ -36,3 +36,4 @@ Feel free to open a pr with an improvement you see fit. It can be anything, I wi
 ## Thank You
 
 This whole repo was a hobby project for the last few months and I have tested it decently well. It was made possible thanks to all of the google searches for various solutions to every issue I ran into. If you see some of your code here its because google helped me find it.
+````
