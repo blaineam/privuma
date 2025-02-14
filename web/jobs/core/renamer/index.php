@@ -34,14 +34,14 @@ foreach ($items as $item) {
     $parts = explode('||', $item);
     $src = remove_utf8_bom($parts[0]);
     $dst = remove_utf8_bom($parts[1]);
-    echo PHP_EOL."Renaming: $src to $dst";
-    $fsMove = $ops->rename(privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $src, privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR .  $dst);
+    echo PHP_EOL . "Renaming: $src to $dst";
+    $fsMove = $ops->rename(privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $src, privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $dst);
     $stmt = $conn->prepare('UPDATE media SET album = ? WHERE album = ?');
     $stmt->execute([
        $dst,
        $src
     ]);
-    echo " Renamed";
+    echo ' Renamed';
 }
 
 unlink(__DIR__ . DIRECTORY_SEPARATOR . 'rename.txt');
