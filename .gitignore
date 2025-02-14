@@ -22,6 +22,7 @@ docker/etc/ssh/**
 !docker/etc/ssh/*-example.*
 docker/db/
 **/job.lock
+**/jobs/*/*/*.txt
 **/cookies.txt
 **/config.php
 **/.DS_Store
