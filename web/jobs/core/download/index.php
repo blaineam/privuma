@@ -63,7 +63,7 @@ $stmt->execute();
 $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
 function sanitizeLine($line)
 {
-    return trim(preg_replace('/[^A-Za-z0-9 ]/', '', $line), "\r\n");
+    return trim(preg_replace('/[^A-Za-z0-9 -]/', '', $line), "\r\n");
 }
 
 function trimExtraNewLines($string)
@@ -120,10 +120,10 @@ function condenseMetaData($item)
                 implode(PHP_EOL, [
                   sanitizeLine(
                       $item['title'] ?:
-                      substr(trimExtraNewLines($item['description']), 0, 256)
+                      substr(trimExtraNewLines($item['description']), 0, 150)
                   ),
                   sanitizeLine($item['favorites']),
-                  sanitizeLine(implode(', ', array_slice($item['tags'], 0, 60))),
+                  sanitizeLine(implode(', ', array_slice($item['tags'], 0, 20))),
                   //substr(trimExtraNewLines($item['comments']), 0, 256),
                 ])
             ),
@@ -132,17 +132,30 @@ function condenseMetaData($item)
         )
     );
 }
-$mobiledata = str_replace('`', '', json_encode(
-    mb_convert_encoding(
-        array_map(function ($item) {
-            $item['metadata'] = is_null($item['metadata']) ? '' : condenseMetaData(parseMetaData($item['metadata']));
-            return $item;
+
+$metaDataFiles = [];
+$mobiledata = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
+        array_map(function ($item) use(&$metaDataFiles) {
+            if(!is_null($item['metadata']) && strlen($item['metadata']) > 3) {
+              $targetMetaDataPrefix = substr(base64_encode($item['hash']), 0, 2);
+              if (!array_key_exists($targetMetaDataPrefix, $metaDataFiles)) {
+                $metaDataFiles[$targetMetaDataPrefix] = [];
+              }
+              $metaDataFiles[$targetMetaDataPrefix][$item['hash']] = $item['metadata'];
+            }
+            $tags = substr(sanitizeLine(implode(', ', array_slice(explode(', ', explode(PHP_EOL, explode('Tags: ', $item['metadata'])[1] ?? '')[0]) ??
+            [], 0, 30))), 0, 200);
+            $item['metadata'] = is_null($item['metadata']) ? '' : (strlen($tags) < 1 ? 'Using MetaData Store...' : $tags);
+            return [
+              "album" => sanitizeLine($item["album"]),
+              "filename" => sanitizeLine(substr($item["filename"], 0, 20)),
+              "hash" => $item["hash"],
+              "time" => $item["time"],
+              "metadata" => $item["metadata"],
+            ];
         }, json_decode($data, true)),
-        'UTF-8',
-        'UTF-8'
-    ),
     JSON_THROW_ON_ERROR
-));
+))));
 
 echo PHP_EOL . 'All Database Lookup Operations have been completed.';
 
@@ -161,9 +174,16 @@ unset($viewerHTML);
 
 echo PHP_EOL . 'Downloading encrypted database offline website payload';
 echo PHP_EOL . 'Downloading Mobile Dataset';
-$mobiledata = 'const encrypted_data = ' . $mobiledata . ';';
+$mobiledata = "const encrypted_data = '" . $mobiledata . "';";
 $ops->file_put_contents('encrypted_mobile_data.js', $mobiledata);
 unset($mobiledata);
+
+echo PHP_EOL . 'Downloading Mobile MetaData Stores';
+foreach($metaDataFiles as $prefix => $store) {
+  $file = "meta" . DIRECTORY_SEPARATOR . $prefix . '.json';
+  echo PHP_EOL."Storing MetaData to: " . $file;
+  $opsNoEncodeNoPrefix->file_put_contents($file, json_encode($store));
+}
 
 echo PHP_EOL . 'Downloading Desktop Dataset';
 $data = 'const encrypted_data = ' . $data . ';';
