@@ -1051,19 +1051,18 @@
       });
 
       function getMetaDataForHash(hash, target) {
-        let targetSrc = 'meta/' + btoa(hash).substring(0,2) + '.json';
+        let targetSrc = "meta/" + btoa(hash).substring(0, 2) + ".json";
         medcrypt.getSrc(targetSrc, (uri) => {
           fetch(uri)
-          .then(response => response.json())
-          .then(data => {
-            target.html(data[hash] ?? '');
-          })
-          .catch(error => {
-            console.error('Error fetching MetaData Store: ', error);
-          });
+            .then((response) => response.json())
+            .then((data) => {
+              target.html(data[hash] ?? "");
+            })
+            .catch((error) => {
+              console.error("Error fetching MetaData Store: ", error);
+            });
         });
       }
-
 
       function rollingTokens(seed) {
         let interval = 30;
@@ -1273,8 +1272,8 @@
         loadMediaTypeSelections();
         var delim = "1--57--2";
         window.alldata = window.mobileCheck()
-        ? JSON.parse(encrypted_data)
-        : encrypted_data;
+          ? JSON.parse(encrypted_data)
+          : encrypted_data;
         restoreFavoritesFromCache();
 
         if (window.location.hash.includes("mobile")) {
@@ -1312,7 +1311,9 @@
             let metadata = el.find("script").text().trim();
             if (metadata.length > 0 && metadata != "0") {
               return (
-                '<a class="btn btn-secondary toggle-collapsible" data-hash="' + el.data('filehash') + '">Expand Details</a><div class="collapsible collapsed">' +
+                '<a class="btn btn-secondary toggle-collapsible" data-hash="' +
+                el.data("filehash") +
+                '">Expand Details</a><div class="collapsible collapsed">' +
                 metadata +
                 "</div>"
               );
@@ -1331,7 +1332,7 @@
           if (el.hasClass("collapsed")) {
             el.removeClass("collapsed");
             $(this).text("Collapse Details");
-            getMetaDataForHash($(this).data('hash'), el);
+            getMetaDataForHash($(this).data("hash"), el);
           } else {
             el.addClass("collapsed");
             $(this).text("Expand Details");
