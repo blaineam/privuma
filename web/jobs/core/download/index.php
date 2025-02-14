@@ -132,7 +132,7 @@ function condenseMetaData($item)
         )
     );
 }
-$mobiledata = json_encode(
+$mobiledata = str_replace('`', '', json_encode(
     mb_convert_encoding(
         array_map(function ($item) {
             $item['metadata'] = is_null($item['metadata']) ? '' : condenseMetaData(parseMetaData($item['metadata']));
@@ -142,7 +142,7 @@ $mobiledata = json_encode(
         'UTF-8'
     ),
     JSON_THROW_ON_ERROR
-);
+));
 
 echo PHP_EOL . 'All Database Lookup Operations have been completed.';
 
@@ -161,7 +161,7 @@ unset($viewerHTML);
 
 echo PHP_EOL . 'Downloading encrypted database offline website payload';
 echo PHP_EOL . 'Downloading Mobile Dataset';
-$mobiledata = 'const encrypted_data = `' . $mobiledata . '`;';
+$mobiledata = 'const encrypted_data = ' . $mobiledata . ';';
 $ops->file_put_contents('encrypted_mobile_data.js', $mobiledata);
 unset($mobiledata);
 

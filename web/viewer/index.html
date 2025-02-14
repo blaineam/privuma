@@ -1257,9 +1257,7 @@
         document.body.classList.add("authed");
         loadMediaTypeSelections();
         var delim = "1--57--2";
-        window.alldata = window.mobileCheck()
-          ? JSON.parse(encrypted_data)
-          : encrypted_data;
+        window.alldata = encrypted_data;
         restoreFavoritesFromCache();
 
         if (window.location.hash.includes("mobile")) {
