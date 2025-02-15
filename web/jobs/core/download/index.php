@@ -144,7 +144,7 @@ $mobiledata = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-'
             $metaDataFiles[$targetMetaDataPrefix][$item['hash']] = $item['metadata'];
         }
         $tags = substr(sanitizeLine(implode(', ', array_slice(explode(', ', explode(PHP_EOL, explode('Tags: ', $item['metadata'])[1] ?? '')[0]) ??
-        [], 0, 30))), 0, 200);
+        [], 0, 60))), 0, 500);
         $item['metadata'] = is_null($item['metadata']) ? '' : (strlen($tags) < 1 ? 'Using MetaData Store...' : $tags);
         return [
           'album' => sanitizeLine($item['album']),
