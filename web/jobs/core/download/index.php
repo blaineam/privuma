@@ -63,7 +63,7 @@ $stmt->execute();
 $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
 function sanitizeLine($line)
 {
-    return trim(preg_replace('/[^A-Za-z0-9 -]/', '', $line), "\r\n");
+    return trim(preg_replace('/[^A-Za-z0-9 \\-\\_\\~\\+\\(\\)\\.\\,]/', '', $line), "\r\n");
 }
 
 function trimExtraNewLines($string)
