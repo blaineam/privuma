@@ -135,7 +135,7 @@ $htmlStyle = '
   }
 
   .tab-content {
-    margin-top: 100px;
+    padding-top: 100px;
   }
 
   * {
