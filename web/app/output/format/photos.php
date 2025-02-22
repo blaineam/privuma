@@ -16,12 +16,11 @@ use privuma\helpers\cloudFS;
 use privuma\helpers\tokenizer;
 use privuma\helpers\mediaFile;
 
-privuma::prof_flag("Photos File Start");
+privuma::prof_flag('Photos File Start');
 
 $ops = privuma::getCloudFS();
 
 $privuma = privuma::getInstance();
-
 
 $tokenizer = new tokenizer();
 $USE_MIRROR = privuma::getEnv('USE_MIRROR');
@@ -530,8 +529,8 @@ function streamMedia($file, bool $useOps = false)
     global $USE_X_Accel_Redirect;
     if ($useOps) {
         global $ops;
-        
-        privuma::prof_flag("Using Ops");
+
+        privuma::prof_flag('Using Ops');
         header('Accept-Ranges: bytes');
         header('Content-Disposition: inline');
         header('Content-Type: ' . get_mime_by_filename($file));
@@ -558,11 +557,11 @@ function streamMedia($file, bool $useOps = false)
           DIRECTORY_SEPARATOR .
           $protocol .
           DIRECTORY_SEPARATOR .
-          $hostname . ":" . $port . 
+          $hostname . ':' . $port .
           DIRECTORY_SEPARATOR .
           $path .
           DIRECTORY_SEPARATOR;
-          privuma::prof_flag("Using Nginx");
+        privuma::prof_flag('Using Nginx');
         header('X-Accel-Redirect: ' . $internalMediaPath);
         die();
     } elseif (pathinfo($file, PATHINFO_EXTENSION) !== 'mp4' || is_file($file)) {
@@ -574,11 +573,11 @@ function streamMedia($file, bool $useOps = false)
         header(
             'Content-Type: ' . ($head['content-type'] ?? get_mime_by_filename($file))
         );
-        privuma::prof_flag("Using readfile");
+        privuma::prof_flag('Using readfile');
         readfile($file);
     } else {
-        
-        privuma::prof_flag("Using Curl");
+
+        privuma::prof_flag('Using Curl');
         set_time_limit(0);
         ini_set('max_execution_time', 0);
         $useragent =
@@ -1065,8 +1064,8 @@ function run()
           : 'Item was removed from Favorites';
         exit();
     } elseif (isset($_GET['media'])) {
-        
-        privuma::prof_flag("Media Request Received");
+
+        privuma::prof_flag('Media Request Received');
         set_time_limit(2);
         if (strpos($_GET['media'], 't-') === 0) {
             $hash = str_replace('t-', '', $_GET['media']);
@@ -1095,14 +1094,14 @@ function run()
         ) {
             $originalExt = pathinfo($_GET['media'], PATHINFO_EXTENSION);
             $hash = str_replace('h-', '', strlen($originalExt) > 0 ? basename($_GET['media'], '.' . $originalExt) : $_GET['media']);
-            
+
             $encoded = base64_encode($hash);
             $encprefix = substr($encoded, 0, 2);
-            $dlurl = "http://" . privuma::getEnv("CLOUDFS_HTTP_SECONDARY_ENDPOINT") . "/" . $encprefix . "/" . $encoded . "." . $originalExt;
+            $dlurl = 'http://' . privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT') . '/' . $encprefix . '/' . $encoded . '.' . $originalExt;
             if (curl_init($dlurl) !== false) {
                 streamMedia($dlurl);
             }
-            
+
             $mediaFileUrl = (new mediaFile('foo', 'bar', null, $hash))->source();
 
             $destExt = pathinfo(basename(explode('?', $mediaFileUrl)[0]), PATHINFO_EXTENSION);
@@ -1147,8 +1146,8 @@ function run()
         }
 
         if (isUrl($_GET['media'])) {
-            
-            privuma::prof_flag("Media is URL Like");
+
+            privuma::prof_flag('Media is URL Like');
             streamMedia($_GET['media'], false);
         }
 
@@ -1196,8 +1195,8 @@ function run()
               DIRECTORY_SEPARATOR .
               ltrim($mediaPath, DIRECTORY_SEPARATOR);
         }
-        
-        privuma::prof_flag("Redirecting to Media");
+
+        privuma::prof_flag('Redirecting to Media');
         redirectToMedia($file);
 
         if (strpos($ENDPOINT, $_SERVER['HTTP_HOST']) == false) {
@@ -1270,8 +1269,8 @@ function run()
             header('X-Accel-Redirect: ' . DIRECTORY_SEPARATOR . $ops->encode($file));
             die();
         }
-        
-        privuma::prof_flag("Last Effort Streaming");
+
+        privuma::prof_flag('Last Effort Streaming');
         streamMedia($file, true);
     } else {
         $realbums = [];
