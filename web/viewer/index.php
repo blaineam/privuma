@@ -156,7 +156,7 @@ if (!isset($_SESSION['viewer-authenticated-successfully']) && isset($_GET['path'
 }
 
 if (isset($_GET['path'])) {
-    if (strstr($_GET['path'], '.js')) {
+    if (strstr($_GET['path'], '.js') && !strstr($_GET['path'], '.json')) {
         if (isset($_SERVER['HTTP_RANGE'])) {
             header('Content-Type: text/javascript');
             echo '          ';
@@ -169,13 +169,13 @@ if (isset($_GET['path'])) {
             //header("Content-Length: " . $dataset['size']);
             echo 'const encrypted_data = `' . $dataset['data'] . '`;';
             die();
+        } else if (strstr($originalFilename, 'encrypted_data')) {
+          header('Content-Type: text/javascript');
+          $dataset = getDB(false, isset($_GET['unfiltered']), isset($_GET['nocache']));
+          //header("Content-Length: " . $dataset['size']);
+          echo 'const encrypted_data = ' . $dataset['data'] . ';';
+          die();
         }
-
-        header('Content-Type: text/javascript');
-        $dataset = getDB(false, isset($_GET['unfiltered']), isset($_GET['nocache']));
-        //header("Content-Length: " . $dataset['size']);
-        echo 'const encrypted_data = ' . $dataset['data'] . ';';
-        die();
     }
 
     $ext = pathinfo($_GET['path'], PATHINFO_EXTENSION);
@@ -185,6 +185,32 @@ if (isset($_GET['path'])) {
       $tokenizer->rollingTokens(privuma::getEnv('AUTHTOKEN'))[1] .
       '&media=' .
       urlencode("h-$hash.$ext");
+      
+    $dlurl = 'http://' . privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT') . $_GET['path'];
+    if (curl_init($dlurl) !== false) {
+      $protocol = parse_url($dlurl, PHP_URL_SCHEME);
+      $hostname = parse_url($dlurl, PHP_URL_HOST);
+      $port = parse_url($dlurl, PHP_URL_PORT);
+      $path = ltrim(
+          parse_url($dlurl, PHP_URL_PATH) .
+            (strpos($dlurl, '?') !== false
+              ? '?' . parse_url($dlurl, PHP_URL_QUERY)
+              : ''),
+          DIRECTORY_SEPARATOR
+      );
+      $internalMediaPath =
+        DIRECTORY_SEPARATOR .
+        'media' .
+        DIRECTORY_SEPARATOR .
+        $protocol .
+        DIRECTORY_SEPARATOR .
+        $hostname . ':' . $port .
+        DIRECTORY_SEPARATOR .
+        $path .
+        DIRECTORY_SEPARATOR;
+      header('X-Accel-Redirect: ' . $internalMediaPath);
+      die();
+    }
     header("Location: $uri");
 }
 

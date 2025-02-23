@@ -32,7 +32,7 @@ if (!$downloadLocationUnencrypted) {
 
 $conn = $privuma->getPDO();
 
-$ops = new cloudFS($downloadLocation, true, '/usr/bin/rclone', null, true);
+$ops = new cloudFS($downloadLocation . "pr" . DIRECTORY_SEPARATOR, true, '/usr/bin/rclone', null, true);
 $opsNoEncodeNoPrefix = new cloudFS($downloadLocation, false, '/usr/bin/rclone', null, false);
 $opsPlain = new cloudFS(
     $downloadLocationUnencrypted,
@@ -180,7 +180,7 @@ unset($mobiledata);
 
 echo PHP_EOL . 'Downloading Mobile MetaData Stores';
 foreach ($metaDataFiles as $prefix => $store) {
-    $file = 'meta' . DIRECTORY_SEPARATOR . $prefix . '.json';
+    $file = 'pr' . DIRECTORY_SEPARATOR . 'meta' . DIRECTORY_SEPARATOR . $prefix . '.json';
     echo PHP_EOL . 'Storing MetaData to: ' . $file;
     $opsNoEncodeNoPrefix->file_put_contents($file, json_encode($store));
 }
@@ -324,7 +324,7 @@ foreach ($dlData as $item) {
                 'filename' => $filename,
                 'url' => $item['url'],
                 'thumbnail' => $item['thumbnail'],
-                'download' => $downloadLocation,
+                'download' => $downloadLocation . "pr" . DIRECTORY_SEPARATOR,
                 'hash' => $item['hash'],
               ],
             ])
@@ -350,7 +350,7 @@ foreach ($dlData as $item) {
                 'album' => $album,
                 'filename' => str_replace('.mp4', '.jpg', $filename),
                 'url' => $item['thumbnail'],
-                'download' => $downloadLocation,
+                'download' => $downloadLocation . "pr" . DIRECTORY_SEPARATOR,
                 'hash' => $item['hash'],
               ],
             ])
