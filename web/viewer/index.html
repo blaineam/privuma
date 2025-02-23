@@ -1842,6 +1842,22 @@
           document.body.removeChild(audio);
         } catch (err) {}
       }
+      
+      var tapped=false
+      $(document).on("touchstart",function(e){
+          if(!tapped){ //if tap is not set, set up single tap
+            tapped=setTimeout(function(){
+                tapped=null
+                //insert things you want to do when single tapped
+            },300);   //wait 300ms then run single click code
+          } else {    //tapped within 300ms of last tap. double tap
+            clearTimeout(tapped); //stop single tap callback
+            tapped=null
+            //insert things you want to do when double tapped
+            clearInterval(window.slideshowTimer);
+            window.slideshowStarted = false;
+          }
+      });
 
       function runApp() {
         document.body.classList.add("authed");
@@ -2498,12 +2514,12 @@
             }
           });
 
-          let slideshowTimer;
-          let slideshowStarted = false;
+          window.slideshowTimer;
+          window.slideshowStarted = false;
 
           $(document).on("beforeClose.fb", function (e, instance) {
-            clearInterval(slideshowTimer);
-            slideshowStarted = false;
+            clearInterval(window.slideshowTimer);
+            window.slideshowStarted = false;
             $("video")
               .trigger("pause")
               .find("Source:first")
@@ -2549,11 +2565,11 @@
           
           $(document).on("keyup", function(e) {
             if (e.which == 32){
-              if (slideshowStarted) {
+              if (window.slideshowStarted) {
                 e.preventDefault();
                 $.fancybox.getInstance().SlideShow.stop();
-                clearInterval(slideshowTimer);
-                slideshowStarted = false;
+                clearInterval(window.slideshowTimer);
+                window.slideshowStarted = false;
               }
             }
           });
@@ -2609,15 +2625,15 @@
               });
               if ($.fancybox.getInstance().SlideShow.isActive) {
                 $.fancybox.getInstance().SlideShow.stop();
-                slideshowStarted = true;
+                window.slideshowStarted = true;
               }
 
-              if (!slideshowStarted) {
+              if (!window.slideshowStarted) {
                 return;
               }
 
-              if (slideshowTimer) {
-                clearTimeout(slideshowTimer);
+              if (window.slideshowTimer) {
+                clearTimeout(window.slideshowTimer);
               }
 
               window
@@ -2653,7 +2669,7 @@
                     let gifDivisible = Math.ceil(defaultDuration / gifduration);
                     targetDuration = gifduration * gifDivisible;
                   }
-                  slideshowTimer = setTimeout(function () {
+                  window.slideshowTimer = setTimeout(function () {
                     $.fancybox.getInstance().next();
                   }, targetDuration);
                 })
@@ -2685,7 +2701,7 @@
                     targetDuration = gifduration * gifDivisible;
                   }
 
-                  slideshowTimer = setTimeout(function () {
+                  window.slideshowTimer = setTimeout(function () {
                     $.fancybox.getInstance().next();
                   }, targetDuration);
                 });
@@ -2774,12 +2790,12 @@
 
             if ($.fancybox.getInstance().SlideShow.isActive) {
               $.fancybox.getInstance().SlideShow.stop();
-              slideshowStarted = true;
+              window.slideshowStarted = true;
             }
 
-            if (slideshowStarted) {
-              if (slideshowTimer) {
-                clearTimeout(slideshowTimer);
+            if (window.slideshowStarted) {
+              if (window.slideshowTimer) {
+                clearTimeout(window.slideshowTimer);
               }
               window
                 .getGifDuration(slide.src)
@@ -2815,7 +2831,7 @@
                     targetDuration = gifduration * gifDivisible;
                   }
 
-                  slideshowTimer = setTimeout(function () {
+                  window.slideshowTimer = setTimeout(function () {
                     $.fancybox.getInstance().next();
                   }, targetDuration);
                 })
@@ -2847,7 +2863,7 @@
                     targetDuration = gifduration * gifDivisible;
                   }
 
-                  slideshowTimer = setTimeout(function () {
+                  window.slideshowTimer = setTimeout(function () {
                     $.fancybox.getInstance().next();
                   }, targetDuration);
                 });
