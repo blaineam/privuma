@@ -1044,35 +1044,39 @@
     <script src="index.php?RapiServe=1"></script>
     <script src="../index.php?RapiServe=1"></script>
     <script>
-      Promise.allSettled = Promise.allSettled || ((promises) => Promise.all(
-          promises.map(p => p
-              .then(value => ({
+      Promise.allSettled =
+        Promise.allSettled ||
+        ((promises) =>
+          Promise.all(
+            promises.map((p) =>
+              p
+                .then((value) => ({
                   status: "fulfilled",
-                  value
-              }))
-              .catch(reason => ({
+                  value,
+                }))
+                .catch((reason) => ({
                   status: "rejected",
-                  reason
-              }))
-          )
-      ));
-    
+                  reason,
+                })),
+            ),
+          ));
+
       function logout() {
         window.localStorage.removeItem("offline-viewer-pass");
         window.location.reload();
       }
-      
+
       function md5ToImage(hash) {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
         canvas.width = 8;
         canvas.height = 8;
-      
+
         const bytes = [];
         for (let i = 0; i < hash.length; i += 2) {
           bytes.push(parseInt(hash.substr(i, 2), 16));
         }
-      
+
         const imageData = ctx.createImageData(8, 8);
         for (let i = 0; i < 64; i++) {
           imageData.data[i * 4] = bytes[i % 16];
@@ -1080,7 +1084,7 @@
           imageData.data[i * 4 + 2] = bytes[(i + 8) % 16];
           imageData.data[i * 4 + 3] = 255;
         }
-      
+
         ctx.putImageData(imageData, 0, 0);
         return canvas.toDataURL();
       }
@@ -1092,7 +1096,7 @@
           el.addClass("collapsed");
         }
       });
-      
+
       window.endpoint = `{{ENDPOINT}}`;
       window.local = true;
       if (window.endpoint.includes("{ENDPOINT}")) {
@@ -1125,7 +1129,7 @@
       function getFileExtension(path) {
         // Find the last occurrence of '.'
         const lastDotIndex = path.lastIndexOf(".");
-      
+
         // If no dot is found or if it's at the start or end of the string, return an empty string
         if (
           lastDotIndex === -1 ||
@@ -1134,7 +1138,7 @@
         ) {
           return "";
         }
-      
+
         // Return everything after the last dot
         return path.slice(lastDotIndex + 1);
       }
@@ -1150,7 +1154,7 @@
         });
         return encodedParts.join("/") + "." + ext;
       }
-      
+
       function decodePath(path) {
         const ext = getFileExtension(path);
         const parts = path.replace("." + ext, "").split("/");
@@ -1163,29 +1167,27 @@
         });
         return encodedParts.join("/") + "." + ext;
       }
-      
+
       function basename(path, ext) {
         // Remove any leading/trailing slashes from the path
         let base = path.replace(/^\/|\/$/g, "");
-      
+
         // Find the last occurrence of '/'
         const lastSlashIndex = base.lastIndexOf("/");
-      
+
         // If there's a slash, take everything after it
         if (lastSlashIndex > -1) {
           base = base.substring(lastSlashIndex + 1);
         }
-      
+
         // If an extension is provided, remove it from the end of the base name
         if (ext && base.endsWith(ext)) {
           base = base.slice(0, -ext.length);
         }
-      
+
         return base;
       }
 
-
-            
       function get3dAttrs(filename) {
         const output = {};
         const upperFilename = filename.toUpperCase();
@@ -1202,7 +1204,7 @@
           "MKX200",
           "VRCA220",
         ];
-      
+
         // Check if any 3D related keywords are present
         if (
           !stereoModes.some((mode) => filenameParts.includes(mode)) &&
@@ -1210,17 +1212,17 @@
         ) {
           return output;
         }
-      
+
         // Determine if it's 3D
         output.is3d = !filenameParts.includes("MONO");
         output.stereoMode = "mono";
         output.screenType = "flat";
-      
+
         // Check for stereo modes
         if (filenameParts.some((part) => ["LR", "3DH", "SBS"].includes(part))) {
           output.stereoMode = "sbs";
         }
-      
+
         if (
           filenameParts.some((part) =>
             ["TB", "3DV", "OVERUNDER"].includes(part),
@@ -1228,7 +1230,7 @@
         ) {
           output.stereoMode = "tb";
         }
-      
+
         // Check for screen types
         if (
           filenameParts.some((part) =>
@@ -1244,14 +1246,14 @@
         ) {
           output.screenType = "dome";
         }
-      
+
         if (filenameParts.includes("360")) {
           output.screenType = "sphere";
         }
-      
+
         return output;
       }
-      
+
       function get3dHash(filename) {
         let hash = "NONE";
         let item = get3dAttrs(filename);
@@ -1279,14 +1281,14 @@
         }
         return hash;
       }
-      
+
       function reloadPlayer(videoUrl) {
         if (!videoUrl) {
           videoUrl = $("#inline-player").find("video source").attr("src");
         }
-      
+
         const thumbnail = videoUrl.replace(".mp4", ".jpg");
-      
+
         if (window.player) {
           window.player.dispose();
         }
@@ -1319,7 +1321,7 @@
         <option value="EAC">EAC</option>
         <option value="EAC_LR">EAC_LR</option>
       </select>`);
-      
+
         var projection = window.localStorage.getItem("vr-type");
         if (projection.length < 1) {
           projection = "180";
@@ -1332,95 +1334,102 @@
         var player = (window.player = videojs("videojs-vr-player"));
         player.mediainfo = player.mediainfo || {};
         player.mediainfo.projection = projection;
-      
+
         // AUTO is the default and looks at mediainfo
         var vr = (window.vr = player.vr({
           projection: projection,
           debug: false,
           forceCardboard: false,
         }));
-      
+
         if (useHalf) {
           var element = document.getElementById("videojs-vr-player");
           element.classList.add("sbs-player");
         }
       }
-      
+
       function selectAction(selectObject) {
         var value = selectObject.value;
         window.localStorage.setItem("vr-type", value);
         reloadPlayer();
       }
-      
-      
+
       medcrypt.getSrc("flash/index.json", (uri) => {
         fetch(uri)
-        .then((response) => response.text())
-        .then((text) => {
-          window.flashdataset = JSON.parse(atob(text));      
-          window.flashmedia = [];
-          let count = 0;
-          for (const [album, items] of Object.entries(window.flashdataset)) {
-            count++;
-            window.flashmedia = window.flashmedia.concat(items.map((item) => ({
-              "album": "Flash---" + album,
-              "filename": "flash/" + btoa(album) + item.url,
-              "hash": item.hash,
-              "time": count,
-              "metadata": "Title: " + item.title + "\n\nTags: " + (item.tags.general ?? []).join(","),
-              "flash": 1,
-              "title": item.title,
-            })));
-            window.alldata = [...(window.alldata ?? []), ...window.flashmedia].sort((a, b) =>
-              a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-            );
-          }
-          medcrypt.getSrc(
-           "flash/ruffle/ruffle.js",
-            (encrypted_data_file) => {
+          .then((response) => response.text())
+          .then((text) => {
+            window.flashdataset = JSON.parse(atob(text));
+            window.flashmedia = [];
+            let count = 0;
+            for (const [album, items] of Object.entries(window.flashdataset)) {
+              count++;
+              window.flashmedia = window.flashmedia.concat(
+                items.map((item) => ({
+                  album: "Flash---" + album,
+                  filename: "flash/" + btoa(album) + item.url,
+                  hash: item.hash,
+                  time: count,
+                  metadata:
+                    "Title: " +
+                    item.title +
+                    "\n\nTags: " +
+                    (item.tags.general ?? []).join(","),
+                  flash: 1,
+                  title: item.title,
+                })),
+              );
+              window.alldata = [
+                ...(window.alldata ?? []),
+                ...window.flashmedia,
+              ].sort((a, b) =>
+                a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+              );
+            }
+            medcrypt.getSrc("flash/ruffle/ruffle.js", (encrypted_data_file) => {
               loadScript(encrypted_data_file);
-            },
-          );
-          
-        });
+            });
+          });
       });
-      
+
       medcrypt.getSrc("vr/deovr-fs.json", (uri) => {
         fetch(uri)
-        .then((response) => {
-          // Check if the response is ok
-          if (!response.ok) {
-            throw new Error("Network response was not ok");
-          }
-          return response.json(); // Parse the JSON
-        })
-        .then((data) => {
-          window.videos = data.filter((file) => file.MimeType === "video/mp4");
-          window.videos.sort((a, b) => {
-            const dateA = new Date(a.ModTime);
-            const dateB = new Date(b.ModTime);
-            return dateB - dateA;
-          });      
-          window.vrmedia = window.videos.map((item) => {
-            return {
-              "album": "VR---" + getDirname(item.Path),
-              "filename": "vr/" + encodePath(item.Path),
-              "hash": md5("vr/" + encodePath(item.Path)),
-              "time": item["ModTime"].split(".")[0].replace("T", " "),
-              "metadata": "",
-              "vr": 1
+          .then((response) => {
+            // Check if the response is ok
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
             }
+            return response.json(); // Parse the JSON
+          })
+          .then((data) => {
+            window.videos = data.filter(
+              (file) => file.MimeType === "video/mp4",
+            );
+            window.videos.sort((a, b) => {
+              const dateA = new Date(a.ModTime);
+              const dateB = new Date(b.ModTime);
+              return dateB - dateA;
+            });
+            window.vrmedia = window.videos.map((item) => {
+              return {
+                album: "VR---" + getDirname(item.Path),
+                filename: "vr/" + encodePath(item.Path),
+                hash: md5("vr/" + encodePath(item.Path)),
+                time: item["ModTime"].split(".")[0].replace("T", " "),
+                metadata: "",
+                vr: 1,
+              };
+            });
+            window.alldata = [
+              ...(window.alldata ?? []),
+              ...window.vrmedia,
+            ].sort((a, b) => (a.time < b.time ? 1 : b.time < a.time ? -1 : 0));
+          })
+          .catch((error) => {
+            console.error(
+              "There has been a problem with your fetch operation:",
+              error,
+            );
           });
-          window.alldata = [...(window.alldata ?? []), ...window.vrmedia].sort((a, b) =>
-            a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-          );
-        })
-        .catch((error) => {
-          console.error(
-            "There has been a problem with your fetch operation:",
-            error,
-          );
-        });
       });
 
       function init() {
@@ -1731,11 +1740,9 @@
             (obj1, i, arr) =>
               arr.findIndex((obj2) => obj2.hash === obj1.hash) === i,
           );
-        window.alldata = cachedFavorites.concat(
-          window.alldata.filter((item) => item.album !== "Favorites"),
-        ).sort((a, b) =>
-          a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-        );
+        window.alldata = cachedFavorites
+          .concat(window.alldata.filter((item) => item.album !== "Favorites"))
+          .sort((a, b) => (a.time < b.time ? 1 : b.time < a.time ? -1 : 0));
       }
 
       $.fancybox.defaults.hash = false;
@@ -1842,32 +1849,35 @@
           document.body.removeChild(audio);
         } catch (err) {}
       }
-      
-      var tapped=false
-      $(document).on("touchstart",function(e){
-          if(!tapped){ //if tap is not set, set up single tap
-            tapped=setTimeout(function(){
-                tapped=null
-                //insert things you want to do when single tapped
-            },300);   //wait 300ms then run single click code
-          } else {    //tapped within 300ms of last tap. double tap
-            clearTimeout(tapped); //stop single tap callback
-            tapped=null
-            //insert things you want to do when double tapped
-            clearInterval(window.slideshowTimer);
-            window.slideshowStarted = false;
-          }
+
+      var tapped = false;
+      $(document).on("touchstart", function (e) {
+        if (!tapped) {
+          //if tap is not set, set up single tap
+          tapped = setTimeout(function () {
+            tapped = null;
+            //insert things you want to do when single tapped
+          }, 300); //wait 300ms then run single click code
+        } else {
+          //tapped within 300ms of last tap. double tap
+          clearTimeout(tapped); //stop single tap callback
+          tapped = null;
+          //insert things you want to do when double tapped
+          clearInterval(window.slideshowTimer);
+          window.slideshowStarted = false;
+        }
       });
 
       function runApp() {
         document.body.classList.add("authed");
         loadMediaTypeSelections();
         var delim = "1--57--2";
-        window.alldata = [...(window.alldata ?? []), ...(window.mobileCheck()
-          ? JSON.parse(encrypted_data)
-          : encrypted_data)].sort((a, b) =>
-            a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-          );
+        window.alldata = [
+          ...(window.alldata ?? []),
+          ...(window.mobileCheck()
+            ? JSON.parse(encrypted_data)
+            : encrypted_data),
+        ].sort((a, b) => (a.time < b.time ? 1 : b.time < a.time ? -1 : 0));
         restoreFavoritesFromCache();
 
         if (window.location.hash.includes("mobile")) {
@@ -2157,30 +2167,31 @@
             }
 
             drawTags();
-            
-            if (album.toLowerCase().includes('vr')) {
+
+            if (album.toLowerCase().includes("vr")) {
               $.fancybox.defaults.touch = false;
               $.fancybox.defaults.keyboard = false;
               $("body").addClass("vr");
             }
-            
-            
-            if (album.toLowerCase().includes('flash')) {
+
+            if (album.toLowerCase().includes("flash")) {
               window.ruffle = window.RufflePlayer.newest();
               let rufflePath = "flash/ruffle/";
-              if (usingRapiServe.length && !rufflePath.startsWith(usingRapiServe + "/")) {
+              if (
+                usingRapiServe.length &&
+                !rufflePath.startsWith(usingRapiServe + "/")
+              ) {
                 rufflePath = usingRapiServe + "/" + rufflePath;
                 window.RufflePlayer.config = {
-                  "publicPath": rufflePath,
+                  publicPath: rufflePath,
                 };
               }
-              
-              
+
               $("a[data-fancybox] img").each(function (el) {
                 $(this).attr(`retro`, md5ToImage($(this).data(`hash`)));
               });
             }
-            
+
             preventSleep();
             Promise.allSettled(
               res.map(function (item) {
@@ -2212,18 +2223,17 @@
                   ".swf",
                 ].includes("." + extension.toLowerCase());
                 if (("video" == kind || "all" == kind) && isVideo) {
-                  
                   let resource = item.filename.replace(".mp4", ".jpg");
                   let videoResource = item.filename;
-                  let video
-                  let vr = (item.vr === 1);
-                  let flash = (item.flash === 1);
-                  
+                  let video;
+                  let vr = item.vr === 1;
+                  let flash = item.flash === 1;
+
                   if (flash) {
                     resource = item.filename.replace(".swf", ".png");
                     videoResource = item.filename;
                   }
-                  
+
                   if (!vr && !flash) {
                     let thumbnailFilename = filenameParts.join(".") + ".jpg";
                     video =
@@ -2282,26 +2292,32 @@
                       vr,
                       flash,
                     ]) =>
-                      flash ? jQuery("#content").append(`<a class="gallerypicture flash-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-hash="${hash}" data-src="${uri}" loading="lazy" alt="" /></div></a>`) : (
-                      vr ? jQuery("#content").append(`<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt="" /></div></a>`) : (
-                      isVideo
+                      flash
                         ? jQuery("#content").append(
-                            `<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery"  data-filehash="${hash}"  href="${videoResource}">
+                            `<a class="gallerypicture flash-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-hash="${hash}" data-src="${uri}" loading="lazy" alt="" /></div></a>`,
+                          )
+                        : vr
+                          ? jQuery("#content").append(
+                              `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt="" /></div></a>`,
+                            )
+                          : isVideo
+                            ? jQuery("#content").append(
+                                `<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery"  data-filehash="${hash}"  href="${videoResource}">
           <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""></div><script type="text/json">${meta}<\/script>` +
-                              (datatype === "video"
-                                ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                  (datatype === "video"
+                                    ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <rect x="0" fill="none" width="24" height="24"/>
               <g>
                 <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
               </g>
               </svg>`
-                                : ``) +
-                              `</a>`,
-                          )
-                        : jQuery("#content").append(
-                            `<a class="gallerypicture" data-width="1920" href="${uri}" title="${filename}"  data-filehash="${hash}"  data-fancybox="gallery">
+                                    : ``) +
+                                  `</a>`,
+                              )
+                            : jQuery("#content").append(
+                                `<a class="gallerypicture" data-width="1920" href="${uri}" title="${filename}"  data-filehash="${hash}"  data-fancybox="gallery">
           <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)"></div><script type="text/json">${meta}<\/script></a>`,
-                          ))),
+                              ),
                   );
               })
               .finally(() => {
@@ -2533,13 +2549,16 @@
             } else {
             }
           });
-          
+
           $(document).on("beforeShow.fb", function (e, instance, slide) {
             if (slide.opts.$orig.hasClass("vr-link")) {
               const playerUrl = slide.opts.$orig.data("url");
               medcrypt.getSrc(playerUrl, (uri) => {
                 let hash = get3dHash(
-                  basename(decodePath(playerUrl), "." + getFileExtension(playerUrl)),
+                  basename(
+                    decodePath(playerUrl),
+                    "." + getFileExtension(playerUrl),
+                  ),
                 );
                 window.localStorage.setItem("vr-type", hash);
                 reloadPlayer(uri);
@@ -2548,8 +2567,12 @@
               const player = ruffle.createPlayer();
               $("#inline-player").empty().html(player);
               let rufflePath = slide.opts.$orig.data("url");
-              if (usingRapiServe.length && !rufflePath.startsWith(usingRapiServe + "/")) {
-                rufflePath = usingRapiServe + "/" + slide.opts.$orig.data("url");
+              if (
+                usingRapiServe.length &&
+                !rufflePath.startsWith(usingRapiServe + "/")
+              ) {
+                rufflePath =
+                  usingRapiServe + "/" + slide.opts.$orig.data("url");
               }
               player.load({
                 url: rufflePath,
@@ -2562,9 +2585,9 @@
               player.style.height = "100%";
             }
           });
-          
-          $(document).on("keyup", function(e) {
-            if (e.which == 32){
+
+          $(document).on("keyup", function (e) {
+            if (e.which == 32) {
               if (window.slideshowStarted) {
                 e.preventDefault();
                 $.fancybox.getInstance().SlideShow.stop();
@@ -2574,7 +2597,6 @@
             }
           });
           $(document).on("afterShow.fb", function (e, instance, slide) {
-            
             if (slide.opts.$orig.hasClass("vr-link")) {
               return;
             }
