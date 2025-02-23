@@ -2298,7 +2298,7 @@
                           )
                         : vr
                           ? jQuery("#content").append(
-                              `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt="" /></div></a>`,
+                              `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-filehash="${hash}" loading="lazy" alt="" /></div></a>`,
                             )
                           : isVideo
                             ? jQuery("#content").append(
@@ -2598,6 +2598,18 @@
           });
           $(document).on("afterShow.fb", function (e, instance, slide) {
             if (slide.opts.$orig.hasClass("vr-link")) {
+              let originalLink = slide.$thumb;
+              let videoElement = document.getElementsByTagName("video")[0];
+              videoElement.currentTime =
+                window.currentAlbumPosition.currentTime ?? 0;
+              videoElement.addEventListener("timeupdate", (e) => {
+                updatePlaybackTimestamp(
+                  originalLink.data("filehash"),
+                  window.currentAlbum,
+                  videoElement,
+                );
+              });
+              
               return;
             }
             let originalLink = $('.gallerypicture[href="' + slide.src + '"]');
