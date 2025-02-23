@@ -25,7 +25,6 @@ function sanitizeLine($line)
     return trim(preg_replace('/[^A-Za-z0-9 \\-\\_\\~\\+\\(\\)\\.\\,\\/]/', '', $line), "\r\n");
 }
 
-
 function trimExtraNewLines($string)
 {
     return trim(
@@ -48,13 +47,13 @@ function parseMetaData($item)
     }
     $dateString = $dateValue;
     try {
-      $dateString = new DateTime(
-          $dateValue
-      );
+        $dateString = new DateTime(
+            $dateValue
+        );
     } catch (Exception $e) {
-      // silence date parsing issues.
+        // silence date parsing issues.
     }
-    
+
     return [
       'title' => explode(PHP_EOL, explode('Title: ', $item)[1] ?? '')[0],
       'author' => explode(PHP_EOL, explode('Author: ', $item)[1] ?? '')[0],
@@ -134,29 +133,29 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false)
         $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
 
         if ($mobile) {
-          $metaDataFiles = [];
-          $data = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
-              array_map(function ($item) use (&$metaDataFiles) {
-                  if (!is_null($item['metadata']) && strlen($item['metadata']) > 3) {
-                      $targetMetaDataPrefix = substr(base64_encode($item['hash']), 0, 2);
-                      if (!array_key_exists($targetMetaDataPrefix, $metaDataFiles)) {
-                          $metaDataFiles[$targetMetaDataPrefix] = [];
-                      }
-                      $metaDataFiles[$targetMetaDataPrefix][$item['hash']] = $item['metadata'];
-                  }
-                  $tags = substr(sanitizeLine(implode(', ', array_slice(explode(', ', explode(PHP_EOL, explode('Tags: ', $item['metadata'])[1] ?? '')[0]) ??
-                  [], 0, 60))), 0, 500);
-                  $item['metadata'] = is_null($item['metadata']) ? '' : (strlen($tags) < 1 ? 'Using MetaData Store...' : $tags);
-                  return [
-                    'album' => sanitizeLine($item['album']),
-                    'filename' => sanitizeLine(substr($item['filename'], 0, 20)) . '.' . pathinfo($item['filename'], PATHINFO_EXTENSION),
-                    'hash' => $item['hash'],
-                    'time' => $item['time'],
-                    'metadata' => $item['metadata'],
-                  ];
-              }, json_decode($data, true)),
-              JSON_THROW_ON_ERROR
-          ))));
+            $metaDataFiles = [];
+            $data = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
+                array_map(function ($item) use (&$metaDataFiles) {
+                    if (!is_null($item['metadata']) && strlen($item['metadata']) > 3) {
+                        $targetMetaDataPrefix = substr(base64_encode($item['hash']), 0, 2);
+                        if (!array_key_exists($targetMetaDataPrefix, $metaDataFiles)) {
+                            $metaDataFiles[$targetMetaDataPrefix] = [];
+                        }
+                        $metaDataFiles[$targetMetaDataPrefix][$item['hash']] = $item['metadata'];
+                    }
+                    $tags = substr(sanitizeLine(implode(', ', array_slice(explode(', ', explode(PHP_EOL, explode('Tags: ', $item['metadata'])[1] ?? '')[0]) ??
+                    [], 0, 60))), 0, 500);
+                    $item['metadata'] = is_null($item['metadata']) ? '' : (strlen($tags) < 1 ? 'Using MetaData Store...' : $tags);
+                    return [
+                      'album' => sanitizeLine($item['album']),
+                      'filename' => sanitizeLine(substr($item['filename'], 0, 20)) . '.' . pathinfo($item['filename'], PATHINFO_EXTENSION),
+                      'hash' => $item['hash'],
+                      'time' => $item['time'],
+                      'metadata' => $item['metadata'],
+                    ];
+                }, json_decode($data, true)),
+                JSON_THROW_ON_ERROR
+            ))));
         }
 
         file_put_contents($cachePath, $data);
@@ -195,11 +194,11 @@ if (isset($_GET['path'])) {
             echo 'const encrypted_data = `' . $dataset['data'] . '`;';
             die();
         } elseif (strstr($originalFilename, 'encrypted_data')) {
-          header('Content-Type: text/javascript');
-          $dataset = getDB(false, isset($_GET['unfiltered']), isset($_GET['nocache']));
-          //header("Content-Length: " . $dataset['size']);
-          echo 'const encrypted_data = ' . $dataset['data'] . ';';
-          die();
+            header('Content-Type: text/javascript');
+            $dataset = getDB(false, isset($_GET['unfiltered']), isset($_GET['nocache']));
+            //header("Content-Length: " . $dataset['size']);
+            echo 'const encrypted_data = ' . $dataset['data'] . ';';
+            die();
         }
     }
 
@@ -210,31 +209,31 @@ if (isset($_GET['path'])) {
       $tokenizer->rollingTokens(privuma::getEnv('AUTHTOKEN'))[1] .
       '&media=' .
       urlencode("h-$hash.$ext");
-      
+
     $dlurl = 'http://' . privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT') . $_GET['path'];
     if (curl_init($dlurl) !== false) {
-      $protocol = parse_url($dlurl, PHP_URL_SCHEME);
-      $hostname = parse_url($dlurl, PHP_URL_HOST);
-      $port = parse_url($dlurl, PHP_URL_PORT);
-      $path = ltrim(
-          parse_url($dlurl, PHP_URL_PATH) .
-            (strpos($dlurl, '?') !== false
-              ? '?' . parse_url($dlurl, PHP_URL_QUERY)
-              : ''),
-          DIRECTORY_SEPARATOR
-      );
-      $internalMediaPath =
-        DIRECTORY_SEPARATOR .
-        'media' .
-        DIRECTORY_SEPARATOR .
-        $protocol .
-        DIRECTORY_SEPARATOR .
-        $hostname . ':' . $port .
-        DIRECTORY_SEPARATOR .
-        $path .
-        DIRECTORY_SEPARATOR;
-      header('X-Accel-Redirect: ' . $internalMediaPath);
-      die();
+        $protocol = parse_url($dlurl, PHP_URL_SCHEME);
+        $hostname = parse_url($dlurl, PHP_URL_HOST);
+        $port = parse_url($dlurl, PHP_URL_PORT);
+        $path = ltrim(
+            parse_url($dlurl, PHP_URL_PATH) .
+              (strpos($dlurl, '?') !== false
+                ? '?' . parse_url($dlurl, PHP_URL_QUERY)
+                : ''),
+            DIRECTORY_SEPARATOR
+        );
+        $internalMediaPath =
+          DIRECTORY_SEPARATOR .
+          'media' .
+          DIRECTORY_SEPARATOR .
+          $protocol .
+          DIRECTORY_SEPARATOR .
+          $hostname . ':' . $port .
+          DIRECTORY_SEPARATOR .
+          $path .
+          DIRECTORY_SEPARATOR;
+        header('X-Accel-Redirect: ' . $internalMediaPath);
+        die();
     }
     header("Location: $uri");
 }
