@@ -32,7 +32,7 @@ if (!$downloadLocationUnencrypted) {
 
 $conn = $privuma->getPDO();
 
-$ops = new cloudFS($downloadLocation . 'pr' . DIRECTORY_SEPARATOR, true, '/usr/bin/rclone', null, true);
+$ops = new cloudFS($downloadLocation . "pr" . DIRECTORY_SEPARATOR, true, '/usr/bin/rclone', null, true);
 $opsNoEncodeNoPrefix = new cloudFS($downloadLocation, false, '/usr/bin/rclone', null, false);
 $opsPlain = new cloudFS(
     $downloadLocationUnencrypted,
@@ -63,7 +63,7 @@ $stmt->execute();
 $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
 function sanitizeLine($line)
 {
-    return trim(preg_replace('/[^A-Za-z0-9 \\-\\_\\~\\+\\(\\)\\.\\,]/', '', $line), "\r\n");
+    return trim(preg_replace('/[^A-Za-z0-9 \\-\\_\\~\\+\\(\\)\\.\\,\\/]/', '', $line), "\r\n");
 }
 
 function trimExtraNewLines($string)
@@ -324,7 +324,7 @@ foreach ($dlData as $item) {
                 'filename' => $filename,
                 'url' => $item['url'],
                 'thumbnail' => $item['thumbnail'],
-                'download' => $downloadLocation . 'pr' . DIRECTORY_SEPARATOR,
+                'download' => $downloadLocation . "pr" . DIRECTORY_SEPARATOR,
                 'hash' => $item['hash'],
               ],
             ])
@@ -350,7 +350,7 @@ foreach ($dlData as $item) {
                 'album' => $album,
                 'filename' => str_replace('.mp4', '.jpg', $filename),
                 'url' => $item['thumbnail'],
-                'download' => $downloadLocation . 'pr' . DIRECTORY_SEPARATOR,
+                'download' => $downloadLocation . "pr" . DIRECTORY_SEPARATOR,
                 'hash' => $item['hash'],
               ],
             ])
