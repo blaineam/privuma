@@ -427,15 +427,20 @@
                   })
                   .catch((e) => reject(e));
               }
-              
-                await fetch(resource, { method: 'HEAD' }).then(function (response) {
-                  const mimeType = response.headers.get('Content-Type')?.split(';')[0].trim();
+
+              await fetch(resource, { method: "HEAD" })
+                .then(function (response) {
+                  const mimeType = response.headers
+                    .get("Content-Type")
+                    ?.split(";")[0]
+                    .trim();
                   if (!mimeType.includes("text/plain")) {
                     resolve(resource);
                   } else {
                     throw new Error("Maybe its encrypted? " + mimeType);
                   }
-                }).catch(async () => {
+                })
+                .catch(async () => {
                   try {
                     return resolve(
                       window.rcloneCrypt.render(
@@ -456,7 +461,7 @@
                     reject(e);
                   }
                 });
-              })
+            })
               .then(action)
               .catch((err) => {
                 medcrypt.finishProgress();
@@ -2125,7 +2130,10 @@
                 let mediaLink = $(
                   'a[data-filehash="' + window.currentAlbumPosition.src + '"',
                 );
-                if (typeof mediaLink !== 'undefined' && typeof mediaLink.get(0) !== 'undefined') {
+                if (
+                  typeof mediaLink !== "undefined" &&
+                  typeof mediaLink.get(0) !== "undefined"
+                ) {
                   mediaLink.get(0).scrollIntoView();
                   mediaLink.click();
                 }
@@ -2652,20 +2660,22 @@
             if (slide.opts.$orig.hasClass("vr-link")) {
               let originalLink = slide.$thumb;
               let videoElement = document.getElementsByTagName("video")[0];
-              
+
               var vjsplayer = document.getElementById("videojs-vr-player");
               if (vjsplayer) {
                 let player = videojs(vjsplayer);
                 player.play();
-                player.currentTime(window.currentAlbumPosition.currentTime ?? 0);
-                player.on("timeupdate", function() {
+                player.currentTime(
+                  window.currentAlbumPosition.currentTime ?? 0,
+                );
+                player.on("timeupdate", function () {
                   updatePlaybackTimestamp(
                     originalLink.data("filehash"),
                     window.currentAlbum,
                     videoElement,
                   );
-                })
-                //videojs(vjsplayer).currentTime(window.currentAlbumPosition.currentTime ?? 0);  
+                });
+                //videojs(vjsplayer).currentTime(window.currentAlbumPosition.currentTime ?? 0);
                 // videoElement.addEventListener("timeupdate", (e) => {
                 //   updatePlaybackTimestamp(
                 //     originalLink.data("filehash"),
@@ -2674,7 +2684,7 @@
                 //   );
                 // });
               }
-              
+
               // Breaks VR playback
               // videoElement.currentTime =
               //   window.currentAlbumPosition.currentTime ?? 0;
