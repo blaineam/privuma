@@ -1354,7 +1354,6 @@
         reloadPlayer();
       }
 
-
       function init() {
         const urlParams = new URLSearchParams(window.location.search);
         let tail = "";
@@ -1790,8 +1789,8 @@
           window.slideshowStarted = false;
         }
       });
-			
-			function loadPacks() {
+
+      function loadPacks() {
         medcrypt.getSrc("flash/index.json", (uri) => {
           fetch(uri)
             .then((response) => response.text())
@@ -1799,7 +1798,9 @@
               window.flashdataset = JSON.parse(atob(text));
               window.flashmedia = [];
               let count = 0;
-              for (const [album, items] of Object.entries(window.flashdataset)) {
+              for (const [album, items] of Object.entries(
+                window.flashdataset,
+              )) {
                 count++;
                 window.flashmedia = window.flashmedia.concat(
                   items.map((item) => ({
@@ -1822,59 +1823,20 @@
                 ].sort((a, b) =>
                   a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
                 );
-                
+
                 window.allAlbums = window.groupByKey(alldata, "album");
-                window.allAlbums = Object.values(window.allAlbums).map((album) => album[0]);
+                window.allAlbums = Object.values(window.allAlbums).map(
+                  (album) => album[0],
+                );
                 window.allAlbums = window.allAlbums.sort((a, b) =>
                   a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
                 );
               }
-              medcrypt.getSrc("flash/ruffle/ruffle.js", (encrypted_data_file) => {
-                loadScript(encrypted_data_file);
-              });
-            }).catch((error) => {
-              console.error(
-                "There has been a problem with your fetch operation:",
-                error,
-              );
-            }).finally(() => {
-							        medcrypt.getSrc("vr/deovr-fs.json", (uri) => {
-          fetch(uri)
-            .then((response) => {
-              // Check if the response is ok
-              if (!response.ok) {
-                throw new Error("Network response was not ok");
-              }
-              return response.json(); // Parse the JSON
-            })
-            .then((data) => {
-              window.videos = data.filter(
-                (file) => file.MimeType === "video/mp4",
-              );
-              window.videos.sort((a, b) => {
-                const dateA = new Date(a.ModTime);
-                const dateB = new Date(b.ModTime);
-                return dateB - dateA;
-              });
-              window.vrmedia = window.videos.map((item) => {
-                return {
-                  album: "VR---" + getDirname(item.Path),
-                  filename: "vr/" + encodePath(item.Path),
-                  hash: md5("vr/" + encodePath(item.Path)),
-                  time: item["ModTime"].split(".")[0].replace("T", " "),
-                  metadata: "",
-                  vr: 1,
-                };
-              });
-              window.alldata = [
-                ...(window.alldata ?? []),
-                ...window.vrmedia,
-              ].sort((a, b) => (a.time < b.time ? 1 : b.time < a.time ? -1 : 0));
-              
-              window.allAlbums = window.groupByKey(alldata, "album");
-              window.allAlbums = Object.values(window.allAlbums).map((album) => album[0]);
-              window.allAlbums = window.allAlbums.sort((a, b) =>
-                a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+              medcrypt.getSrc(
+                "flash/ruffle/ruffle.js",
+                (encrypted_data_file) => {
+                  loadScript(encrypted_data_file);
+                },
               );
             })
             .catch((error) => {
@@ -1882,15 +1844,64 @@
                 "There has been a problem with your fetch operation:",
                 error,
               );
-            }).finally(() => {
-							runApp();
-						});
-        });
-						});
-        });
-			}
+            })
+            .finally(() => {
+              medcrypt.getSrc("vr/deovr-fs.json", (uri) => {
+                fetch(uri)
+                  .then((response) => {
+                    // Check if the response is ok
+                    if (!response.ok) {
+                      throw new Error("Network response was not ok");
+                    }
+                    return response.json(); // Parse the JSON
+                  })
+                  .then((data) => {
+                    window.videos = data.filter(
+                      (file) => file.MimeType === "video/mp4",
+                    );
+                    window.videos.sort((a, b) => {
+                      const dateA = new Date(a.ModTime);
+                      const dateB = new Date(b.ModTime);
+                      return dateB - dateA;
+                    });
+                    window.vrmedia = window.videos.map((item) => {
+                      return {
+                        album: "VR---" + getDirname(item.Path),
+                        filename: "vr/" + encodePath(item.Path),
+                        hash: md5("vr/" + encodePath(item.Path)),
+                        time: item["ModTime"].split(".")[0].replace("T", " "),
+                        metadata: "",
+                        vr: 1,
+                      };
+                    });
+                    window.alldata = [
+                      ...(window.alldata ?? []),
+                      ...window.vrmedia,
+                    ].sort((a, b) =>
+                      a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+                    );
 
-			
+                    window.allAlbums = window.groupByKey(alldata, "album");
+                    window.allAlbums = Object.values(window.allAlbums).map(
+                      (album) => album[0],
+                    );
+                    window.allAlbums = window.allAlbums.sort((a, b) =>
+                      a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+                    );
+                  })
+                  .catch((error) => {
+                    console.error(
+                      "There has been a problem with your fetch operation:",
+                      error,
+                    );
+                  })
+                  .finally(() => {
+                    runApp();
+                  });
+              });
+            });
+        });
+      }
 
       function runApp() {
         document.body.classList.add("authed");
@@ -1908,7 +1919,9 @@
           window.location.hash = "";
         }
         window.allAlbums = window.groupByKey(alldata, "album");
-        window.allAlbums = Object.values(window.allAlbums).map((album) => album[0]);
+        window.allAlbums = Object.values(window.allAlbums).map(
+          (album) => album[0],
+        );
         window.allAlbums = window.allAlbums.sort((a, b) => a.time - b.time);
         function findSearch(searchText, res) {
           return searchifica(res, searchText, [
@@ -2506,7 +2519,7 @@
               param,
             );
 
-          window.run = function() {
+          window.run = function () {
             medcrypt.flushQueue();
             jQuery("#content").empty();
             var hash = window.location.hash;
@@ -2518,9 +2531,9 @@
               var videoskind = kind == "all" || kind == "video" ? "1" : "0";
               let targetAlbum = shouldOpenAlbum(window.allAlbums, album);
               if (targetAlbum) {
-                var id = window.allAlbums.find((item) => item.album == targetAlbum)[
-                  "id"
-                ];
+                var id = window.allAlbums.find(
+                  (item) => item.album == targetAlbum,
+                )["id"];
                 if (localStorage.getItem("LastRequestedAlbum") === id) {
                   const backHash = targetAlbum.split("---");
                   backHash.pop();
@@ -2538,7 +2551,7 @@
             $(document).ready(function () {
               $('[data-fancybox="gallery"]').fancybox({});
             });
-          }
+          };
 
           $(document).on("click", ".openalbum", function (e) {
             window.location.hash = $(this).data("hash");
