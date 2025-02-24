@@ -1,6 +1,6 @@
 <?php
 
-die("malformed request");
+die('malformed request');
 
 use privuma\privuma;
 
