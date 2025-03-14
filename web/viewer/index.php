@@ -1,7 +1,7 @@
 <?php
 ini_set('memory_limit', '2G');
-// error_reporting(E_ALL);
-// ini_set("display_errors", "on");
+ // error_reporting(E_ALL);
+ // ini_set("display_errors", "on");
 session_start();
 
 use privuma\privuma;
@@ -15,18 +15,21 @@ require_once __DIR__ .
   DIRECTORY_SEPARATOR .
   'privuma.php';
 
-$privuma = privuma::getInstance();
-$tokenizer = new tokenizer();
 
-$conn = $privuma->getPDO();
 
-function sanitizeLine($line)
+function sanitizeLine($line): string
 {
-    return trim(preg_replace('/[^A-Za-z0-9 \\-\\_\\~\\+\\(\\)\\.\\,\\/]/', '', $line), "\r\n");
+    if (is_null($line)) {
+      return "";
+    }
+    return trim(preg_replace('/[^A-Za-z0-9 \-_\~\+\(\)\.\,\/]/', '', $line), "\r\n");
 }
 
-function trimExtraNewLines($string)
+function trimExtraNewLines($string): string
 {
+  if (is_null($string)) {
+    return "";
+  }
     return trim(
         implode(
             PHP_EOL,
@@ -38,7 +41,7 @@ function trimExtraNewLines($string)
     );
 }
 
-function parseMetaData($item)
+function parseMetaData($item): array
 {
     $dateValue = explode(PHP_EOL, explode('Date: ', $item)[1] ?? '')[0];
     $intval = filter_var($dateValue, FILTER_VALIDATE_INT);
@@ -99,9 +102,9 @@ function condenseMetaData($item)
     );
 }
 
-function getDB($mobile = false, $unfiltered = false, $nocache = false)
+function getDB($mobile = false, $unfiltered = false, $nocache = false): array
 {
-    global $conn;
+    $conn = (privuma::getInstance())->getPDO();
 
     $cachePath = __DIR__ .
       DIRECTORY_SEPARATOR .
@@ -116,10 +119,10 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false)
       'viewer_db_' .
       ($mobile ? 'mobile_' : '') .
       ($unfiltered ? 'unfiltered_' : '') .
-      '.json';
+      '.js';
 
     $currentTime = time();
-    $lastRan = filemtime($cachePath) ?? $currentTime - 24 * 60 * 60;
+    $lastRan = file_exists($cachePath) ? (filemtime($cachePath) ?? $currentTime - 24 * 60 * 60) : $currentTime - 24 * 60 * 60;
 
     if ($currentTime - $lastRan > 24 * 60 * 60 || $nocache || !file_exists($cachePath)) {
         $blocked = "(album = 'Favorites' or blocked = 0) and";
@@ -131,7 +134,6 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false)
         );
         $stmt->execute();
         $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
-
         if ($mobile) {
             $metaDataFiles = [];
             $data = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
@@ -156,6 +158,9 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false)
                 }, json_decode($data, true)),
                 JSON_THROW_ON_ERROR
             ))));
+            $data = 'const encrypted_data = `' . $data . '`;';
+        } else {
+          $data = 'const encrypted_data = ' . $data . ';';
         }
 
         file_put_contents($cachePath, $data);
@@ -169,8 +174,7 @@ if (isset($_GET['RapiServe'])) {
     echo 'canrapiserve = "index.php?path=";';
     die();
 }
-
-if (isset($_POST['key']) && base64_decode($_POST['key']) == privuma::getEnv('DOWNLOAD_PASSWORD')) {
+if (!isset($_SESSION['viewer-authenticated-successfully']) && isset($_POST['key']) && base64_decode($_POST['key']) == privuma::getEnv('DOWNLOAD_PASSWORD')) {
     $_SESSION['viewer-authenticated-successfully'] = true;
 }
 
@@ -180,6 +184,11 @@ if (!isset($_SESSION['viewer-authenticated-successfully']) && isset($_GET['path'
 }
 
 if (isset($_GET['path'])) {
+    if(str_starts_with($_GET["path"], "/data:")) {
+        http_response_code(404);
+        die();
+    }
+
     if (strstr($_GET['path'], '.js') && !strstr($_GET['path'], '.json')) {
         if (isset($_SERVER['HTTP_RANGE'])) {
             header('Content-Type: text/javascript');
@@ -190,51 +199,39 @@ if (isset($_GET['path'])) {
         if (strstr($originalFilename, '_mobile_')) {
             header('Content-Type: text/javascript');
             $dataset = getDB(true, isset($_GET['unfiltered']), isset($_GET['nocache']));
-            //header("Content-Length: " . $dataset['size']);
-            echo 'const encrypted_data = `' . $dataset['data'] . '`;';
+            header("Content-Length: " . $dataset['size']);
+            echo $dataset['data'];
             die();
         } elseif (strstr($originalFilename, 'encrypted_data')) {
             header('Content-Type: text/javascript');
             $dataset = getDB(false, isset($_GET['unfiltered']), isset($_GET['nocache']));
-            //header("Content-Length: " . $dataset['size']);
-            echo 'const encrypted_data = ' . $dataset['data'] . ';';
+            header("Content-Length: " . $dataset['size']);
+            echo $dataset['data'];
             die();
         }
     }
 
+    set_time_limit(1);
     $ext = pathinfo($_GET['path'], PATHINFO_EXTENSION);
+    if (!in_array(strtolower($ext), [
+      "jpg",
+      "jpeg",
+      "png",
+      "gif",
+      "mp4",
+      "webm",
+    ]) || !str_starts_with($_GET["path"], "/pr")) {
+      $dlurl = 'http://' . privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT') . $_GET['path'];
+      //if (privuma::live($dlurl)) {
+      privuma::accel($dlurl);
+      //}
+    }
     $hash = base64_decode(basename($_GET['path'], '.' . $ext));
     $uri =
       '/?token=' .
-      $tokenizer->rollingTokens(privuma::getEnv('AUTHTOKEN'))[1] .
+      (new tokenizer())->rollingTokens(privuma::getEnv('AUTHTOKEN'))[1] .
       '&media=' .
       urlencode("h-$hash.$ext");
-
-    $dlurl = 'http://' . privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT') . $_GET['path'];
-    if (curl_init($dlurl) !== false) {
-        $protocol = parse_url($dlurl, PHP_URL_SCHEME);
-        $hostname = parse_url($dlurl, PHP_URL_HOST);
-        $port = parse_url($dlurl, PHP_URL_PORT);
-        $path = ltrim(
-            parse_url($dlurl, PHP_URL_PATH) .
-              (strpos($dlurl, '?') !== false
-                ? '?' . parse_url($dlurl, PHP_URL_QUERY)
-                : ''),
-            DIRECTORY_SEPARATOR
-        );
-        $internalMediaPath =
-          DIRECTORY_SEPARATOR .
-          'media' .
-          DIRECTORY_SEPARATOR .
-          $protocol .
-          DIRECTORY_SEPARATOR .
-          $hostname . ':' . $port .
-          DIRECTORY_SEPARATOR .
-          $path .
-          DIRECTORY_SEPARATOR;
-        header('X-Accel-Redirect: ' . $internalMediaPath);
-        die();
-    }
     header("Location: $uri");
 }
 

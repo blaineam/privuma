@@ -1,7 +1,6 @@
 <?php
 
 namespace privuma\output\format;
-
 //uncomment to allow app to reauth
 //echo "[]";
 //die();
@@ -529,7 +528,6 @@ function streamMedia($file, bool $useOps = false)
     global $USE_X_Accel_Redirect;
     if ($useOps) {
         global $ops;
-
         privuma::prof_flag('Using Ops');
         header('Accept-Ranges: bytes');
         header('Content-Disposition: inline');
@@ -538,32 +536,7 @@ function streamMedia($file, bool $useOps = false)
         $ops->readfile($file);
     } elseif ($USE_X_Accel_Redirect && isUrl($file)) {
         $file = getCompressionUrl($file);
-        header(
-            'Content-Type: ' . get_mime_by_filename(basename(explode('?', $file)[0]))
-        );
-        $protocol = parse_url($file, PHP_URL_SCHEME);
-        $hostname = parse_url($file, PHP_URL_HOST);
-        $port = parse_url($file, PHP_URL_PORT);
-        $path = ltrim(
-            parse_url($file, PHP_URL_PATH) .
-              (strpos($file, '?') !== false
-                ? '?' . parse_url($file, PHP_URL_QUERY)
-                : ''),
-            DIRECTORY_SEPARATOR
-        );
-        $internalMediaPath =
-          DIRECTORY_SEPARATOR .
-          'media' .
-          DIRECTORY_SEPARATOR .
-          $protocol .
-          DIRECTORY_SEPARATOR .
-          $hostname . ':' . $port .
-          DIRECTORY_SEPARATOR .
-          $path .
-          DIRECTORY_SEPARATOR;
-        privuma::prof_flag('Using Nginx');
-        header('X-Accel-Redirect: ' . $internalMediaPath);
-        die();
+        privuma::accel($file);
     } elseif (pathinfo($file, PATHINFO_EXTENSION) !== 'mp4' || is_file($file)) {
         $file = getCompressionUrl($file);
         $headers = get_headers($file, true);
@@ -576,74 +549,8 @@ function streamMedia($file, bool $useOps = false)
         privuma::prof_flag('Using readfile');
         readfile($file);
     } else {
-
         privuma::prof_flag('Using Curl');
-        set_time_limit(0);
-        ini_set('max_execution_time', 0);
-        $useragent =
-          'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.96 Safari/537.36';
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_VERBOSE, 1);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 222222);
-        curl_setopt($ch, CURLOPT_URL, $file);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_HEADER, true);
-        curl_setopt($ch, CURLOPT_FRESH_CONNECT, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_USERAGENT, $useragent);
-        curl_setopt($ch, CURLOPT_NOBODY, true);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $info = curl_exec($ch);
-        $size = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
-        header('Content-Type: video/mp4');
-
-        header('Accept-Ranges: bytes');
-        header('Cache-Control: public, must-revalidate, max-age=0');
-        header('Pragma: no-cache');
-        $begin = 0;
-        $end = $size - 1;
-        if (isset($_SERVER['HTTP_RANGE'])) {
-            if (
-                preg_match(
-                    "/bytes=\h*(\d+)-(\d*)[\D.*]?/i",
-                    $_SERVER['HTTP_RANGE'],
-                    $matches
-                )
-            ) {
-                $begin = intval($matches[1]);
-                if (!empty($matches[2])) {
-                    $end = intval($matches[2]);
-                }
-            }
-        }
-
-        header('Content-Length:' . ($end - $begin + 1));
-
-        header('Content-Transfer-Encoding: binary');
-        if (isset($_SERVER['HTTP_RANGE'])) {
-            header('x-meta: ' . $begin . ' + ' . $end);
-            header('HTTP/1.1 206 Partial Content');
-            header("Content-Range: bytes $begin-$end/$size");
-        } else {
-            header('HTTP/1.1 200 OK');
-        }
-
-        $ch = curl_init();
-        if (isset($_SERVER['HTTP_RANGE'])) {
-            $headers = ['Range: bytes=' . $begin . '-' . $end];
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        }
-        curl_setopt($ch, CURLOPT_VERBOSE, 1);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 222222);
-        curl_setopt($ch, CURLOPT_URL, $file);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_HEADER, false);
-        curl_setopt($ch, CURLOPT_FRESH_CONNECT, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_USERAGENT, $useragent);
-        curl_setopt($ch, CURLOPT_NOBODY, false);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, false);
-        curl_exec($ch);
+        privuma::proxy($file);
     }
     exit();
 }
@@ -1095,19 +1002,19 @@ function run()
             $originalExt = pathinfo($_GET['media'], PATHINFO_EXTENSION);
             $hash = str_replace('h-', '', strlen($originalExt) > 0 ? basename($_GET['media'], '.' . $originalExt) : $_GET['media']);
 
-            $encoded = base64_encode($hash);
-            $encprefix = substr($encoded, 0, 2);
-            $dlurl = 'http://' . privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT') . '/' . $encprefix . '/' . $encoded . '.' . $originalExt;
-            if (curl_init($dlurl) !== false) {
-                streamMedia($dlurl);
-            }
+            //$encoded = base64_encode($hash);
+            //$encprefix = 'pr/' . substr($encoded, 0, 2);
+            // $dlurl = 'http://' . privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT') . '/' . $encprefix . '/' . $encoded . '.' . $originalExt;
+            // if (curl_init($dlurl) !== false) {
+            //     privuma::proxy($dlurl);
+            // }
 
             $mediaFileUrl = (new mediaFile('foo', 'bar', null, $hash))->source();
 
             $destExt = pathinfo(basename(explode('?', $mediaFileUrl)[0]), PATHINFO_EXTENSION);
             if ($destExt !== $originalExt) {
                 $thumb = (new mediaFile('foo', 'bar', null, $hash))->record()['thumbnail'];
-                if (strlen($thumb) > 5) {
+                if (strlen($thumb ?? "") > 5) {
                     $mediaFileUrl = $thumb;
                 }
             }
@@ -1146,7 +1053,7 @@ function run()
         }
 
         if (isUrl($_GET['media'])) {
-
+            //privuma::accel($_GET['media']);
             privuma::prof_flag('Media is URL Like');
             streamMedia($_GET['media'], false);
         }

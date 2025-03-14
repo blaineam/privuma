@@ -11,6 +11,7 @@ location ~* ^/media/(.*?)/(.*?)/(.*)/$ {
     proxy_set_header Host $download_host;
     proxy_set_header Authorization '';
     proxy_set_header Cookie '';
+    # proxy_pass_request_headers      on; # breaks requests, should be default on anyways
     # Headers for the response, by using $upstream_http_... here we can inject
     # other headers from Django, proxy_hide_header ensures the header from the
     # remote server isn't passed through.
