@@ -267,14 +267,14 @@ class privuma
         }
         return $return;
     }
-    
+
     public static function accel($url)
     {
         $protocol = parse_url($url, PHP_URL_SCHEME);
         $hostname = parse_url($url, PHP_URL_HOST);
         $port = parse_url($url, PHP_URL_PORT);
-        if(!$port) {
-            $port = ($protocol == "https") ? "443" : "80";
+        if (!$port) {
+            $port = ($protocol == 'https') ? '443' : '80';
         }
         $path = ltrim(
             parse_url($url, PHP_URL_PATH) .
@@ -296,44 +296,55 @@ class privuma
         header('X-Accel-Redirect: ' . $internalMediaPath);
         die();
     }
-    
+
     public static function proxy($url)
     {
-       error_reporting(0);
-       set_time_limit(0);
-       ob_end_clean();
-    
-       if(isset($_SERVER['HTTP_RANGE'])) {
-           stream_context_set_default([
-               'http' => [
-                   'header' => "Range: " . $_SERVER['HTTP_RANGE']
-               ]
-           ]);
-       }
-    
-       $headers = get_headers($url, 1);
-    
-       header($headers[0]);
-    
-       if(isset($headers['Content-Type'])) { header('Content-Type: ' . $headers['Content-Type']); }
-       if(isset($headers['Content-Length'])) { header('Content-Length: ' . $headers['Content-Length']); }
-       if(isset($headers['Accept-Ranges'])) { header('Accept-Ranges: ' . $headers['Accept-Ranges']); }
-       if(isset($headers['Content-Range'])) { header('Content-Range: ' . $headers['Content-Range']); }
-    
-       if($_SERVER['REQUEST_METHOD'] == 'HEAD') { exit; }
-    
-       $fp = fopen($url, 'rb');
-       while(!feof($fp)) {
-           echo fread($fp, 1024 * 256); flush();
-       }
-       fclose($fp);
-       die();
+        error_reporting(0);
+        set_time_limit(0);
+        ob_end_clean();
+
+        if (isset($_SERVER['HTTP_RANGE'])) {
+            stream_context_set_default([
+                'http' => [
+                    'header' => 'Range: ' . $_SERVER['HTTP_RANGE']
+                ]
+            ]);
+        }
+
+        $headers = get_headers($url, 1);
+
+        header($headers[0]);
+
+        if (isset($headers['Content-Type'])) {
+            header('Content-Type: ' . $headers['Content-Type']);
+        }
+        if (isset($headers['Content-Length'])) {
+            header('Content-Length: ' . $headers['Content-Length']);
+        }
+        if (isset($headers['Accept-Ranges'])) {
+            header('Accept-Ranges: ' . $headers['Accept-Ranges']);
+        }
+        if (isset($headers['Content-Range'])) {
+            header('Content-Range: ' . $headers['Content-Range']);
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] == 'HEAD') {
+            exit;
+        }
+
+        $fp = fopen($url, 'rb');
+        while (!feof($fp)) {
+            echo fread($fp, 1024 * 256);
+            flush();
+        }
+        fclose($fp);
+        die();
     }
-    
+
     public static function live($url)
     {
         $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1); 
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
         curl_setopt($ch, CURLOPT_TIMEOUT, 1);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_NOBODY, true);
@@ -343,7 +354,7 @@ class privuma
         curl_close($ch);
         return $statusCode == 200;
     }
-    
+
     public static function getDataFolder()
     {
         return self::$dataFolder;

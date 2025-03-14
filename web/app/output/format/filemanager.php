@@ -263,7 +263,7 @@ if (isset($_GET['logout'])) {
 }
 
 // Validate connection IP
-if($ip_ruleset != 'OFF') {
+if ($ip_ruleset != 'OFF') {
     $clientIp = $_SERVER['REMOTE_ADDR'];
 
     $proceed = false;
@@ -271,20 +271,20 @@ if($ip_ruleset != 'OFF') {
     $whitelisted = in_array($clientIp, $ip_whitelist);
     $blacklisted = in_array($clientIp, $ip_blacklist);
 
-    if($ip_ruleset == 'AND') {
-        if($whitelisted == true && $blacklisted == false) {
+    if ($ip_ruleset == 'AND') {
+        if ($whitelisted == true && $blacklisted == false) {
             $proceed = true;
         }
-    } elseif($ip_ruleset == 'OR') {
-        if($whitelisted == true || $blacklisted == false) {
+    } elseif ($ip_ruleset == 'OR') {
+        if ($whitelisted == true || $blacklisted == false) {
             $proceed = true;
         }
     }
 
-    if($proceed == false) {
+    if ($proceed == false) {
         trigger_error('User connection denied from: ' . $clientIp, E_USER_WARNING);
 
-        if($ip_silent == false) {
+        if ($ip_silent == false) {
             fm_set_msg(lng('Access denied. IP restriction applicable'), 'error');
             fm_show_header_login();
             fm_show_message();
@@ -301,7 +301,7 @@ if ($use_auth) {
     } elseif (isset($_POST['fm_usr'], $_POST['fm_pwd'])) {
         // Logging In
         sleep(1);
-        if(function_exists('password_verify')) {
+        if (function_exists('password_verify')) {
             if (isset($auth_users[$_POST['fm_usr']]) && isset($_POST['fm_pwd']) && password_verify($_POST['fm_pwd'], $auth_users[$_POST['fm_usr']])) {
                 $_SESSION[FM_SESSION_ID]['logged'] = $_POST['fm_usr'];
                 fm_set_msg(lng('You are logged in'));
@@ -465,7 +465,7 @@ if (isset($_POST['ajax']) && !FM_READONLY) {
     }
 
     //search : get list of files from the current folder
-    if(isset($_POST['type']) && $_POST['type'] == 'search') {
+    if (isset($_POST['type']) && $_POST['type'] == 'search') {
         $dir = FM_ROOT_PATH;
         $response = scan($dir . '/' . fm_clean_path($_POST['path']), $_POST['content']);
         echo json_encode($response);
@@ -551,7 +551,7 @@ if (isset($_POST['ajax']) && !FM_READONLY) {
     }
 
     //upload using url
-    if(isset($_POST['type']) && $_POST['type'] == 'upload' && !empty($_REQUEST['uploadurl'])) {
+    if (isset($_POST['type']) && $_POST['type'] == 'upload' && !empty($_REQUEST['uploadurl'])) {
         $path = FM_ROOT_PATH;
         if (FM_PATH != '') {
             $path .= '/' . FM_PATH;
@@ -593,7 +593,7 @@ if (isset($_POST['ajax']) && !FM_READONLY) {
 
         $err = false;
 
-        if(!$isFileAllowed) {
+        if (!$isFileAllowed) {
             $err = array('message' => 'File extension is not allowed');
             event_callback(array('fail' => $err));
             exit();
@@ -675,7 +675,7 @@ if (isset($_GET['new']) && isset($_GET['type']) && !FM_READONLY) {
         }
         if ($_GET['type'] == 'file') {
             if (!$ops->is_file($path . '/' . $new)) {
-                if(fm_is_valid_ext($new)) {
+                if (fm_is_valid_ext($new)) {
                     if ($ops->touch($path . '/' . $new) === false) {
                         die('Cannot open file:  ' . $new);
                     }
@@ -745,7 +745,7 @@ if (isset($_GET['copy'], $_GET['finish']) && !FM_READONLY) {
             $msg_from = trim(FM_PATH . '/' . basename($from), '/');
             $fn_parts = pathinfo($from);
             $extension_suffix = '';
-            if(!$ops->is_dir($from)) {
+            if (!$ops->is_dir($from)) {
                 $extension_suffix = '.' . $fn_parts['extension'];
             }
             //Create new name for duplicate
@@ -753,7 +753,7 @@ if (isset($_GET['copy'], $_GET['finish']) && !FM_READONLY) {
             $loop_count = 0;
             $max_loop = 1000;
             // Check if a file with the duplicate name already exists, if so, make new name (edge case...)
-            while($ops->is_file($fn_duplicate) & $loop_count < $max_loop) {
+            while ($ops->is_file($fn_duplicate) & $loop_count < $max_loop) {
                 $fn_parts = pathinfo($fn_duplicate);
                 $fn_duplicate = $fn_parts['dirname'] . '/' . $fn_parts['filename'] . '-copy' . $extension_suffix;
                 $loop_count++;
@@ -890,9 +890,9 @@ if (isset($_GET['st'])) {
         global $use_x_accel_redirect;
 
         $cloudUrl = $ops->public_link($path . '/' . $st, '15m');
-        if($cloudUrl !== false) {
+        if ($cloudUrl !== false) {
             $head = array_change_key_case(get_headers($cloudUrl, true));
-            if($head['content-type'] == $ops->mime_content_type($path . '/' . $st)) {
+            if ($head['content-type'] == $ops->mime_content_type($path . '/' . $st)) {
                 header('Location: ' . $cloudUrl);
                 exit;
             }
@@ -940,7 +940,7 @@ if (!empty($_FILES) && !FM_READONLY) {
     $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
     $isFileAllowed = ($allowed) ? in_array($ext, $allowed) : true;
 
-    if(!fm_isvalid_filename($filename) && !fm_isvalid_filename(base64_decode($_REQUEST['fullpath']))) {
+    if (!fm_isvalid_filename($filename) && !fm_isvalid_filename(base64_decode($_REQUEST['fullpath']))) {
         $response = array(
             'status' => 'error',
             'info' => 'Invalid File name!',
@@ -954,7 +954,7 @@ if (!empty($_FILES) && !FM_READONLY) {
         $fullPath = $path . '/' . str_replace('./', '_', base64_decode($_REQUEST['fullpath']));
         $folder = substr($fullPath, 0, strrpos($fullPath, '/'));
 
-        if($ops->is_file($fullPath) && !$override_file_name) {
+        if ($ops->is_file($fullPath) && !$override_file_name) {
             $ext_1 = $ext ? '.' . $ext : '';
             $fullPath = str_replace($ext_1, '', $fullPath) . '_' . date('ymdHis') . $ext_1;
         }
@@ -1097,7 +1097,7 @@ if (!$ops->is_dir($path)) {
 $parent = fm_get_parent_path(FM_PATH);
 
 $objects = $ops->scandir($path, true);
-if($objects === false) {
+if ($objects === false) {
     $objects = array();
 }
 $folders = array();
@@ -1105,7 +1105,7 @@ $files = array();
 $current_path = array_slice(explode('/', $path), -1)[0];
 if (is_array($objects) && fm_is_exclude_items($current_path)) {
     foreach ($objects as $file) {
-        if(!isset($file['Name'])) {
+        if (!isset($file['Name'])) {
             continue;
         }
         $object = $file;
@@ -1140,7 +1140,7 @@ if (isset($_GET['upload']) && !FM_READONLY) {
     function getUploadExt()
     {
         $extArr = explode(',', FM_UPLOAD_EXTENSION);
-        if(FM_UPLOAD_EXTENSION && $extArr) {
+        if (FM_UPLOAD_EXTENSION && $extArr) {
             array_walk($extArr, function (&$x) {$x = ".$x";});
             return implode(',', $extArr);
         }
@@ -1342,9 +1342,9 @@ if (isset($_GET['settings']) && !FM_READONLY) {
                     //get ON/OFF and active class
                     function getChecked($conf, $val, $txt)
                     {
-                        if($conf == 1 && $val == 1) {
+                        if ($conf == 1 && $val == 1) {
                             return $txt;
-                        } elseif($conf == '' && $val == '') {
+                        } elseif ($conf == '' && $val == '') {
                             return $txt;
                         } else {
                             return '';
@@ -1411,10 +1411,10 @@ if (isset($_GET['settings']) && !FM_READONLY) {
                         <label for="js-3-1" class="col-sm-3 col-form-label"><?php echo lng('Theme') ?></label>
                         <div class="col-sm-5">
                             <select class="form-control" id="js-3-0" name="js-theme-3" style="width:100px;">
-                         <option value='light' <?php if($theme == 'light') {
+                         <option value='light' <?php if ($theme == 'light') {
                              echo 'selected';
                          } ?>><?php echo lng('light') ?></option>
-                         <option value='dark' <?php if($theme == 'dark') {
+                         <option value='dark' <?php if ($theme == 'dark') {
                              echo 'selected';
                          } ?>><?php echo lng('dark') ?></option>
                             </select>
@@ -1461,7 +1461,7 @@ if (isset($_GET['help'])) {
                                 <li class="list-group-item"><a href="https://github.com/prasathmani/tinyfilemanager/wiki" target="_blank"><i class="fa fa-question-circle"></i> <?php echo lng('Help Documents') ?> </a> </li>
                                 <li class="list-group-item"><a href="https://github.com/prasathmani/tinyfilemanager/issues" target="_blank"><i class="fa fa-bug"></i> <?php echo lng('Report Issue') ?></a></li>
                                 <li class="list-group-item"><a href="javascript:latest_release_info('<?php echo VERSION; ?>');"><i class="fa fa-link"> </i> <?php echo lng('Check Latest Version') ?></a></li>
-                                <?php if(!FM_READONLY) { ?>
+                                <?php if (!FM_READONLY) { ?>
                                 <li class="list-group-item"><a href="javascript:show_new_pwd();"><i class="fa fa-lock"></i> <?php echo lng('Generate new password hash') ?></a></li>
                                 <?php } ?>
                             </ul>
@@ -1503,7 +1503,7 @@ if (isset($_GET['view'])) {
         fm_redirect(FM_SELF_URL . '?p=' . urlencode(base64_encode(FM_PATH)));
     }
 
-    if(!$quickView) {
+    if (!$quickView) {
         fm_show_header(); // HEADER
         fm_show_nav_path(FM_PATH); // current path
     }
@@ -1528,7 +1528,7 @@ if (isset($_GET['view'])) {
     $content = ''; // for text
     $online_viewer = strtolower(FM_DOC_VIEWER);
 
-    if($online_viewer && $online_viewer !== 'false' && in_array($ext, fm_get_onlineViewer_exts())) {
+    if ($online_viewer && $online_viewer !== 'false' && in_array($ext, fm_get_onlineViewer_exts())) {
         $is_onlineViewer = true;
     } elseif (in_array($ext, fm_get_image_exts())) {
         $is_image = true;
@@ -1547,7 +1547,7 @@ if (isset($_GET['view'])) {
     ?>
     <div class="row">
         <div class="col-12">
-            <?php if(!$quickView) { ?>
+            <?php if (!$quickView) { ?>
                 <p class="break-word"><b><?php echo $view_title ?> "<?php echo fm_enc(fm_convert_win($file)) ?>"</b></p>
                 <p class="break-word">
                     Full path: <?php echo fm_enc(fm_convert_win($file_path)) ?><br>
@@ -1588,10 +1588,10 @@ if (isset($_GET['view'])) {
                 </p>
                 <?php
             }
-    if($is_onlineViewer) {
-        if($online_viewer == 'google') {
+    if ($is_onlineViewer) {
+        if ($online_viewer == 'google') {
             echo '<iframe src="https://docs.google.com/viewer?embedded=true&hl=en&url=' . fm_enc($file_url) . '" frameborder="no" style="width:100%;min-height:460px"></iframe>';
-        } elseif($online_viewer == 'microsoft') {
+        } elseif ($online_viewer == 'microsoft') {
             echo '<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=' . fm_enc($file_url) . '" frameborder="no" style="width:100%;min-height:460px"></iframe>';
         }
     } elseif ($is_image) {
@@ -1632,7 +1632,7 @@ if (isset($_GET['view'])) {
         </div>
     </div>
     <?php
-    if(!$quickView) {
+    if (!$quickView) {
         fm_show_footer();
     }
     exit;
@@ -2115,7 +2115,7 @@ function fm_rename($old, $new)
     global $ops;
     $isFileAllowed = fm_is_valid_ext($new);
 
-    if(!$isFileAllowed) {
+    if (!$isFileAllowed) {
         return false;
     }
 
@@ -2317,7 +2317,7 @@ function fm_get_translations($tr)
 {
     try {
         $content = @file_get_contents('translation.json');
-        if($content !== false) {
+        if ($content !== false) {
             $lng = json_decode($content, true);
             global $lang_list;
             foreach ($lng['language'] as $key => $value) {
@@ -2416,7 +2416,7 @@ function fm_get_directorysize($directory)
         $size = 0;
         $count = 0;
         $dirCount = 0;
-        foreach($ops->scandir($directory, true, true) as $file) {
+        foreach ($ops->scandir($directory, true, true) as $file) {
             if (!$file['IsDir']) {
                 $size += $file['Size'];
                 $count++;
@@ -2807,7 +2807,7 @@ function fm_get_file_mimes($extension)
     $fileTypes['html'] = ['text/html'];
     $fileTypes['txt'] = ['text/plain'];
     //Unknown mime-types should be 'application/octet-stream'
-    if(empty($fileTypes[$extension])) {
+    if (empty($fileTypes[$extension])) {
         $fileTypes[$extension] = ['application/octet-stream'];
     }
     return $fileTypes[$extension];
@@ -2823,13 +2823,13 @@ function scan($dir, $filter = '')
 {
     $path = FM_ROOT_PATH . '/' . $dir;
     global $ops;
-    if($dir) {
+    if ($dir) {
 
         $files = array();
         error_log($dir);
         error_log($filter);
         $search = $ops->scandir($dir, true, true, [$filter]);
-        if($search === false) {
+        if ($search === false) {
             return $files;
         }
         foreach ($search as $file) {
@@ -2863,9 +2863,9 @@ function fm_download_file($fileLocation, $fileName, $chunkSize = 1024)
     global $use_x_accel_redirect;
 
     $cloudUrl = $ops->public_link($fileLocation, '15m');
-    if($cloudUrl !== false) {
+    if ($cloudUrl !== false) {
         $head = array_change_key_case(get_headers($cloudUrl, true));
-        if($head['content-type'] == $ops->mime_content_type($fileLocation)) {
+        if ($head['content-type'] == $ops->mime_content_type($fileLocation)) {
             header('Location: ' . $cloudUrl);
             exit;
         }
@@ -2946,7 +2946,7 @@ function fm_download_file($fileLocation, $fileName, $chunkSize = 1024)
 function fm_get_theme()
 {
     $result = '';
-    if(FM_THEME == 'dark') {
+    if (FM_THEME == 'dark') {
         $result = 'text-white bg-dark';
     }
     return $result;
@@ -3019,7 +3019,7 @@ function fm_show_nav_path($path)
     $isStickyNavBar = $sticky_navbar ? 'fixed-top' : '';
     $getTheme = fm_get_theme();
     $getTheme .= ' navbar-light';
-    if(FM_THEME == 'dark') {
+    if (FM_THEME == 'dark') {
         $getTheme .= ' navbar-dark';
     } else {
         $getTheme .= ' bg-white';
@@ -3077,7 +3077,7 @@ function fm_show_nav_path($path)
                     <?php endif; ?>
                     <?php if (FM_USE_AUTH): ?>
                     <li class="nav-item avatar dropdown">
-                        <a class="nav-link dropdown-toggle" id="navbarDropdownMenuLink-5" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="fa fa-user-circle"></i> <?php if(isset($_SESSION[FM_SESSION_ID]['logged'])) {
+                        <a class="nav-link dropdown-toggle" id="navbarDropdownMenuLink-5" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="fa fa-user-circle"></i> <?php if (isset($_SESSION[FM_SESSION_ID]['logged'])) {
                             echo $_SESSION[FM_SESSION_ID]['logged'];
                         } ?></a>
                         <div class="dropdown-menu dropdown-menu-right <?php echo fm_get_theme(); ?>" aria-labelledby="navbarDropdownMenuLink-5">
@@ -3137,7 +3137,7 @@ function fm_show_header_login()
     <meta name="author" content="CCP Programmers">
     <meta name="robots" content="noindex, nofollow">
     <meta name="googlebot" content="noindex">
-    <?php if($favicon_path) {
+    <?php if ($favicon_path) {
         echo '<link rel="icon" href="' . fm_enc($favicon_path) . '" type="image/png">';
     } ?>
     <title><?php echo fm_enc(APP_TITLE) ?></title>
@@ -3211,7 +3211,7 @@ function fm_show_header()
     <meta name="author" content="CCP Programmers">
     <meta name="robots" content="noindex, nofollow">
     <meta name="googlebot" content="noindex">
-    <?php if($favicon_path) {
+    <?php if ($favicon_path) {
         echo '<link rel="icon" href="' . fm_enc($favicon_path) . '" type="image/png">';
     } ?>
     <title><?php echo fm_enc(APP_TITLE) ?></title>

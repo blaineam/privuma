@@ -1,6 +1,7 @@
 <?php
 
 namespace privuma\output\format;
+
 //uncomment to allow app to reauth
 //echo "[]";
 //die();
@@ -1014,7 +1015,7 @@ function run()
             $destExt = pathinfo(basename(explode('?', $mediaFileUrl)[0]), PATHINFO_EXTENSION);
             if ($destExt !== $originalExt) {
                 $thumb = (new mediaFile('foo', 'bar', null, $hash))->record()['thumbnail'];
-                if (strlen($thumb ?? "") > 5) {
+                if (strlen($thumb ?? '') > 5) {
                     $mediaFileUrl = $thumb;
                 }
             }
