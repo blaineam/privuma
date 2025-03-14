@@ -1,7 +1,7 @@
 <?php
 ini_set('memory_limit', '2G');
- // error_reporting(E_ALL);
- // ini_set("display_errors", "on");
+// error_reporting(E_ALL);
+// ini_set("display_errors", "on");
 session_start();
 
 use privuma\privuma;
@@ -15,21 +15,19 @@ require_once __DIR__ .
   DIRECTORY_SEPARATOR .
   'privuma.php';
 
-
-
 function sanitizeLine($line): string
 {
     if (is_null($line)) {
-      return "";
+        return '';
     }
     return trim(preg_replace('/[^A-Za-z0-9 \-_\~\+\(\)\.\,\/]/', '', $line), "\r\n");
 }
 
 function trimExtraNewLines($string): string
 {
-  if (is_null($string)) {
-    return "";
-  }
+    if (is_null($string)) {
+        return '';
+    }
     return trim(
         implode(
             PHP_EOL,
@@ -160,7 +158,7 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false): array
             ))));
             $data = 'const encrypted_data = `' . $data . '`;';
         } else {
-          $data = 'const encrypted_data = ' . $data . ';';
+            $data = 'const encrypted_data = ' . $data . ';';
         }
 
         file_put_contents($cachePath, $data);
@@ -184,7 +182,7 @@ if (!isset($_SESSION['viewer-authenticated-successfully']) && isset($_GET['path'
 }
 
 if (isset($_GET['path'])) {
-    if(str_starts_with($_GET["path"], "/data:")) {
+    if (str_starts_with($_GET['path'], '/data:')) {
         http_response_code(404);
         die();
     }
@@ -199,13 +197,13 @@ if (isset($_GET['path'])) {
         if (strstr($originalFilename, '_mobile_')) {
             header('Content-Type: text/javascript');
             $dataset = getDB(true, isset($_GET['unfiltered']), isset($_GET['nocache']));
-            header("Content-Length: " . $dataset['size']);
+            header('Content-Length: ' . $dataset['size']);
             echo $dataset['data'];
             die();
         } elseif (strstr($originalFilename, 'encrypted_data')) {
             header('Content-Type: text/javascript');
             $dataset = getDB(false, isset($_GET['unfiltered']), isset($_GET['nocache']));
-            header("Content-Length: " . $dataset['size']);
+            header('Content-Length: ' . $dataset['size']);
             echo $dataset['data'];
             die();
         }
@@ -214,17 +212,17 @@ if (isset($_GET['path'])) {
     set_time_limit(1);
     $ext = pathinfo($_GET['path'], PATHINFO_EXTENSION);
     if (!in_array(strtolower($ext), [
-      "jpg",
-      "jpeg",
-      "png",
-      "gif",
-      "mp4",
-      "webm",
-    ]) || !str_starts_with($_GET["path"], "/pr")) {
-      $dlurl = 'http://' . privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT') . $_GET['path'];
-      //if (privuma::live($dlurl)) {
-      privuma::accel($dlurl);
-      //}
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'mp4',
+      'webm',
+    ]) || !str_starts_with($_GET['path'], '/pr')) {
+        $dlurl = 'http://' . privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT') . $_GET['path'];
+        //if (privuma::live($dlurl)) {
+        privuma::accel($dlurl);
+        //}
     }
     $hash = base64_decode(basename($_GET['path'], '.' . $ext));
     $uri =
