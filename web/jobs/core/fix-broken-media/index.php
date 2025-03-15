@@ -16,9 +16,9 @@ $conn = $privuma->getPDO();
 
 $album = '';
 if (isset($_GET['albums'])) {
-    $albums = implode(", ", array_map(function($albumItem) use ($conn) {
+    $albums = implode(', ', array_map(function ($albumItem) use ($conn) {
         return $conn->quote($albumItem);
-    }, explode(",", $_GET['albums'])));
+    }, explode(',', $_GET['albums'])));
     echo PHP_EOL . "checking broken links in album: {$albums}";
     $album = " and album in ({$albums}) ";
 }
