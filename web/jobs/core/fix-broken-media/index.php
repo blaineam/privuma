@@ -15,10 +15,12 @@ if ($argc > 1) {
 $conn = $privuma->getPDO();
 
 $album = '';
-if (isset($_GET['album'])) {
-    $album = $conn->quote($_GET['album']);
-    echo PHP_EOL . "checking broken media in album: {$album}";
-    $album = " and album = {$album} ";
+if (isset($_GET['albums'])) {
+    $albums = implode(", ", array_map(function($albumItem) use ($conn) {
+        return $conn->quote($albumItem);
+    }, explode(",", $_GET['albums'])));
+    echo PHP_EOL . "checking broken links in album: {$albums}";
+    $album = " and album in ({$albums}) ";
 }
 
 $select_results = $conn->query("SELECT id, album, filename FROM media where url is null and album != 'Favorites' {$album} order by id desc");
