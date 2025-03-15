@@ -2,11 +2,12 @@
 <html lang="en-US">
   <head>
     <title>Privuma(Offline Web App)</title>
-    <meta charset="utf-8">
-    <meta name="referrer" content="no-referrer">
+    <meta charset="utf-8" />
+    <meta name="referrer" content="no-referrer" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+      content="width=device-width, initial-scale=1.0, shrink-to-fit=no"
+    />
     <!-- prettier-ignore -->
     <style>@charset "UTF-8";
     /*!
@@ -406,7 +407,7 @@
         },
         processingQueue: false,
         maxTries: 2,
-        getSrc: function(resource, action = () => {}, currentTries = 0) {
+        getSrc: function (resource, action = () => {}, currentTries = 0) {
           if (usingRapiServe.length) {
             return medcrypt.getSrcRaw(resource, action, currentTries);
           }
@@ -417,80 +418,80 @@
           return medcrypt.processingQueue;
         },
         getSrcRaw: function (resource, action = () => {}, currentTries = 0) {
-            return new Promise(async (resolve, reject) => {
-              if (medcrypt.loadedCache[resource]) {
-                return resolve(medcrypt.loadedCache[resource]);
-              }
+          return new Promise(async (resolve, reject) => {
+            if (medcrypt.loadedCache[resource]) {
+              return resolve(medcrypt.loadedCache[resource]);
+            }
 
-              if (resource.includes("blob:")) {
-                return resolve(resource);
-              }
+            if (resource.includes("blob:")) {
+              return resolve(resource);
+            }
 
-              if (usingRapiServe.length) {
-                let targetSrc = usingRapiServe + "/" + resource;
-                if (resource.startsWith(usingRapiServe + "/")) {
-                  targetSrc = resource;
-                }
-                return fetch(targetSrc, { headers: { range: "bytes=0-1" } })
-                  .then(function (response) {
-                    if (!response.ok) {
-                      throw new Error("HTTP status " + response.status);
-                    }
-                    return true;
-                  })
-                  .then(() => {
-                    resolve(targetSrc);
-                  })
-                  .catch((e) => reject(e));
+            if (usingRapiServe.length) {
+              let targetSrc = usingRapiServe + "/" + resource;
+              if (resource.startsWith(usingRapiServe + "/")) {
+                targetSrc = resource;
               }
-
-              await fetch(resource, { method: "HEAD" })
+              return fetch(targetSrc, { headers: { range: "bytes=0-1" } })
                 .then(function (response) {
-                  const mimeType = response.headers
-                    .get("Content-Type")
-                    ?.split(";")[0]
-                    .trim();
-                  if (!mimeType.includes("text/plain")) {
-                    resolve(resource);
-                  } else {
-                    throw new Error("Maybe its encrypted? " + mimeType);
+                  if (!response.ok) {
+                    throw new Error("HTTP status " + response.status);
                   }
+                  return true;
                 })
-                .catch(async () => {
-                  try {
-                    return resolve(
-                      window.rcloneCrypt.render(
-                        await window.rcloneCrypt.decrypt(
-                          "crypt/" +
-                            (await window.rcloneCrypt.encryptPath(
-                              resource,
-                              passphrase,
-                            )),
-                          passphrase,
-                        ),
-                        "",
-                        false,
-                        false,
-                      ),
-                    );
-                  } catch (e) {
-                    reject(e);
-                  }
-                });
-            })
-              .then(action)
-              .catch((err) => {
-                medcrypt.finishProgress();
-                if (currentTries < medcrypt.maxTries) {
-                  let delay = currentTries + 1 * 100;
-                  setTimeout(
-                    () => medcrypt.getSrc(resource, action, currentTries + 1),
-                    delay,
-                  );
+                .then(() => {
+                  resolve(targetSrc);
+                })
+                .catch((e) => reject(e));
+            }
+
+            await fetch(resource, { method: "HEAD" })
+              .then(function (response) {
+                const mimeType = response.headers
+                  .get("Content-Type")
+                  ?.split(";")[0]
+                  .trim();
+                if (!mimeType.includes("text/plain")) {
+                  resolve(resource);
                 } else {
-                  action(resource);
+                  throw new Error("Maybe its encrypted? " + mimeType);
+                }
+              })
+              .catch(async () => {
+                try {
+                  return resolve(
+                    window.rcloneCrypt.render(
+                      await window.rcloneCrypt.decrypt(
+                        "crypt/" +
+                          (await window.rcloneCrypt.encryptPath(
+                            resource,
+                            passphrase,
+                          )),
+                        passphrase,
+                      ),
+                      "",
+                      false,
+                      false,
+                    ),
+                  );
+                } catch (e) {
+                  reject(e);
                 }
               });
+          })
+            .then(action)
+            .catch((err) => {
+              medcrypt.finishProgress();
+              if (currentTries < medcrypt.maxTries) {
+                let delay = currentTries + 1 * 100;
+                setTimeout(
+                  () => medcrypt.getSrc(resource, action, currentTries + 1),
+                  delay,
+                );
+              } else {
+                action(resource);
+              }
+            });
         },
       };
 
@@ -967,7 +968,8 @@
         type="password"
         class="form-control"
         id="downloadPassword"
-        placeholder="Password">
+        placeholder="Password"
+      />
       <button class="btn btn-primary" id="unlockBtn">Unlock</button>
     </div>
     <div id="searchBox">
@@ -977,7 +979,8 @@
         class="form-control"
         id="searchInput"
         name="search"
-        placeholder="Search">
+        placeholder="Search"
+      />
       <a class="btn btn-secondary trigger-collapsible" id="tags-toggle"
         ><svg
           fill="None"
@@ -1812,17 +1815,17 @@
           window.slideshowStarted = false;
         }
       });
-      
+
       function epochToDateTime(epoch) {
-          const date = new Date(epoch);
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0'); // +1 because months are 0-based
-          const day = String(date.getDate()).padStart(2, '0');
-          const hours = String(date.getHours()).padStart(2, '0');
-          const minutes = String(date.getMinutes()).padStart(2, '0');
-          const seconds = String(date.getSeconds()).padStart(2, '0');
-          
-          return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        const date = new Date(epoch);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0"); // +1 because months are 0-based
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        const seconds = String(date.getSeconds()).padStart(2, "0");
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
       }
 
       function loadPacks() {
@@ -2448,7 +2451,6 @@
               );
               window.history.back();
             }
-
 
             $("body").removeClass("album");
 
