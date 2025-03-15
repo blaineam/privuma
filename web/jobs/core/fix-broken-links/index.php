@@ -14,9 +14,9 @@ $conn = $privuma->getPDO();
 
 $album = '';
 if (isset($_GET['albums'])) {
-    $albums = implode(", ", array_map(function($albumItem) use ($conn) {
+    $albums = implode(', ', array_map(function ($albumItem) use ($conn) {
         return $conn->quote($albumItem);
-    }, explode(",", $_GET['albums'])));
+    }, explode(',', $_GET['albums'])));
     echo PHP_EOL . "checking broken links in album: {$albums}";
     $album = " and album in ({$albums}) ";
 }
@@ -41,12 +41,12 @@ foreach (array_chunk($results, 2000) as $key => $chunk) {
             $hostHeaders = get_headers($protocol . '://' . $hostname, true);
             $hostResponseCode = substr($hostHeaders[0], 9, 3);
             $hostOk = (
-                str_starts_with($hostResponseCode, "2") ||
-                str_starts_with($hostResponseCode, "3") ||
-                str_starts_with($hostResponseCode, "4")
+                str_starts_with($hostResponseCode, '2') ||
+                str_starts_with($hostResponseCode, '3') ||
+                str_starts_with($hostResponseCode, '4')
             );
             $fileMissing = (
-                (!str_starts_with($responseCode, "2") && !str_starts_with($responseCode, "3"))
+                (!str_starts_with($responseCode, '2') && !str_starts_with($responseCode, '3'))
                 || (
                     strpos($head['content-type'], 'image') === false
                     && strpos($head['content-type'], 'video') === false
@@ -74,7 +74,7 @@ foreach (array_chunk($results, 2000) as $key => $chunk) {
                     $hostHeaders = get_headers($protocol . '://' . $hostname, true);
 
                     $fileMissing = (
-                        (!str_starts_with($responseCode, "2") && !str_starts_with($responseCode, "3"))
+                        (!str_starts_with($responseCode, '2') && !str_starts_with($responseCode, '3'))
                         || (
                             strpos($head['content-type'], 'image') === false
                             && strpos($head['content-type'], 'video') === false
@@ -98,4 +98,4 @@ foreach (array_chunk($results, 2000) as $key => $chunk) {
     }
 }
 
-echo PHP_EOL."Total Deletions: {$delections} / {$checkCount}";
+echo PHP_EOL . "Total Deletions: {$delections} / {$checkCount}";
