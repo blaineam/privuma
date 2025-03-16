@@ -67,6 +67,9 @@ foreach (array_chunk($results, 2000) as $key => $chunk) {
                 if (!is_null($row['thumbnail']) && strlen($row['thumbnail']) > 0) {
                     //echo PHP_EOL."Checking thumbnail: " . $row['thumbnail'];
                     $headers = get_headers($row['thumbnail'], true);
+                    if (!is_array($headers)) {
+                        continue;
+                    }
                     $responseCode = substr($headers[0], 9, 3);
                     $head = array_change_key_case($headers);
                     $protocol = parse_url($row['thumbnail'],  PHP_URL_SCHEME);
