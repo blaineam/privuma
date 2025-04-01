@@ -543,7 +543,9 @@
       }
 
       window.mobileCheck = function () {
-        if (window.location.hash.includes("mobile")) {
+        if (window.location.hash.includes("desktop")) {
+          return false;
+        } else {
           return true;
         }
         let check = false;
@@ -1945,11 +1947,21 @@
         document.body.classList.add("authed");
         loadMediaTypeSelections();
         var delim = "1--57--2";
+        let decompressedArray = [];
+        [...(window.mobileCheck()
+        ? JSON.parse(encrypted_data)
+        : encrypted_data)].forEach((item) => {
+          if (item.albums.length) {
+            item.albums.forEach((album, index) => {
+              decompressedArray.push({album, filename: item.filename, hash: item.hash, metadata: item.metadata, time: item.times[index] });
+            });
+          } else {
+            decompressedArray.push(item);
+          }
+        });
         window.alldata = [
           ...(window.alldata ?? []),
-          ...(window.mobileCheck()
-            ? JSON.parse(encrypted_data)
-            : encrypted_data),
+          ...decompressedArray,
         ].sort((a, b) => (a.time < b.time ? 1 : b.time < a.time ? -1 : 0));
         restoreFavoritesFromCache();
 
