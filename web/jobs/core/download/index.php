@@ -182,7 +182,7 @@ foreach ($dataset as $item) {
     [], 0, 60))), 0, 500);
     $item['metadata'] = is_null($item['metadata']) ? '' : (strlen($tags) < 1 ? 'Using MetaData Store...' : $tags);
     if (!array_key_exists($item['hash'], $array)) {
-        $filenameParts = explode("-----", $item['filename']);
+        $filenameParts = explode('-----', $item['filename']);
         $array[$item['hash']] = [
           'albums' => [sanitizeLine($item['album'])],
           'filename' => sanitizeLine(substr(end($filenameParts), 0, 20)) . '.' . pathinfo($item['filename'], PATHINFO_EXTENSION),
@@ -235,7 +235,7 @@ $array = [];
 $dataset = json_decode($data, true);
 foreach ($dataset as $item) {
     if (!array_key_exists($item['hash'], $array)) {
-        $filenameParts = explode("-----", $item['filename']);
+        $filenameParts = explode('-----', $item['filename']);
         $array[$item['hash']] = [
            ...filterArrayByKeys($item, ['filename', 'album', 'time']),
            'filename' => end($filenameParts),
