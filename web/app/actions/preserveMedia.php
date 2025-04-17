@@ -98,7 +98,7 @@ class preserveMedia
         $preserveExt = pathinfo($preserve, PATHINFO_EXTENSION);
 
         if (privuma::getEnv('COMPRESS_MEDIA') !== true) {
-            if (in_array(strtoupper($ext), ['GIF', 'JPG', 'JPEG', 'PNG', 'MP4'])) {
+            if (in_array(strtoupper($ext), ['GIF', 'JPG', 'JPEG', 'PNG', 'MP4', 'WEBM'])) {
                 echo PHP_EOL . 'Skipping Compression';
                 return $this->ops->rename($file, $preserve, false);
             } else {
