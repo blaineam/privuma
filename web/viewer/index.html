@@ -1121,107 +1121,109 @@
     <script src="index.php?RapiServe=1"></script>
     <script src="../index.php?RapiServe=1"></script>
     <script>
-     // Track active requests and their progress
-        let activeRequests = 0;
-        let totalBytesExpected = 0;
-        let totalBytesTransferred = 0;
-        let hasUnknownSize = false; // Flag for requests without Content-Length
-        const progressBar = document.getElementById('progressBar');
-        
-        // Function to update progress bar
-        function updateProgressBar() {
-          if (activeRequests > 0) {
-            if (hasUnknownSize || totalBytesExpected === 0) {
-              // Use indeterminate animation if any request lacks Content-Length
-              progressBar.classList.add('indeterminate');
-              progressBar.style.width = '100%';
-            } else {
-              // Use determinate progress based on bytes
-              const progress = (totalBytesTransferred / totalBytesExpected) * 100;
-              progressBar.classList.remove('indeterminate');
-              progressBar.style.width = `${Math.min(progress, 100)}%`;
-            }
+      // Track active requests and their progress
+      let activeRequests = 0;
+      let totalBytesExpected = 0;
+      let totalBytesTransferred = 0;
+      let hasUnknownSize = false; // Flag for requests without Content-Length
+      const progressBar = document.getElementById("progressBar");
+
+      // Function to update progress bar
+      function updateProgressBar() {
+        if (activeRequests > 0) {
+          if (hasUnknownSize || totalBytesExpected === 0) {
+            // Use indeterminate animation if any request lacks Content-Length
+            progressBar.classList.add("indeterminate");
+            progressBar.style.width = "100%";
           } else {
-            // Reset when no requests are active
-            progressBar.classList.remove('indeterminate');
-            progressBar.style.width = '0';
-            totalBytesExpected = 0;
-            totalBytesTransferred = 0;
-            hasUnknownSize = false;
+            // Use determinate progress based on bytes
+            const progress = (totalBytesTransferred / totalBytesExpected) * 100;
+            progressBar.classList.remove("indeterminate");
+            progressBar.style.width = `${Math.min(progress, 100)}%`;
           }
+        } else {
+          // Reset when no requests are active
+          progressBar.classList.remove("indeterminate");
+          progressBar.style.width = "0";
+          totalBytesExpected = 0;
+          totalBytesTransferred = 0;
+          hasUnknownSize = false;
         }
-        
-        // Process response stream to track transferred bytes
-        async function processResponse(response) {
-          const contentLength = response.clone().headers.get('Content-Length');
-          const expectedBytes = contentLength ? parseInt(contentLength, 10) : null;
-        
-          if (expectedBytes) {
-            totalBytesExpected += expectedBytes;
-          } else {
-            hasUnknownSize = true;
-          }
-        
-          const reader = response.clone().body.getReader();
-          let transferredBytes = 0;
-        
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-        
-            transferredBytes += value.length;
-            if (expectedBytes) {
-              totalBytesTransferred += value.length;
-            }
-            updateProgressBar();
-          }
-        
-          if (expectedBytes) {
-            totalBytesExpected -= expectedBytes;
-            totalBytesTransferred -= transferredBytes;
-          } else {
-            hasUnknownSize = totalBytesExpected > 0 ? hasUnknownSize : false;
-          }
-        
-          return response;
+      }
+
+      // Process response stream to track transferred bytes
+      async function processResponse(response) {
+        const contentLength = response.clone().headers.get("Content-Length");
+        const expectedBytes = contentLength
+          ? parseInt(contentLength, 10)
+          : null;
+
+        if (expectedBytes) {
+          totalBytesExpected += expectedBytes;
+        } else {
+          hasUnknownSize = true;
         }
-        
-        // Store the original fetch
-        const nativeFetch = window.fetch;
-        
-        // Override fetch to track network requests
-        window.fetch = async function (...args) {
-          activeRequests++;
+
+        const reader = response.clone().body.getReader();
+        let transferredBytes = 0;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          transferredBytes += value.length;
+          if (expectedBytes) {
+            totalBytesTransferred += value.length;
+          }
           updateProgressBar();
-        
-          try {
-            const response = await nativeFetch(...args);
-            return await processResponse(response);
-          } finally {
-            activeRequests--;
-            updateProgressBar();
-          }
-        };
-        
-        // Override XMLHttpRequest for older APIs (fallback, no byte tracking)
-        const NativeXMLHttpRequest = window.XMLHttpRequest;
-        window.XMLHttpRequest = function () {
-          const xhr = new NativeXMLHttpRequest();
-        
-          xhr.addEventListener('loadstart', () => {
-            activeRequests++;
-            hasUnknownSize = true; // XHR doesn't provide stream, assume unknown size
-            updateProgressBar();
-          });
-        
-          xhr.addEventListener('loadend', () => {
-            activeRequests--;
-            hasUnknownSize = activeRequests > 0 ? hasUnknownSize : false;
-            updateProgressBar();
-          });
-        
-          return xhr;
-        };
+        }
+
+        if (expectedBytes) {
+          totalBytesExpected -= expectedBytes;
+          totalBytesTransferred -= transferredBytes;
+        } else {
+          hasUnknownSize = totalBytesExpected > 0 ? hasUnknownSize : false;
+        }
+
+        return response;
+      }
+
+      // Store the original fetch
+      const nativeFetch = window.fetch;
+
+      // Override fetch to track network requests
+      window.fetch = async function (...args) {
+        activeRequests++;
+        updateProgressBar();
+
+        try {
+          const response = await nativeFetch(...args);
+          return await processResponse(response);
+        } finally {
+          activeRequests--;
+          updateProgressBar();
+        }
+      };
+
+      // Override XMLHttpRequest for older APIs (fallback, no byte tracking)
+      const NativeXMLHttpRequest = window.XMLHttpRequest;
+      window.XMLHttpRequest = function () {
+        const xhr = new NativeXMLHttpRequest();
+
+        xhr.addEventListener("loadstart", () => {
+          activeRequests++;
+          hasUnknownSize = true; // XHR doesn't provide stream, assume unknown size
+          updateProgressBar();
+        });
+
+        xhr.addEventListener("loadend", () => {
+          activeRequests--;
+          hasUnknownSize = activeRequests > 0 ? hasUnknownSize : false;
+          updateProgressBar();
+        });
+
+        return xhr;
+      };
 
       Promise.allSettled =
         Promise.allSettled ||
