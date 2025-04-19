@@ -582,7 +582,7 @@ class cloudFS
                 escapeshellarg($this->rCloneConfigPath),
                 '--auto-confirm',
                 '--log-level ERROR',
-								'--multi-thread-streams=1',
+                                '--multi-thread-streams=1',
                 '--s3-no-check-bucket',
                 '--s3-no-head',
                 // '--s3-no-head-object', -- Cannot be used for single file operations
