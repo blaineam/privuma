@@ -1254,7 +1254,7 @@
         canvas.height = 8;
 
         const bytes = [];
-        for (let i = 0; i < hash.length; i += 2) {
+        for (let i = 0; i < hash?.length; i += 2) {
           bytes.push(parseInt(hash.substr(i, 2), 16));
         }
 
@@ -1290,7 +1290,7 @@
           ? canrapiserve === true
             ? "index.php"
             : canrapiserve
-          : window.location.hash.includes("rapiserve")
+          : window.location?.hash?.includes("rapiserve")
             ? "index.php"
             : "";
 
@@ -2127,7 +2127,7 @@
         );
         restoreFavoritesFromCache();
 
-        if (window.location.hash.includes("mobile")) {
+        if (window.location?.hash?.includes("mobile")) {
           window.location.hash = "";
         }
         window.allAlbums = window.groupByKey(alldata, "album");
@@ -2175,7 +2175,7 @@
           touch: true,
           video: {
             ...jQuery.fancybox.defaults.video,
-            format: "video/mp4",
+            tpl:'<video class="fancybox-video" playsinline controls controlsList="nodownload" poster="{{poster}}"><source src="{{src}}" type="video/webm" /><source src="{{src}}" type="video/mp4" />Sorry, your browser doesn\'t support embedded videos, <a href="{{src}}">download</a> and watch with your favorite video player!</video>',
             autoStart: false,
           },
         };
@@ -2749,7 +2749,7 @@
           window.run = function () {
             medcrypt.flushQueue();
             jQuery("#content").empty();
-            var hash = window.location.hash;
+            var hash = window.location?.hash;
             if (hash.length > 1) {
               var parts = hash.substr(1).split(delim);
               var album = decodeURI(atob(parts[0]));
@@ -3199,7 +3199,7 @@
           $("#backBtn").click(function () {
             $("body").removeClass("vr");
             $("#tags").empty();
-            let hash = window.location.hash.slice(1);
+            let hash = window.location?.hash?.slice(1);
             if (hash) {
               let hashParts = hash.split(delim);
               let path = atob(hashParts[0]);
@@ -3217,14 +3217,14 @@
             }
           });
 
-          let lastHash = window.location.hash;
+          let lastHash = window.location?.hash;
           if (!lastHash) {
             lastHash = "none";
           }
 
           $(window).on("hashchange", function (e) {
             medcrypt.flushQueue();
-            let newhash = window.location.hash;
+            let newhash = window.location?.hash;
             if (!newhash) {
               newhash = "none";
             }

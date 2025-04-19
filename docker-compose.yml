@@ -146,7 +146,7 @@ services:
     depends_on:
       - gluetun
     network_mode: "service:gluetun"
-    command: serve http --read-only --no-checksum --no-modtime --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8991 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz,json,swf,wasm} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+    command: serve http --read-only --no-checksum --no-modtime --multi-thread-streams=1 --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8991 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz,json,swf,wasm} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
   cloudfs-http-secondary:
     image: rclone/rclone:latest
     container_name: privuma_cloudfs_http_secondary
@@ -157,7 +157,7 @@ services:
     depends_on:
       - gluetun
     network_mode: "service:gluetun"
-    command: serve http --read-only --no-checksum --no-modtime --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8992 ${CLOUDFS_HTTP_SECONDARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz,json,swf,wasm} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G  --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+    command: serve http --read-only --no-checksum --no-modtime --multi-thread-streams=1 --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8992 ${CLOUDFS_HTTP_SECONDARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz,json,swf,wasm} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G  --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
   cloudfs-http-tertiary:
     image: rclone/rclone:latest
     container_name: privuma_cloudfs_http_teriary
@@ -166,6 +166,6 @@ services:
       - ./web/config/rclone:/config/rclone
     user: $DOCKER_USER
     network_mode: "service:gluetun"
-    command: serve http --read-only --no-checksum --no-modtime --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8993 ${CLOUDFS_HTTP_TERTIARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz,json,swf,wasm} --dir-cache-time 1m --fast-list  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+    command: serve http --read-only --no-checksum --no-modtime --multi-thread-streams=1 --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8993 ${CLOUDFS_HTTP_TERTIARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz,json,swf,wasm} --dir-cache-time 1m --fast-list  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
 volumes:
   db_data:
