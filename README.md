@@ -1,14 +1,12 @@
 # Privuma
 
-Privuma is a multimedia deduplication, compression and access endpoint that works with gphotos.wemiller.com and the ios app Lux Shield. It is a simple setup with docker compose that is extendable with jobs that can download content from around the internet. It consists of a customer php-fpm image that includes multimedia processing dependencies available to php via an exec call.
+Privuma is a multimedia deduplication, compression and access endpoint that works with a web based viewer. It is a simple setup with docker compose that is extendable with jobs that can download content from around the internet. It consists of a customer php-fpm image that includes multimedia processing dependencies available to php via an exec call.
 
 # Structure
 
 - mariadb: to keep track of deduplicated media
 - nginx: to serve the endpoint for access media with the aforementioned apps.
-- privuma-php: the custom image with php-fpm:7.4, python:3.9, ffmpeg, ImageMagick 7, and cron
-- ssh-tunnel: a simple solution to use an external mysql db for a mirror/edge instance
-- puppeteer: a chrome browser with a web based api to help with scraping cron jobs.
+- privuma-php: the custom image with php-fpm:8.1, python:3.9, ffmpeg, ImageMagick 7
 
 ## Setup
 
