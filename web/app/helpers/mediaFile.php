@@ -38,7 +38,7 @@ class mediaFile
         ;
         $this->metadata = $metadata ?? '';
         $this->cloudFS = privuma::getCloudFS();
-        $downloadLocation = privuma::getEnv('DOWNLOAD_LOCATION');
+        $downloadLocation = privuma::getEnv('DOWNLOAD_LOCATION') . "pr" . DIRECTORY_SEPARATOR;
         $this->dlOps = new cloudFS($downloadLocation, true, '/usr/bin/rclone', null, true);
         $this->sanitizedFilesPath = privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'sanitizedFiles.json';
         $privuma = privuma::getInstance();
@@ -358,12 +358,15 @@ class mediaFile
         $this->hash = $this->persistedHash();
         if (!$this->duplicateHashes()) {
             $dlPath = str_replace(
-                ['.mpg', '.mod', '.mmv', '.tod', '.wmv', '.asf', '.avi', '.divx', '.mov', '.m4v', '.3gp', '.3g2', '.mp4', '.m2t', '.m2ts', '.mts', '.mkv', '.webm'], '.mp4',
+                ['.mpg', '.mod', '.mmv', '.tod', '.wmv', '.asf', '.avi', '.divx', '.mov', '.m4v', '.3gp', '.3g2', '.mp4', '.m2t', '.m2ts', '.mts', '.mkv'], '.mp4',
                 ($this->persistedHash() ?? $hash ?? $this->hash) . '.' . pathinfo($this->path(), PATHINFO_EXTENSION)
             );
             $this->dlOps->unlink($dlPath);
             if (strpos($dlPath, '.mp4') !== false) {
                 $this->dlOps->unlink(str_replace('.mp4', '.jpg', $dlPath));
+            }
+            if (strpos($dlPath, '.webm') !== false) {
+                $this->dlOps->unlink(str_replace('.webm', '.jpg', $dlPath));
             }
         }
 

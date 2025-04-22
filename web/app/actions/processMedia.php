@@ -65,7 +65,6 @@ class processMedia
                                 '.m2ts',
                                 '.mts',
                                 '.mkv',
-                                '.webm',
                             ],
                             '.mp4',
                             $data['hash'] .
@@ -203,7 +202,11 @@ class processMedia
                             $thumbnailPreservationPath = str_replace(
                                 '.mp4',
                                 '.jpg',
-                                $mediaPreservationPath
+                                str_replace(
+                                    '.webm',
+                                    '.jpg',
+                                    $mediaPreservationPath
+                                )
                             );
                             if (
                                 (new preserveMedia([], $downloadOps))->compress(

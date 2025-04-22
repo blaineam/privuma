@@ -2142,6 +2142,8 @@
             "metadata",
           ]);
         }
+        
+        $.fancybox.defaults.btnTpl.download2 = $.fancybox.defaults.btnTpl.download.replace('data-fancybox-download', '');
 
         jQuery.fancybox.defaults = {
           ...jQuery.fancybox.defaults,
@@ -2151,7 +2153,7 @@
             "zoom",
             "slideShow",
             "fullScreen",
-            "download",
+            "download2",
             "close",
             "favorite",
           ],
@@ -2175,9 +2177,12 @@
           touch: true,
           video: {
             ...jQuery.fancybox.defaults.video,
-            tpl: '<video class="fancybox-video" playsinline controls controlsList="nodownload" poster="{{poster}}"><source src="{{src}}" type="video/webm" /><source src="{{src}}" type="video/mp4" />Sorry, your browser doesn\'t support embedded videos, <a href="{{src}}">download</a> and watch with your favorite video player!</video>',
+            tpl: '<video class="fancybox-video" playsinline controls poster="{{poster}}"><source src="{{src}}" type="video/webm" /><source src="{{src}}" type="video/mp4" />Sorry, your browser doesn\'t support embedded videos, <a href="{{src}}">download</a> and watch with your favorite video player!</video>',
             autoStart: false,
           },
+          beforeShow : function(instance, slide) { 
+            instance.$refs.container.find('.fancybox-button--download').attr('href', slide.src);
+          }
         };
 
         $(document).on("click", ".toggle-collapsible", function (event) {
@@ -2473,7 +2478,6 @@
                   ".m4v",
                   ".3gp",
                   ".3g2",
-                  ".mp4",
                   ".m2t",
                   ".m2ts",
                   ".mts",
@@ -2500,8 +2504,7 @@
                     let thumbnailFilename = filenameParts.join(".") + ".jpg";
                     video =
                       btoa(item.hash) +
-                      "." +
-                      (extension.toLowerCase() == "gif" ? "gif" : "mp4");
+                      "." + extension;
                     let thumbnail = btoa(item.hash) + ".jpg";
                     resource = `pr/${thumbnail.substring(0, 2)}/${thumbnail}`;
                     videoResource = `pr/${video.substring(0, 2)}/${video}`;
@@ -2661,7 +2664,6 @@
                   ".m4v",
                   ".3gp",
                   ".3g2",
-                  ".mp4",
                   ".m2t",
                   ".m2ts",
                   ".mts",
@@ -2674,7 +2676,7 @@
                   btoa(item.hash) + "." + (isVideo ? "jpg" : extension);
                 let resource = `pr/${image.substring(0, 2)}/${image}`;
                 if (item.vr === 1) {
-                  resource = item.filename.replace(".mp4", ".jpg");
+                  resource = item.filename.replace(".mp4", ".jpg").replace(".webm", ".jpg");
                 }
                 if (item.flash === 1) {
                   resource = md5ToImage(item.hash); //item.filename.replace(".swf", ".png");
