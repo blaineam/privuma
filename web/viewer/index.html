@@ -2142,8 +2142,12 @@
             "metadata",
           ]);
         }
-        
-        $.fancybox.defaults.btnTpl.download2 = $.fancybox.defaults.btnTpl.download.replace('data-fancybox-download', '');
+
+        $.fancybox.defaults.btnTpl.download2 =
+          $.fancybox.defaults.btnTpl.download.replace(
+            "data-fancybox-download",
+            "",
+          );
 
         jQuery.fancybox.defaults = {
           ...jQuery.fancybox.defaults,
@@ -2180,9 +2184,11 @@
             tpl: '<video class="fancybox-video" playsinline controls poster="{{poster}}"><source src="{{src}}" type="video/webm" /><source src="{{src}}" type="video/mp4" />Sorry, your browser doesn\'t support embedded videos, <a href="{{src}}">download</a> and watch with your favorite video player!</video>',
             autoStart: false,
           },
-          beforeShow : function(instance, slide) { 
-            instance.$refs.container.find('.fancybox-button--download').attr('href', slide.src);
-          }
+          beforeShow: function (instance, slide) {
+            instance.$refs.container
+              .find(".fancybox-button--download")
+              .attr("href", slide.src);
+          },
         };
 
         $(document).on("click", ".toggle-collapsible", function (event) {
@@ -2502,9 +2508,7 @@
 
                   if (!vr && !flash) {
                     let thumbnailFilename = filenameParts.join(".") + ".jpg";
-                    video =
-                      btoa(item.hash) +
-                      "." + extension;
+                    video = btoa(item.hash) + "." + extension;
                     let thumbnail = btoa(item.hash) + ".jpg";
                     resource = `pr/${thumbnail.substring(0, 2)}/${thumbnail}`;
                     videoResource = `pr/${video.substring(0, 2)}/${video}`;
@@ -2676,7 +2680,9 @@
                   btoa(item.hash) + "." + (isVideo ? "jpg" : extension);
                 let resource = `pr/${image.substring(0, 2)}/${image}`;
                 if (item.vr === 1) {
-                  resource = item.filename.replace(".mp4", ".jpg").replace(".webm", ".jpg");
+                  resource = item.filename
+                    .replace(".mp4", ".jpg")
+                    .replace(".webm", ".jpg");
                 }
                 if (item.flash === 1) {
                   resource = md5ToImage(item.hash); //item.filename.replace(".swf", ".png");
