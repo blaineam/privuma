@@ -32,10 +32,10 @@ $items = explode(PHP_EOL, $data);
 
 $ops = $privuma->getCloudFS();
 
-$downloadLocation = privuma::getEnv('DOWNLOAD_LOCATION') . "pr" . DIRECTORY_SEPARATOR;
+$downloadLocation = privuma::getEnv('DOWNLOAD_LOCATION') . 'pr' . DIRECTORY_SEPARATOR;
 $dlOps = new cloudFS($downloadLocation, true, '/usr/bin/rclone', null, true);
 
-$albumFilenameDelimiter = "-----";
+$albumFilenameDelimiter = '-----';
 
 foreach ($items as $item) {
     $parts = explode('||', $item);
@@ -58,7 +58,7 @@ foreach ($items as $item) {
         $dstExt = pathinfo($dstFilename, PATHINFO_EXTENSION);
         if ($srcExt !== $dstExt) {
             $hash = (new mediaFile($srcFilename, $srcAlbum))->record()['hash'];
-            $dlMove = $dlOps->rename($hash.".".$srcExt, $hash . "." . $dstExt);
+            $dlMove = $dlOps->rename($hash . '.' . $srcExt, $hash . '.' . $dstExt);
         }
         $stmt = $conn->prepare('UPDATE media SET album = ?, filename = ? WHERE album = ? AND filename = ?');
         $stmt->execute([

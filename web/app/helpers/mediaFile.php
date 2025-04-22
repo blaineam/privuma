@@ -38,7 +38,7 @@ class mediaFile
         ;
         $this->metadata = $metadata ?? '';
         $this->cloudFS = privuma::getCloudFS();
-        $downloadLocation = privuma::getEnv('DOWNLOAD_LOCATION') . "pr" . DIRECTORY_SEPARATOR;
+        $downloadLocation = privuma::getEnv('DOWNLOAD_LOCATION') . 'pr' . DIRECTORY_SEPARATOR;
         $this->dlOps = new cloudFS($downloadLocation, true, '/usr/bin/rclone', null, true);
         $this->sanitizedFilesPath = privuma::getConfigDirectory() . DIRECTORY_SEPARATOR . 'sanitizedFiles.json';
         $privuma = privuma::getInstance();
