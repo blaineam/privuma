@@ -293,19 +293,17 @@ $dlData = array_filter($dlData, function ($item) use (
           '.m4v',
           '.3gp',
           '.3g2',
-          '.mp4',
           '.m2t',
           '.m2ts',
           '.mts',
           '.mkv',
-          '.webm',
         ],
         '.mp4',
         $item['filename']
     );
     $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
     $thumbnailPreserve = $item['hash'] . '.jpg';
-    return !array_key_exists($preserve, $previouslyDownloadedMedia) || (str_contains($preserve, '.mp4') &&
+    return !array_key_exists($preserve, $previouslyDownloadedMedia) || ((str_contains($preserve, '.webm') || str_contains($preserve, '.mp4')) &&
       !array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia));
 });
 
@@ -337,12 +335,10 @@ foreach ($dlData as $item) {
           '.m4v',
           '.3gp',
           '.3g2',
-          '.mp4',
           '.m2t',
           '.m2ts',
           '.mts',
           '.mkv',
-          '.webm',
         ],
         '.mp4',
         $item['filename']
@@ -364,7 +360,7 @@ foreach ($dlData as $item) {
                   $privuma->getCloudFS()->public_link($path) ?:
                   $tokenizer->mediaLink($path, false, false, true)
             ) {
-                if (strpos($filename, '.mp4') !== false) {
+                if (strpos($filename, '.webm') !== false || strpos($filename, '.mp4') !== false) {
                     $item['thumbnail'] =
                       $privuma->getCloudFS()->public_link($thumbnailPath) ?:
                       $tokenizer->mediaLink($thumbnailPath, false, false, true);
@@ -396,7 +392,7 @@ foreach ($dlData as $item) {
         );
         $newDlCount++;
     } elseif (
-        strpos($filename, '.mp4') !== false &&
+        (strpos($filename, '.webm') !== false || strpos($filename, '.mp4') !== false) &&
         is_null($item['thumbnail']) &&
         !$ops->is_file($thumbnailPreserve) &&
         ($item['thumbnail'] =
@@ -413,7 +409,7 @@ foreach ($dlData as $item) {
               'type' => 'processMedia',
               'data' => [
                 'album' => $album,
-                'filename' => str_replace('.mp4', '.jpg', $filename),
+                'filename' => str_replace('.webm', '.jpg', str_replace('.mp4', '.jpg', $filename)),
                 'url' => $item['thumbnail'],
                 'download' => $downloadLocation . 'pr' . DIRECTORY_SEPARATOR,
                 'hash' => $item['hash'],

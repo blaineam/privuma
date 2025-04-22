@@ -28,7 +28,7 @@ class preserveMedia
                 'path' => $data['path'],
                 'hash' => $hash,
             ]);
-            $mediaFile = new mediaFile(str_replace(['.mpg', '.mod', '.mmv', '.tod', '.wmv', '.asf', '.avi', '.divx', '.mov', '.m4v', '.3gp', '.3g2', '.mp4', '.m2t', '.m2ts', '.mts', '.mkv', '.webm'], '.mp4', $correctedFilename), $data['album'], null, $hash);
+            $mediaFile = new mediaFile(str_replace(['.mpg', '.mod', '.mmv', '.tod', '.wmv', '.asf', '.avi', '.divx', '.mov', '.m4v', '.3gp', '.3g2', '.mp4', '.m2t', '.m2ts', '.mts', '.mkv'], '.mp4', $correctedFilename), $data['album'], null, $hash);
             echo PHP_EOL . 'New mediaFile: ' . $mediaFile->path();
             if ($mediaFile->hashConflict()) {
                 echo PHP_EOL . 'There was a hash conflict';
