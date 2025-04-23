@@ -372,11 +372,26 @@ class cloudFS
         }
         return false;
     }
+    
+    public static function canonicalize($path)
+    {
+        $path = explode('/', $path);
+        $keys = array_keys($path, '..');
+    
+        foreach($keys AS $keypos => $key)
+        {
+            array_splice($path, $key - ($keypos * 2 + 1), 2);
+        }
+    
+        $path = implode('/', $path);
+        $path = str_replace('./', '', $path);
+        return $path;
+    }
 
-    public static function encode(string $path): string
+    public static function encode(string $path, bool $segmented = false): string
     {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
-        return implode(DIRECTORY_SEPARATOR, array_map(function ($part) use ($ext) {
+        $encoded = implode(DIRECTORY_SEPARATOR, array_map(function ($part) use ($ext) {
             return implode('*', array_map(function ($p) use ($ext) {
                 if (strpos($p, '.') !== 0) {
                     return base64_encode(basename($p, '.' . $ext));
@@ -384,6 +399,20 @@ class cloudFS
                 return '';
             }, explode('*', $part)));
         }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
+        return $segmented
+        ? dirname(
+            $encoded
+        )
+        . DIRECTORY_SEPARATOR
+        . substr(
+            basename(
+                $encoded
+            ),
+            0, 2
+        )
+        . DIRECTORY_SEPARATOR
+        . $encoded
+        : $encoded;
     }
 
     public static function decode(string $path, bool $segmented = false): string
