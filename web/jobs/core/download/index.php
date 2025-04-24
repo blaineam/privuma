@@ -177,7 +177,7 @@ foreach ($dataset as $item) {
         if (!array_key_exists($targetMetaDataPrefix, $metaDataFiles)) {
             $metaDataFiles[$targetMetaDataPrefix] = [];
         }
-        $metaDataFiles[$targetMetaDataPrefix][$item['hash']] = ["target" => ($item['album'] === "Favorites" ? "fa" : "pr"), "store" => $item['metadata']];
+        $metaDataFiles[$targetMetaDataPrefix][$item['hash']] = $item['metadata'];
     }
     $tags = substr(sanitizeLine(implode(', ', array_slice(explode(', ', explode(PHP_EOL, explode('Tags: ', $item['metadata'])[1] ?? '')[0]) ??
     [], 0, 60))), 0, 500);
@@ -234,12 +234,6 @@ $ops->file_put_contents('encrypted_mobile_data.js', $mobiledata);
 unset($mobiledata);
 
 $opsNoEncodeNoPrefix->file_put_contents("fa/favorites.json", $favorites);
-
-
-echo PHP_EOL .
-  'Checking ' .
-  count($dlData) .
-  ' media items have been downloaded';
 
 $previouslyDownloadedMedia = array_flip(
     array_map(
@@ -299,6 +293,14 @@ $newFavorites = array_filter($favoritesJson, function ($item) use (
     array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia));
     return $newFavorite && $fileExists;
 });
+
+
+
+echo PHP_EOL .
+  'Found ' .
+  count($newFavorites) .
+  ' New Favorites';
+
 $favoritesNames = array_map(function($item) {
   $filename = str_replace(
       [
@@ -332,6 +334,12 @@ $removedFavorites = array_filter($existingFavoritesPaths, function ($name) use (
   return !array_key_exists(basename($name), array_column($favoritesNames, "name")) && !array_key_exists(basename($name), array_column($favoritesNames, "thumbnail"));
 });
 
+
+echo PHP_EOL .
+  'Found ' .
+  count($removedFavorites) .
+  ' Removed Favorites';
+
 echo PHP_EOL."Syncing favorites";
 foreach($newFavorites as $favorite) {
   $ext = pathinfo($favorite["filename"], PATHINFO_EXTENSION);
@@ -359,9 +367,14 @@ foreach($removedFavorites as $name) {
 
 echo PHP_EOL . 'Downloading Mobile MetaData Stores';
 foreach ($metaDataFiles as $prefix => $item) {
-    $file = $item['target'] . DIRECTORY_SEPARATOR . 'meta' . DIRECTORY_SEPARATOR . $prefix . '.json';
+    $file = 'pr' . DIRECTORY_SEPARATOR . 'meta' . DIRECTORY_SEPARATOR . $prefix . '.json';
     echo PHP_EOL . 'Storing MetaData to: ' . $file;
-    $opsNoEncodeNoPrefix->file_put_contents($file, json_encode($item['store']));
+    $opsNoEncodeNoPrefix->file_put_contents($file, json_encode($item));
+}
+foreach ($metaDataFiles as $prefix => $item) {
+    $file = 'fa' . DIRECTORY_SEPARATOR . 'meta' . DIRECTORY_SEPARATOR . $prefix . '.json';
+    echo PHP_EOL . 'Storing MetaData to: ' . $file;
+    $opsNoEncodeNoPrefix->file_put_contents($file, json_encode($item));
 }
 
 echo PHP_EOL . 'Downloading Desktop Dataset';
@@ -394,6 +407,11 @@ unset($data);
 echo PHP_EOL . 'Database Downloads have been completed';
 
 
+
+echo PHP_EOL .
+  'Checking ' .
+  count($dlData) .
+  ' media items have been downloaded';
 
 echo PHP_EOL .
   'Filtering ' .
