@@ -372,17 +372,16 @@ class cloudFS
         }
         return false;
     }
-    
+
     public static function canonicalize($path)
     {
         $path = explode('/', $path);
         $keys = array_keys($path, '..');
-    
-        foreach($keys AS $keypos => $key)
-        {
+
+        foreach ($keys as $keypos => $key) {
             array_splice($path, $key - ($keypos * 2 + 1), 2);
         }
-    
+
         $path = implode('/', $path);
         $path = str_replace('./', '', $path);
         return $path;

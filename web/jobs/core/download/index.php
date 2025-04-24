@@ -197,15 +197,15 @@ foreach ($dataset as $item) {
     }
 }
 $mobiledata = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
-    array_values(array_filter($array, function($item) {
-      return !in_array("Favorites", $item['albums']);
+    array_values(array_filter($array, function ($item) {
+        return !in_array('Favorites', $item['albums']);
     })),
     JSON_THROW_ON_ERROR
 ))));
 
 $favorites = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
-    array_values(array_filter($array, function($item) {
-      return in_array("Favorites", $item['albums']);
+    array_values(array_filter($array, function ($item) {
+        return in_array('Favorites', $item['albums']);
     })),
     JSON_THROW_ON_ERROR
 ))));
@@ -233,7 +233,7 @@ $mobiledata = "const encrypted_data = '" . $mobiledata . "';";
 $ops->file_put_contents('encrypted_mobile_data.js', $mobiledata);
 unset($mobiledata);
 
-$opsNoEncodeNoPrefix->file_put_contents("fa/favorites.json", $favorites);
+$opsNoEncodeNoPrefix->file_put_contents('fa/favorites.json', $favorites);
 
 $previouslyDownloadedMedia = array_flip(
     array_map(
@@ -245,22 +245,22 @@ $previouslyDownloadedMedia = array_flip(
     )
 );
 
-echo PHP_EOL."Scanning favorites";
+echo PHP_EOL . 'Scanning favorites';
 $favoritesJson = json_decode($favorites, true) ;
 $existingFavoritesPaths = array_flip(
     array_map(
         fn ($item) => trim($item, "\/"),
         array_column(
-            $opsFavorites->scandir("", true, true, null, false, true, true, true),
+            $opsFavorites->scandir('', true, true, null, false, true, true, true),
             'Path'
         )
     )
 );
-$existingFavorites = array_map(function($item) {
-  return basename($item);
+$existingFavorites = array_map(function ($item) {
+    return basename($item);
 }, $existingFavoritesPaths);
 $newFavorites = array_filter($favoritesJson, function ($item) use (
-    $existingFavorites, 
+    $existingFavorites,
     $previouslyDownloadedMedia
 ) {
     $filename = str_replace(
@@ -294,75 +294,72 @@ $newFavorites = array_filter($favoritesJson, function ($item) use (
     return $newFavorite && $fileExists;
 });
 
-
-
 echo PHP_EOL .
   'Found ' .
   count($newFavorites) .
   ' New Favorites';
 
-$favoritesNames = array_map(function($item) {
-  $filename = str_replace(
-      [
-        '.mpg',
-        '.mod',
-        '.mmv',
-        '.tod',
-        '.wmv',
-        '.asf',
-        '.avi',
-        '.divx',
-        '.mov',
-        '.m4v',
-        '.3gp',
-        '.3g2',
-        '.m2t',
-        '.m2ts',
-        '.mts',
-        '.mkv',
-      ],
-      '.mp4',
-      $item['filename']
-  );
-  $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
-  $thumbnailPreserve = $item['hash'] . '.jpg';
-  return ["name" => $preserve, "thumbnail" => $thumbnailPreserve];
+$favoritesNames = array_map(function ($item) {
+    $filename = str_replace(
+        [
+          '.mpg',
+          '.mod',
+          '.mmv',
+          '.tod',
+          '.wmv',
+          '.asf',
+          '.avi',
+          '.divx',
+          '.mov',
+          '.m4v',
+          '.3gp',
+          '.3g2',
+          '.m2t',
+          '.m2ts',
+          '.mts',
+          '.mkv',
+        ],
+        '.mp4',
+        $item['filename']
+    );
+    $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
+    $thumbnailPreserve = $item['hash'] . '.jpg';
+    return ['name' => $preserve, 'thumbnail' => $thumbnailPreserve];
 }, $favoritesJson);
 $removedFavorites = array_filter($existingFavoritesPaths, function ($name) use (
     $favoritesNames
 ) {
-  return !array_key_exists(basename($name), array_column($favoritesNames, "name")) && !array_key_exists(basename($name), array_column($favoritesNames, "thumbnail"));
+    return !array_key_exists(basename($name), array_column($favoritesNames, 'name')) && !array_key_exists(basename($name), array_column($favoritesNames, 'thumbnail'));
 });
-
 
 echo PHP_EOL .
   'Found ' .
   count($removedFavorites) .
   ' Removed Favorites';
 
-echo PHP_EOL."Syncing favorites";
-foreach($newFavorites as $favorite) {
-  $ext = pathinfo($favorite["filename"], PATHINFO_EXTENSION);
-  $src = cloudFS::canonicalize("pr" . DIRECTORY_SEPARATOR . cloudFS::encode($favorite["hash"] . '.' . $ext, true));
-  $dst = cloudFS::canonicalize("fa" . DIRECTORY_SEPARATOR . cloudFS::encode($favorite["hash"] . '.' . $ext, true));
-  echo PHP_EOL."Moving favorite: " . $src . "  to: " . $dst;
-  $opsNoEncodeNoPrefix->rename($src, $dst, true);
-  if (in_array(strtolower($ext), ["webm", "mp4", "gif"])) {
-    $src = cloudFS::canonicalize("pr" . DIRECTORY_SEPARATOR . cloudFS::encode($favorite["hash"] . '.' . "jpg", true));
-    $dst = cloudFS::canonicalize("fa" . DIRECTORY_SEPARATOR . cloudFS::encode($favorite["hash"] . '.' . "jpg", true));
-    echo PHP_EOL."Moving favorite: " . $src . "  to: " . $dst;
+echo PHP_EOL . 'Syncing favorites';
+foreach ($newFavorites as $favorite) {
+    $ext = pathinfo($favorite['filename'], PATHINFO_EXTENSION);
+    $src = cloudFS::canonicalize('pr' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.' . $ext, true));
+    $dst = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.' . $ext, true));
+    echo PHP_EOL . 'Moving favorite: ' . $src . '  to: ' . $dst;
     $opsNoEncodeNoPrefix->rename($src, $dst, true);
-  }
+    if (in_array(strtolower($ext), ['webm', 'mp4', 'gif'])) {
+        $src = cloudFS::canonicalize('pr' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.' . 'jpg', true));
+        $dst = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.' . 'jpg', true));
+        echo PHP_EOL . 'Moving favorite: ' . $src . '  to: ' . $dst;
+        $opsNoEncodeNoPrefix->rename($src, $dst, true);
+    }
 }
 
-foreach($removedFavorites as $name) {
-  $ext = pathinfo($name, PATHINFO_EXTENSION);
-  if (count(explode(DIRECTORY_SEPARATOR, $name)) > 1 && in_array(strtolower($ext), ["webm", "mp4", "gif", "jpg", "png"])) {
-    $src = cloudFS::canonicalize("fa" . DIRECTORY_SEPARATOR . $name);
-    $dst = cloudFS::canonicalize("pr" . DIRECTORY_SEPARATOR . $name);
-    echo PHP_EOL."Moving de-favorited media: " . $src . "  to: " . $dst;
-    $opsNoEncodeNoPrefix->rename($src, $dst, true);
-  }
+foreach ($removedFavorites as $name) {
+    $ext = pathinfo($name, PATHINFO_EXTENSION);
+    if (count(explode(DIRECTORY_SEPARATOR, $name)) > 1 && in_array(strtolower($ext), ['webm', 'mp4', 'gif', 'jpg', 'png'])) {
+        $src = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . $name);
+        $dst = cloudFS::canonicalize('pr' . DIRECTORY_SEPARATOR . $name);
+        echo PHP_EOL . 'Moving de-favorited media: ' . $src . '  to: ' . $dst;
+        $opsNoEncodeNoPrefix->rename($src, $dst, true);
+    }
 }
 
 echo PHP_EOL . 'Downloading Mobile MetaData Stores';
@@ -395,8 +392,8 @@ foreach ($dataset as $item) {
     }
 }
 $data = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
-    array_values(array_filter($array, function($item) {
-      return !in_array("Favorites", $item['albums']);
+    array_values(array_filter($array, function ($item) {
+        return !in_array('Favorites', $item['albums']);
     })),
     JSON_THROW_ON_ERROR
 ))));
@@ -405,8 +402,6 @@ $ops->file_put_contents('encrypted_data.js', $data);
 unset($data);
 
 echo PHP_EOL . 'Database Downloads have been completed';
-
-
 
 echo PHP_EOL .
   'Checking ' .
@@ -453,7 +448,7 @@ $existingFavorites = array_flip(
     array_map(
         fn ($item) => trim($item, "\/"),
         array_column(
-            $opsFavorites->scandir("", true, true, null, false, true, true, true),
+            $opsFavorites->scandir('', true, true, null, false, true, true, true),
             'Name'
         )
     )
