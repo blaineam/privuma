@@ -588,6 +588,7 @@
         script.type = "text/javascript";
         script.src = url;
         script.onload = callback;
+        script.onerror = callback;
         head.appendChild(script);
       }
 
@@ -2139,17 +2140,17 @@
             });
         });
       }
-
+      
       function runApp() {
         document.body.classList.add("authed");
         loadMediaTypeSelections();
         var delim = "1--57--2";
         let decompressedArray = [];
-        [
+        ((typeof encrypted_data !== 'undefined') ? [
           ...(window.mobileCheck()
             ? JSON.parse(encrypted_data)
             : encrypted_data),
-        ].forEach((item) => {
+        ] : []).forEach((item) => {
           if (item.albums.length) {
             item.albums.forEach((album, index) => {
               decompressedArray.push({
