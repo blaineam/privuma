@@ -287,9 +287,9 @@ $newFavorites = array_filter($favoritesJson, function ($item) use (
     );
     $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
     $thumbnailPreserve = $item['hash'] . '.jpg';
-    $newFavorite = !array_key_exists($preserve, $existingFavorites) || ((str_contains($preserve, '.webm') || str_contains($preserve, '.mp4')) &&
+    $newFavorite = !array_key_exists($preserve, $existingFavorites) || ((str_contains($preserve, '.webm') || str_contains($preserve, '.mp4') || str_contains($preserve, '.gif')) &&
       !array_key_exists($thumbnailPreserve, $existingFavorites));
-    $fileExists = array_key_exists($preserve, $previouslyDownloadedMedia) && ((str_contains($preserve, '.webm') || str_contains($preserve, '.mp4')) &&
+    $fileExists = array_key_exists($preserve, $previouslyDownloadedMedia) && ((str_contains($preserve, '.webm') || str_contains($preserve, '.mp4') || str_contains($preserve, '.gif')) &&
     array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia));
     return $newFavorite && $fileExists;
 });
