@@ -273,10 +273,10 @@ if (isset($_GET['path'])) {
             die();
         }
     }
-    
+
     if (isset($_GET['nocache']) && strstr($_GET['path'], 'favorites.json')) {
-      http_response_code(404);
-      die();
+        http_response_code(404);
+        die();
     }
 
     set_time_limit(1);
