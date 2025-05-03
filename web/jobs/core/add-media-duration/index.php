@@ -34,16 +34,16 @@ foreach (array_chunk($results, 2000) as $key => $chunk) {
         if (!is_null($album) && !is_null($filename)) {
             if (is_null($url)) {
                 $preserve = privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename;
-                $url = "http://" . privuma::getEnv("CLOUDFS_HTTP_ENDPOINT") . "/" . $preserve;
-                echo PHP_EOL."Missing URL, Using Media URL Instead: ".$url;
+                $url = 'http://' . privuma::getEnv('CLOUDFS_HTTP_ENDPOINT') . '/' . $preserve;
+                echo PHP_EOL . 'Missing URL, Using Media URL Instead: ' . $url;
             }
-            $duration = shell_exec('ffprobe -i "'.$url.'" -show_entries format=duration -v quiet -of csv="p=0"');
+            $duration = shell_exec('ffprobe -i "' . $url . '" -show_entries format=duration -v quiet -of csv="p=0"');
             if ($duration === false || is_null($duration)) {
-                echo PHP_EOL."Failed to determine media Duration: " . $url;
+                echo PHP_EOL . 'Failed to determine media Duration: ' . $url;
                 continue;
             }
             $duration = intval($duration);
-            echo PHP_EOL."Duration Determined: ".$duration;
+            echo PHP_EOL . 'Duration Determined: ' . $duration;
             $duration_stmt = $conn->prepare('update media set duration = ? WHERE id = ?');
             $duration_stmt->execute([$duration, $row['id']]);
         }
