@@ -3,6 +3,7 @@ node_modules
 @eaDir
 **/*.sql
 *.sql
+*.log
 **/*.csv
 .env
 .auth
