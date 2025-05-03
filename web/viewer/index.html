@@ -1757,12 +1757,12 @@
           );
         };
       });
-      
+
       function formatSeconds(seconds) {
         const hrs = Math.floor(seconds / 3600);
         const mins = Math.floor((seconds % 3600) / 60);
         const secs = seconds % 60;
-        
+
         if (hrs > 0) {
           // Pad both minutes and seconds when hours are shown
           const paddedMins = mins < 10 ? `0${mins}` : mins;
@@ -2099,7 +2099,7 @@
                         time: item["ModTime"].split(".")[0].replace("T", " "),
                         metadata: "",
                         vr: 1,
-                        duration: item["Duration"] ?? 0
+                        duration: item["Duration"] ?? 0,
                       };
                     });
                     window.alldata = [
@@ -2138,7 +2138,7 @@
                                   hash: item.hash,
                                   metadata: item.metadata,
                                   time: item.times[index],
-                                  duration: item.duration
+                                  duration: item.duration,
                                 });
                               });
                             } else {
@@ -2198,7 +2198,7 @@
                 hash: item.hash,
                 metadata: item.metadata,
                 time: item.times[index],
-                duration: item.duration
+                duration: item.duration,
               });
             });
           } else {
@@ -2607,7 +2607,7 @@
                     item.hash,
                     vr,
                     flash,
-                    item.duration
+                    item.duration,
                   ]);
                 }
                 if (("photo" == kind || "all" == kind) && !isVideo) {
@@ -2624,7 +2624,7 @@
                     item.hash,
                     item.vr === 1,
                     item.flash === 1,
-                    0
+                    0,
                   ]);
                 }
               }),
@@ -2645,7 +2645,7 @@
                       hash,
                       vr,
                       flash,
-                      duration
+                      duration,
                     ]) =>
                       flash
                         ? jQuery("#content").append(
@@ -2653,12 +2653,20 @@
                           )
                         : vr
                           ? jQuery("#content").append(
-                              `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-filehash="${hash}" loading="lazy" alt="" /></div>` + (duration ? `<span class="thumb-duration">${formatSeconds(duration)}</span>` : '') + `</a>`,
+                              `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-filehash="${hash}" loading="lazy" alt="" /></div>` +
+                                (duration
+                                  ? `<span class="thumb-duration">${formatSeconds(duration)}</span>`
+                                  : "") +
+                                `</a>`,
                             )
                           : isVideo
                             ? jQuery("#content").append(
                                 `<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery"  data-filehash="${hash}"  href="${videoResource}">
-          <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""></div>` + (duration ? `<span class="thumb-duration">${formatSeconds(duration)}</span>` : '') + `<script type="text/json">${meta}<\/script>` +
+          <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""></div>` +
+                                  (duration
+                                    ? `<span class="thumb-duration">${formatSeconds(duration)}</span>`
+                                    : "") +
+                                  `<script type="text/json">${meta}<\/script>` +
                                   (datatype === "video"
                                     ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <rect x="0" fill="none" width="24" height="24"/>
@@ -2852,9 +2860,9 @@
               var videoskind = kind == "all" || kind == "video" ? "1" : "0";
               let targetAlbum = shouldOpenAlbum(window.allAlbums, album);
               if (targetAlbum) {
-                var id = window.allAlbums?.find(
-                  (item) => item?.album == targetAlbum,
-                )?.id ?? 0;
+                var id =
+                  window.allAlbums?.find((item) => item?.album == targetAlbum)
+                    ?.id ?? 0;
                 if (localStorage.getItem("LastRequestedAlbum") === id) {
                   const backHash = targetAlbum.split("---");
                   backHash.pop();
