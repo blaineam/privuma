@@ -107,7 +107,7 @@ services:
           # cpus: "2.0"
           memory: 3G
   db:
-    image: mariadb
+    image: mariadb:lts-jammy
     restart: always
     container_name: privuma_db
     env_file:

@@ -44,7 +44,7 @@ $opsPlain = new cloudFS(
 );
 
 echo PHP_EOL . 'Building list of media to download';
-$stmt = $conn->prepare("select filename, album, time, hash, url, thumbnail
+$stmt = $conn->prepare("select filename, album, time, hash, url, thumbnail, duration
 from media
 where hash is not null
 and hash != ''
@@ -58,7 +58,7 @@ $stmt->execute();
 $dlData = $stmt->fetchAll();
 echo PHP_EOL . 'Building web app payload of media to download';
 $stmt = $conn->prepare(
-    "SELECT filename, album, dupe, time, hash, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE (album = 'Favorites' or blocked = 0) and hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;"
+    "SELECT filename, album, dupe, time, hash, duration, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE (album = 'Favorites' or blocked = 0) and hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;"
 );
 $stmt->execute();
 $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
@@ -190,6 +190,7 @@ foreach ($dataset as $item) {
           'hash' => $item['hash'],
           'times' => [$item['time']],
           'metadata' => $item['metadata'],
+          'duration' => $item['duration']
         ];
     } else {
         $array[$item['hash']]['albums'][] = sanitizeLine($item['album']);
