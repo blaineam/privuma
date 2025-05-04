@@ -68,9 +68,9 @@ foreach (array_chunk($results, 2000) as $key => $chunk) {
                 $sound_stmt->execute([-91, $row['hash']]);
                 continue;
             }
-            $parts = explode(":", $volume);
+            $parts = explode(':', $volume);
             $volume = end($parts);
-            $volume = floatval(explode(" ", trim($volume))[0]);
+            $volume = floatval(explode(' ', trim($volume))[0]);
             echo PHP_EOL . getPos($ikey, $key, $total) . 'Volume Determined: ' . $volume;
             $sound_stmt = $conn->prepare('update media set sound = ? WHERE hash = ? AND (sound is null OR sound = -91)');
             $sound_stmt->execute([$volume, $row['hash']]);
