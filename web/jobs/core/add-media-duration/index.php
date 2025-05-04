@@ -24,30 +24,29 @@ if (isset($_GET['albums'])) {
     $album = " and album in ({$albums}) ";
 }
 
-
-$exts = ["mp4", "mov", "webm"];
+$exts = ['mp4', 'mov', 'webm'];
 if (isset($_GET['exts'])) {
-    $exts = explode(",", $_GET['exts']);
+    $exts = explode(',', $_GET['exts']);
 }
-
 
 $refresh = '';
 if (isset($_GET['refresh'])) {
-    $refresh = " or duration = -1 ";
+    $refresh = ' or duration = -1 ';
     // Only Add Gif Duration during Refresh Call since Gifs are Slower to process.
-    $exts[] = "gif";
+    $exts[] = 'gif';
 }
 
-$extQuery = implode(" or ", array_map(function($ext) {
+$extQuery = implode(' or ', array_map(function ($ext) {
     return " filename like '%.$ext' or url like '%.$ext%' ";
 }, $exts));
 
 $select_results = $conn->query("SELECT hash, album, filename, url FROM media where (duration is null {$refresh}) and ({$extQuery}) and album != 'Favorites' {$album} group by hash order by id desc");
 $results = $select_results->fetchAll(PDO::FETCH_ASSOC);
-    $total = count($results);
+$total = count($results);
 echo PHP_EOL . 'Checking ' . $total . ' database records';
 
-function getPos($innerKey, $outerKey, $total) {
+function getPos($innerKey, $outerKey, $total)
+{
     $pos = ($outerKey * 2000) + $innerKey;
     $percent = round($pos / $total, 5) * 100;
     return "$pos / $total ($percent%)  ";
@@ -72,7 +71,7 @@ foreach (array_chunk($results, 2000) as $key => $chunk) {
                 continue;
             }
             $duration = intval($duration);
-            echo PHP_EOL . getPos($ikey, $key, $total) .  'Duration Determined: ' . $duration;
+            echo PHP_EOL . getPos($ikey, $key, $total) . 'Duration Determined: ' . $duration;
             $duration_stmt = $conn->prepare('update media set duration = ? WHERE hash = ? AND (duration is null OR duration = -1)');
             $duration_stmt->execute([$duration, $row['hash']]);
         }
