@@ -93,6 +93,7 @@ class privuma
                 `metadata` varchar(9512) DEFAULT NULL,
                 `blocked` int(1) DEFAULT 1,
                 `duration` bigint(20) DEFAULT NULL,
+                `sound` FLOAT DEFAULT NULL,
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `media_id_IDX` (`id`) USING BTREE,
                 KEY `media_hash_IDX` (`hash`) USING BTREE,
@@ -130,7 +131,8 @@ class privuma
                     `time` datetime DEFAULT CURRENT_TIMESTAMP,
                     `metadata` TEXT DEFAULT NULL,
                     `blocked` INTEGER DEFAULT 1,
-                    `duration` INTEGER DEFAULT NULL
+                    `duration` INTEGER DEFAULT NULL,
+                    `sound` REAL DEFAULT NULL
                     );');
 
                 $this->pdo->exec(

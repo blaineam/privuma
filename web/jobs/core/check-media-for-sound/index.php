@@ -20,7 +20,7 @@ if (isset($_GET['albums'])) {
     $albums = implode(', ', array_map(function ($albumItem) use ($conn) {
         return $conn->quote($albumItem);
     }, explode(',', $_GET['albums'])));
-    echo PHP_EOL . "checking media durations in album: {$albums}";
+    echo PHP_EOL . "checking sound in album: {$albums}";
     $album = " and album in ({$albums}) ";
 }
 
@@ -31,16 +31,15 @@ if (isset($_GET['exts'])) {
 
 $refresh = '';
 if (isset($_GET['refresh'])) {
-    $refresh = ' or duration = -1 ';
-    // Only Add Gif Duration during Refresh Call since Gifs are Slower to process.
-    $exts[] = 'gif';
+    $refresh = ' or sound = -91 ';
 }
 
 $extQuery = implode(' or ', array_map(function ($ext) {
     return " filename like '%.$ext' or url like '%.$ext%' ";
 }, $exts));
 
-$select_results = $conn->query("SELECT hash, album, filename, url FROM media where (duration is null {$refresh}) and ({$extQuery}) and album != 'Favorites' {$album} group by hash order by id desc");
+$query = "SELECT hash, album, filename, url FROM media where (sound is null {$refresh}) and ({$extQuery}) and album != 'Favorites' {$album} AND (`metadata` NOT LIKE '%no_sound%') group by hash order by id desc";
+$select_results = $conn->query($query);
 $results = $select_results->fetchAll(PDO::FETCH_ASSOC);
 $total = count($results);
 echo PHP_EOL . 'Checking ' . $total . ' database records';
@@ -61,19 +60,20 @@ foreach (array_chunk($results, 2000) as $key => $chunk) {
             if (is_null($url) || empty($url)) {
                 $preserve = privuma::getDataFolder() . DIRECTORY_SEPARATOR . mediaFile::MEDIA_FOLDER . DIRECTORY_SEPARATOR . $album . DIRECTORY_SEPARATOR . $filename;
                 $url = 'http://' . privuma::getEnv('CLOUDFS_HTTP_ENDPOINT') . '/' . cloudFS::encode($preserve);
-                //echo PHP_EOL . 'Missing URL, Using Media URL Instead: ' . $url;
             }
-            $duration = shell_exec('ffprobe -i "' . $url . '" -show_entries format=duration -v quiet -of csv="p=0"');
-            if ($duration === false || is_null($duration)) {
-                echo PHP_EOL . getPos($ikey, $key, $total) . 'Failed to determine media Duration: ' . $url;
-                $duration_stmt = $conn->prepare('update media set duration = ? WHERE hash = ? AND (duration is null OR duration = -1)');
-                $duration_stmt->execute([-1, $row['hash']]);
+            $volume = shell_exec('ffmpeg -hide_banner -i "' . $url . '" -af volumedetect -vn -f null - 2>&1 | grep mean_volume');
+            if ($volume === false || is_null($volume) || empty($volume)) {
+                echo PHP_EOL . getPos($ikey, $key, $total) . 'Failed to determine media Volume: ' . $url;
+                $sound_stmt = $conn->prepare('update media set sound = ? WHERE hash = ? AND (sound is null OR sound = -91)');
+                $sound_stmt->execute([-91, $row['hash']]);
                 continue;
             }
-            $duration = intval($duration);
-            echo PHP_EOL . getPos($ikey, $key, $total) . 'Duration Determined: ' . $duration;
-            $duration_stmt = $conn->prepare('update media set duration = ? WHERE hash = ? AND (duration is null OR duration = -1)');
-            $duration_stmt->execute([$duration, $row['hash']]);
+            $parts = explode(":", $volume);
+            $volume = end($parts);
+            $volume = floatval(explode(" ", trim($volume))[0]);
+            echo PHP_EOL . getPos($ikey, $key, $total) . 'Volume Determined: ' . $volume;
+            $sound_stmt = $conn->prepare('update media set sound = ? WHERE hash = ? AND (sound is null OR sound = -91)');
+            $sound_stmt->execute([$volume, $row['hash']]);
         }
     }
 }
