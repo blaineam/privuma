@@ -128,7 +128,7 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false): array
             $blocked = '';
         }
         $stmt = $conn->prepare(
-            "SELECT filename, album, dupe, time, hash, duration, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE $blocked hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;"
+            "SELECT filename, album, dupe, time, hash, duration, sound, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE $blocked hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;"
         );
         $stmt->execute();
         $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
@@ -190,7 +190,8 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false): array
                       'hash' => $item['hash'],
                       'times' => [$item['time']],
                       'metadata' => $item['metadata'],
-                      'duration' => $item['duration']
+                      'duration' => $item['duration'],
+                      'sound' => $item['sound']
                     ];
                 } else {
                     $array[$item['hash']]['albums'][] = sanitizeLine($item['album']);
