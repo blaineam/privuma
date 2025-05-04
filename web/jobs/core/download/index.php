@@ -329,7 +329,8 @@ $favoritesNames = array_map(function ($item) {
 $removedFavorites = array_filter($existingFavoritesPaths, function ($name) use (
     $favoritesNames
 ) {
-    return !array_key_exists(basename($name), array_column($favoritesNames, 'name')) && !array_key_exists(basename($name), array_column($favoritesNames, 'thumbnail'));
+  $ext = pathinfo($name, PATHINFO_EXTENSION);
+  return !array_key_exists(basename($name), array_column($favoritesNames, 'name')) && !array_key_exists(basename($name), array_column($favoritesNames, 'thumbnail')) && count(explode(DIRECTORY_SEPARATOR, $name)) > 1 && in_array(strtolower($ext), ['webm', 'mp4', 'gif', 'jpg', 'png']);
 });
 
 echo PHP_EOL .
@@ -353,13 +354,10 @@ foreach ($newFavorites as $favorite) {
 }
 
 foreach ($removedFavorites as $name) {
-    $ext = pathinfo($name, PATHINFO_EXTENSION);
-    if (count(explode(DIRECTORY_SEPARATOR, $name)) > 1 && in_array(strtolower($ext), ['webm', 'mp4', 'gif', 'jpg', 'png'])) {
-        $src = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . $name);
-        $dst = cloudFS::canonicalize('pr' . DIRECTORY_SEPARATOR . $name);
-        echo PHP_EOL . 'Moving de-favorited media: ' . $src . '  to: ' . $dst;
-        $opsNoEncodeNoPrefix->rename($src, $dst, true);
-    }
+  $src = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . $name);
+  $dst = cloudFS::canonicalize('pr' . DIRECTORY_SEPARATOR . $name);
+  echo PHP_EOL . 'Moving de-favorited media: ' . $src . '  to: ' . $dst;
+  $opsNoEncodeNoPrefix->rename($src, $dst, true);
 }
 
 echo PHP_EOL . 'Downloading Mobile MetaData Stores';

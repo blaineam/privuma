@@ -2607,7 +2607,7 @@
                     item.hash,
                     vr,
                     flash,
-                    item.duration,
+                    item.duration > 0 ? item.duration : 0,
                   ]);
                 }
                 if (("photo" == kind || "all" == kind) && !isVideo) {
