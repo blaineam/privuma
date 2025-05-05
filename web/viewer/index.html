@@ -3189,19 +3189,21 @@
                 instance.loadSlide(slide);
               }
 
-						
               var retry = 0;
-              $('video').on('error', function() {
-                if(retry < 4){
+              $("video").on("error", function () {
+                if (retry < 4) {
                   retry++;
-                  setTimeout(function(){
+                  setTimeout(function () {
                     $("video")
                       .find("source")
                       .attr("src", uri)
                       .parent()
                       .trigger("load");
-                      
-                    $("video").prop("currentTime", window.currentAlbumPosition.currentTime ?? 0);
+
+                    $("video").prop(
+                      "currentTime",
+                      window.currentAlbumPosition.currentTime ?? 0,
+                    );
                     $("video").trigger("play");
                   }, 1000);
                 }
@@ -3211,15 +3213,21 @@
                 .attr("src", uri)
                 .parent()
                 .trigger("load");
-              
-              $("video").prop("currentTime", window.currentAlbumPosition.currentTime ?? 0);
+
+              $("video").prop(
+                "currentTime",
+                window.currentAlbumPosition.currentTime ?? 0,
+              );
               $("video").trigger("play");
-              $("video").on("loadedmetadata", function() {
-                $(this).prop("currentTime", window.currentAlbumPosition.currentTime ?? 0);
+              $("video").on("loadedmetadata", function () {
+                $(this).prop(
+                  "currentTime",
+                  window.currentAlbumPosition.currentTime ?? 0,
+                );
                 $("video").trigger("play");
-              });	
-              
-              $("video").on("timeupdate", function() {
+              });
+
+              $("video").on("timeupdate", function () {
                 updatePlaybackTimestamp(
                   originalLink.data("filehash"),
                   window.currentAlbum,
