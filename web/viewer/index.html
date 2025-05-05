@@ -3150,7 +3150,6 @@
                 });
               return;
             }
-
             try {
               $("video").trigger("pause");
               var videoDuration = $("video").attr("duration");
@@ -3190,23 +3189,41 @@
                 instance.loadSlide(slide);
               }
 
-              // $(
-              //     '.gallerypicture[href="' + slide.src + '"]',
-              // ).attr("href", uri);
+						
+              var retry = 0;
+              $('video').on('error', function() {
+                if(retry < 4){
+                  retry++;
+                  setTimeout(function(){
+                    $("video")
+                      .find("source")
+                      .attr("src", uri)
+                      .parent()
+                      .trigger("load");
+                      
+                    $("video").prop("currentTime", window.currentAlbumPosition.currentTime ?? 0);
+                    $("video").trigger("play");
+                  }, 1000);
+                }
+              });
               $("video")
-                .find("Source:first")
+                .find("source")
                 .attr("src", uri)
                 .parent()
-                .trigger("load")
-                .trigger("play");
-              let videoElement = document.getElementsByTagName("video")[0];
-              videoElement.currentTime =
-                window.currentAlbumPosition.currentTime ?? 0;
-              videoElement.addEventListener("timeupdate", (e) => {
+                .trigger("load");
+              
+              $("video").prop("currentTime", window.currentAlbumPosition.currentTime ?? 0);
+              $("video").trigger("play");
+              $("video").on("loadedmetadata", function() {
+                $(this).prop("currentTime", window.currentAlbumPosition.currentTime ?? 0);
+                $("video").trigger("play");
+              });	
+              
+              $("video").on("timeupdate", function() {
                 updatePlaybackTimestamp(
                   originalLink.data("filehash"),
                   window.currentAlbum,
-                  videoElement,
+                  $("video").get(0),
                 );
               });
             });
