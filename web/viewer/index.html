@@ -2,12 +2,11 @@
 <html lang="en-US">
   <head>
     <title>Privuma(Offline Web App)</title>
-    <meta charset="utf-8" />
-    <meta name="referrer" content="no-referrer" />
+    <meta charset="utf-8">
+    <meta name="referrer" content="no-referrer">
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, shrink-to-fit=no"
-    />
+      content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <!-- prettier-ignore -->
     <style>@charset "UTF-8";
     /*!
@@ -349,7 +348,7 @@
       function loadMediaTypeSelections() {
         let currentMediaTypes = JSON.parse(
           window.localStorage.getItem("media-types-selected") ??
-            '{"gifs": true, "videos": true, "photos": true}',
+            '{"gifs": true, "videos": true, "videoswithsound": true, "sortbyduration": false, "photos": true}',
         );
         Object.entries(currentMediaTypes).forEach(([key, val]) => {
           val
@@ -362,7 +361,7 @@
       function saveMediaTypeSelections() {
         let currentMediaTypes = JSON.parse(
           window.localStorage.getItem("media-types-selected") ??
-            '{"gifs": true, "videos": true, "photos": true}',
+            '{"gifs": true, "videos": true, "photos": true, "videoswithsound": true, "sortbyduration": false }',
         );
         Object.entries(currentMediaTypes).forEach(([key, val]) => {
           currentMediaTypes[key] = $(`#media-type-${key}`).hasClass("active");
@@ -1036,8 +1035,7 @@
         type="password"
         class="form-control"
         id="downloadPassword"
-        placeholder="Password"
-      />
+        placeholder="Password">
       <button class="btn btn-primary" id="unlockBtn">Unlock</button>
     </div>
     <div id="searchBox">
@@ -1047,8 +1045,7 @@
         class="form-control"
         id="searchInput"
         name="search"
-        placeholder="Search"
-      />
+        placeholder="Search">
       <a class="btn btn-secondary trigger-collapsible" id="tags-toggle"
         ><svg
           fill="None"
@@ -1073,8 +1070,16 @@
       ></a>
       <ul id="tags" class="collapsible collapsed"></ul>
     </div>
-    <ul id="media-types">
-      <li id="media-type-gifs" class="active">
+    <ul id="media-types">   
+      <li id="media-type-sortbyduration">
+        <svg width="30px" height="30px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g stroke-width="0"/>
+        <g stroke-linecap="round" stroke-linejoin="round"/>
+        <g> <path fill-rule="evenodd" clip-rule="evenodd" d="M17 17C19.7614 17 22 14.7614 22 12C22 9.23858 19.7614 7 17 7C14.2386 7 12 9.23858 12 12C12 14.7614 14.2386 17 17 17ZM17.75 10C17.75 9.58579 17.4142 9.25 17 9.25C16.5858 9.25 16.25 9.58579 16.25 10V11.8462C16.25 12.0266 16.3151 12.201 16.4332 12.3374L17.4332 13.4912C17.7045 13.8042 18.1782 13.838 18.4912 13.5668C18.8042 13.2955 18.838 12.8218 18.5668 12.5088L17.75 11.5664V10Z" fill="#ffffff"/> <g opacity="0.5"> <path fill-rule="evenodd" clip-rule="evenodd" d="M1.25 7C1.25 6.58579 1.58579 6.25 2 6.25H10C10.4142 6.25 10.75 6.58579 10.75 7C10.75 7.41421 10.4142 7.75 10 7.75H2C1.58579 7.75 1.25 7.41421 1.25 7ZM1.25 12C1.25 11.5858 1.58579 11.25 2 11.25H8C8.41421 11.25 8.75 11.5858 8.75 12C8.75 12.4142 8.41421 12.75 8 12.75H2C1.58579 12.75 1.25 12.4142 1.25 12ZM1.25 17C1.25 16.5858 1.58579 16.25 2 16.25H10C10.4142 16.25 10.75 16.5858 10.75 17C10.75 17.4142 10.4142 17.75 10 17.75H2C1.58579 17.75 1.25 17.4142 1.25 17Z" fill="#ffffff"/> </g> </g>
+        </svg>
+      </li>
+      <li><hr></li>
+      <li id="media-type-gifs">
         <svg
           width="30px"
           height="30px"
@@ -1105,6 +1110,9 @@
             />
           </g>
         </svg>
+      </li>
+      <li id="media-type-videoswithsound">
+        <svg width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" style="fill:#fff;"/><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg>
       </li>
       <li id="media-type-photos">
         <svg
@@ -2452,7 +2460,7 @@
             }
 
             $("body").addClass("album");
-
+            let mediaFilters = loadMediaTypeSelections();
             res.sort((a, b) => {
               let aext = a["filename"].split(".").pop();
               let bext = b["filename"].split(".").pop();
@@ -2485,6 +2493,10 @@
                 !["webm", "mp4"].includes(aext)
               ) {
                 return 1;
+              }
+
+              if (mediaFilters["sortbyduration"]) {
+                  return b["duration"] - a["duration"];
               }
 
               return b["time"] - a["time"];
@@ -2659,7 +2671,13 @@
                           )
                         : vr
                           ? jQuery("#content").append(
-                              `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-filehash="${hash}" loading="lazy" alt="" /></div>` +
+                              `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}" ` +
+                              (duration
+                                ? `data-duration="true"`
+                                : "") + `  ` +
+                                (sound
+                                  ? `data-sound="true"`
+                                  : "") + ` ><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-filehash="${hash}" loading="lazy" alt="" /></div>` +
                                 (duration
                                   ? `<span class="thumb-duration">${formatSeconds(duration)}</span>`
                                   : "") +
@@ -2670,12 +2688,18 @@
                                   <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
                                 </g>
                                 </svg>`
-                                  : `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" style="fill:#fff;"/><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg>`) +
+                                  : `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" style="fill:#fff;"/><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg>`) +
                                 `</a>`,
                             )
                           : isVideo
                             ? jQuery("#content").append(
-                                `<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery"  data-filehash="${hash}"  href="${videoResource}">
+                                `<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery"  data-filehash="${hash}"  href="${videoResource}" ` +
+                                (duration
+                                  ? `data-duration="true"`
+                                  : "") + `  ` +
+                                  (sound
+                                    ? `data-sound="true"`
+                                    : "") + ` >
           <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""></div>` +
                                   (duration
                                     ? `<span class="thumb-duration">${formatSeconds(duration)}</span>`
@@ -2689,7 +2713,7 @@
               </g>
               </svg>`
                                     : datatype === "video" && sound
-                                      ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" style="fill:#fff;"/><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg>`
+                                      ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" style="fill:#fff;"/><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg>`
                                       : ``) +
                                   `</a>`,
                               )
@@ -2708,8 +2732,11 @@
                     if (key == "gifs") {
                       $('.gallerypicture[href*=".gif"]').remove();
                     } else if (key == "videos") {
-                      $('.gallerypicture[href*=".mp4"]').remove();
-                      $('.gallerypicture[href*=".webm"]').remove();
+                      $('.gallerypicture[href*=".mp4"]:not([data-sound])').remove();
+                      $('.gallerypicture[href*=".webm"]:not([data-sound])').remove();
+                    } else  if (key == "videoswithsound") {
+                      $('.gallerypicture[href*=".mp4"][data-sound]').remove();
+                      $('.gallerypicture[href*=".webm"][data-sound]').remove();
                     } else if (key == "photos") {
                       $('.gallerypicture[href*=".png"]').remove();
                       $('.gallerypicture[href*=".jpg"]').remove();
