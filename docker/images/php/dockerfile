@@ -102,7 +102,8 @@ pip3 install gallery-dl --break-system-packages
 
 RUN apt-get install -y  libimage-exiftool-perl ocrmypdf wget
 
-RUN apt-get install -y megatools
+RUN curl -L https://xff.cz/megatools/builds/builds/megatools-1.11.4.20250411-linux-$(uname -m).tar.gz -o megatools.tar.gz && \
+    tar -xzvf megatools.tar.gz && cp megatools-1.11.4.20250411-linux-$(uname -m)/megatools /usr/local/bin/megatools && rm -rf megatools-1.11.4.20250411-linux-$(uname -m) megatools.tar.gz
 
 RUN apt-get -y update \
     && apt-get install -y libicu-dev \
@@ -119,10 +120,10 @@ RUN apt-get install -y default-jdk
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 
 RUN cd /usr/local/ \
-		&& git clone https://github.com/ruffle-rs/ruffle.git ruffle
+        && git clone https://github.com/ruffle-rs/ruffle.git ruffle
 RUN cd /usr/local/ruffle \
-		&& /root/.cargo/bin/cargo build --release --package=exporter --bin=exporter \
-		&& /usr/local/ruffle/target/release/exporter --version
+        && /root/.cargo/bin/cargo build --release --package=exporter --bin=exporter \
+        && /usr/local/ruffle/target/release/exporter --version
 
 # Cleanup extra packages
 RUN apt-get remove --autoremove --purge -y gcc make cmake autoconf g++ yasm pkg-config libpng-dev libjpeg62-turbo-dev libde265-dev libx265-dev libxml2-dev libtiff-dev libfontconfig1-dev libfreetype6-dev
