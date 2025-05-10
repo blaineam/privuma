@@ -2482,6 +2482,10 @@
             window.currentAlbum = album;
             delete window.currentAlbumPosition;
             syncPlayBackPositionsReal(false, () => {
+              if(!window.albumLinkClicked) {
+                return;
+              }
+              window.albumLinkClicked = false;
               window.currentAlbumPosition = loadAlbumPosition(album);
               if (
                 window.currentAlbumPosition &&
@@ -2948,6 +2952,7 @@
               param,
             );
 
+          window.albumLinkClicked = true;
           window.run = function () {
             medcrypt.flushQueue();
             jQuery("#content").empty();
@@ -2983,6 +2988,7 @@
           };
 
           $(document).on("click", ".openalbum", function (e) {
+            window.albumLinkClicked = true;
             window.location.hash = $(this).data("hash");
           });
 
