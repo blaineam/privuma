@@ -19,8 +19,11 @@ class generateThumbnail
             rename($newThumbTemp, $newThumbTemp . '.jpg');
             $newThumbTemp = $newThumbTemp . '.jpg';
             $targetThumbnailPath = str_replace('.mp4', '.jpg', $data['path']);
-
-            exec('nice cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . " -- $ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y -ss `$ffmpegPath -threads $ffmpegThreadCount -y -i " . escapeshellarg($tempFile) . " 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'` -i " . escapeshellarg($tempFile) . ' -vcodec mjpeg -vframes 1 -an -f rawvideo ' . escapeshellarg($newThumbTemp) . ' > /dev/null', $void, $response);
+            $time = shell_exec("$ffmpegPath -threads $ffmpegThreadCount -y -i " . escapeshellarg($tempFile) . " 2>&1 | grep Duration | awk '{print $2}' | tr -d , | awk -F ':' '{print ($3+$2*60+$1*3600)/2}'");
+            if (is_null($time) || $time === false || strlen($time) === 0) {
+                $time = "00:00:01.00";
+            }
+            exec('nice cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . " -- $ffmpegPath -threads $ffmpegThreadCount -hide_banner -loglevel error -y  -ss $time  -i " . escapeshellarg($tempFile) . ' -vcodec mjpeg -vframes 1 -an -f rawvideo ' . escapeshellarg($newThumbTemp) . ' > /dev/null', $void, $response);
             if ($response !== 0) {
                 unset($response);
                 unset($void);
