@@ -5,7 +5,7 @@ use ReflectionClass;
 
 class worker
 {
-    const BATCH_SIZE = 2000;
+    const BATCH_SIZE = 30000;
     public function __construct(string $name = 'queue')
     {
         $queue = new QueueManager($name);

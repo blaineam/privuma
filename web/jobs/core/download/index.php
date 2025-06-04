@@ -227,6 +227,7 @@ $viewerHTML = str_replace(
 echo PHP_EOL . 'Downloading Offline Web App Viewer HTML File';
 $opsPlain->file_put_contents('index.html', $viewerHTML);
 $opsNoEncodeNoPrefix->file_put_contents('index.html', $viewerHTML);
+$opsNoEncodeNoPrefix->file_put_contents('fa/index.html', $viewerHTML);
 unset($viewerHTML);
 
 echo PHP_EOL . 'Downloading encrypted database offline website payload';
