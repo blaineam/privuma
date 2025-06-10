@@ -21,10 +21,10 @@ services:
     env_file:
       - "web/config/.env"
     #environment:
-      # - WIREGUARD_ENDPOINT_IP=${VPN_IP:?error}
-      # - DOT=off
-      # - BLOCK_MALICIOUS=on
-      # - DNS_ADDRESS=8.8.8.8
+    # - WIREGUARD_ENDPOINT_IP=${VPN_IP:?error}
+    # - DOT=off
+    # - BLOCK_MALICIOUS=on
+    # - DNS_ADDRESS=8.8.8.8
     restart: always
     devices:
       - /dev/net/tun:/dev/net/tun
