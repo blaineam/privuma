@@ -19,12 +19,12 @@ require_once __DIR__ .
 
 $privuma = privuma::getInstance();
 $tokenizer = new tokenizer();
-$downloadLocation = $privuma->getEnv('DOWNLOAD_LOCATION');
+$downloadLocation = $privuma->getEnv('UNFILTERED_DOWNLOAD_LOCATION');
 if (!$downloadLocation) {
     exit();
 }
 $downloadLocationUnencrypted = $privuma->getEnv(
-    'DOWNLOAD_LOCATION_UNENCRYPTED'
+    'UNFILTERED_DOWNLOAD_LOCATION_UNENCRYPTED'
 );
 if (!$downloadLocationUnencrypted) {
     exit();
@@ -32,7 +32,7 @@ if (!$downloadLocationUnencrypted) {
 
 $conn = $privuma->getPDO();
 
-$ops = new cloudFS($downloadLocation . 'pr' . DIRECTORY_SEPARATOR, true, '/usr/bin/rclone', null, true);
+$ops = new cloudFS($downloadLocation . 'un' . DIRECTORY_SEPARATOR, true, '/usr/bin/rclone', null, true);
 $opsFavorites = new cloudFS($downloadLocation . 'fa' . DIRECTORY_SEPARATOR, true, '/usr/bin/rclone', null, true);
 $opsNoEncodeNoPrefix = new cloudFS($downloadLocation, false, '/usr/bin/rclone', null, false);
 $opsPlain = new cloudFS(
@@ -49,7 +49,7 @@ from media
 where hash is not null
 and hash != ''
 and hash != 'compressed'
-and (album = 'Favorites' or blocked = 0)
+and (album = 'Favorites' or blocked = 1)
 and (dupe = 0 or album = 'Favorites')
 group by hash
  order by
@@ -58,7 +58,7 @@ $stmt->execute();
 $dlData = $stmt->fetchAll();
 echo PHP_EOL . 'Building web app payload of media to download';
 $stmt = $conn->prepare(
-    "SELECT filename, album, dupe, time, hash, duration, sound, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE (album = 'Favorites' or blocked = 0) and hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;"
+    "SELECT filename, album, dupe, time, hash, duration, sound, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE (album = 'Favorites' or blocked = 1) and hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;"
 );
 $stmt->execute();
 $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
@@ -228,6 +228,7 @@ echo PHP_EOL . 'Downloading Offline Web App Viewer HTML File';
 $opsPlain->file_put_contents('index.html', $viewerHTML);
 $opsNoEncodeNoPrefix->file_put_contents('index.html', $viewerHTML);
 $opsNoEncodeNoPrefix->file_put_contents('fa/index.html', $viewerHTML);
+$opsNoEncodeNoPrefix->file_put_contents('un/index.html', $viewerHTML);
 unset($viewerHTML);
 
 echo PHP_EOL . 'Downloading encrypted database offline website payload';
@@ -343,12 +344,12 @@ echo PHP_EOL .
 echo PHP_EOL . 'Syncing favorites';
 foreach ($newFavorites as $favorite) {
     $ext = pathinfo($favorite['filename'], PATHINFO_EXTENSION);
-    $src = cloudFS::canonicalize('pr' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.' . $ext, true));
+    $src = cloudFS::canonicalize('un' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.' . $ext, true));
     $dst = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.' . $ext, true));
     echo PHP_EOL . 'Moving favorite: ' . $src . '  to: ' . $dst;
     $opsNoEncodeNoPrefix->rename($src, $dst, true);
     if (in_array(strtolower($ext), ['webm', 'mp4', 'gif'])) {
-        $src = cloudFS::canonicalize('pr' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.' . 'jpg', true));
+        $src = cloudFS::canonicalize('un' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.' . 'jpg', true));
         $dst = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.' . 'jpg', true));
         echo PHP_EOL . 'Moving favorite: ' . $src . '  to: ' . $dst;
         $opsNoEncodeNoPrefix->rename($src, $dst, true);
@@ -357,14 +358,14 @@ foreach ($newFavorites as $favorite) {
 
 foreach ($removedFavorites as $name) {
     $src = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . $name);
-    $dst = cloudFS::canonicalize('pr' . DIRECTORY_SEPARATOR . $name);
+    $dst = cloudFS::canonicalize('un' . DIRECTORY_SEPARATOR . $name);
     echo PHP_EOL . 'Moving de-favorited media: ' . $src . '  to: ' . $dst;
     $opsNoEncodeNoPrefix->rename($src, $dst, true);
 }
 
 echo PHP_EOL . 'Downloading Mobile MetaData Stores';
 foreach ($metaDataFiles as $prefix => $item) {
-    $file = 'pr' . DIRECTORY_SEPARATOR . 'meta' . DIRECTORY_SEPARATOR . $prefix . '.json';
+    $file = 'un' . DIRECTORY_SEPARATOR . 'meta' . DIRECTORY_SEPARATOR . $prefix . '.json';
     echo PHP_EOL . 'Storing MetaData to: ' . $file;
     $opsNoEncodeNoPrefix->file_put_contents($file, json_encode($item));
 }
@@ -568,7 +569,7 @@ foreach ($dlData as $item) {
                 'filename' => $filename,
                 'url' => $item['url'],
                 'thumbnail' => $item['thumbnail'],
-                'download' => $downloadLocation . 'pr' . DIRECTORY_SEPARATOR,
+                'download' => $downloadLocation . 'un' . DIRECTORY_SEPARATOR,
                 'hash' => $item['hash'],
               ],
             ])
@@ -594,7 +595,7 @@ foreach ($dlData as $item) {
                 'album' => $album,
                 'filename' => str_replace('.webm', '.jpg', str_replace('.mp4', '.jpg', $filename)),
                 'url' => $item['thumbnail'],
-                'download' => $downloadLocation . 'pr' . DIRECTORY_SEPARATOR,
+                'download' => $downloadLocation . 'un' . DIRECTORY_SEPARATOR,
                 'hash' => $item['hash'],
               ],
             ])
