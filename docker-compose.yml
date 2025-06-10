@@ -20,10 +20,10 @@ services:
         ipv4_address: 172.20.0.100
     env_file:
       - "web/config/.env"
-    environment:
+    #environment:
       # - WIREGUARD_ENDPOINT_IP=${VPN_IP:?error}
       # - DOT=off
-      - BLOCK_MALICIOUS=off
+      # - BLOCK_MALICIOUS=on
       # - DNS_ADDRESS=8.8.8.8
     restart: always
     devices:
