@@ -514,13 +514,6 @@
               })
               .catch(async () => {
                 try {
-                  if (resource.includes("pr/")) {
-                    return medcrypt.getSrcRaw(
-                      resource.replace("pr/", "fa/"),
-                      action,
-                      0,
-                    );
-                  }
                   return resolve(
                     window.rcloneCrypt.render(
                       await window.rcloneCrypt.decrypt(
@@ -537,6 +530,20 @@
                     ),
                   );
                 } catch (e) {
+                  if (resource.includes("fa/")) {
+                    return medcrypt.getSrcRaw(
+                      resource.replace("fa/", ""),
+                      action,
+                      0,
+                    );
+                  }
+                  if (resource.includes("pr/")) {
+                    return medcrypt.getSrcRaw(
+                      resource.replace("pr/", "fa/"),
+                      action,
+                      0,
+                    );
+                  }
                   reject(e);
                 }
               });
@@ -2148,7 +2155,7 @@
                 fetch(uri)
                   .then((response) => response.json())
                   .then((data) => {
-                    window.videos = data.filter(
+                    window.videos = (data ?? []).filter(
                       (file) => file.MimeType === "video/mp4",
                     );
                     window.videos.sort((a, b) => {
@@ -2276,7 +2283,7 @@
         window.alldata = [...(window.alldata ?? []), ...decompressedArray].sort(
           (a, b) => (a.time < b.time ? 1 : b.time < a.time ? -1 : 0),
         );
-        restoreFavoritesFromCache();
+        // TODO: Determine why restore removes uncached favorites. restoreFavoritesFromCache();
 
         if (window.location?.hash?.includes("mobile")) {
           window.location.hash = "";
