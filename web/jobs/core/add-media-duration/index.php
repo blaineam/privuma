@@ -73,7 +73,9 @@ foreach (array_chunk($results, 2000) as $key => $chunk) {
             $duration = intval($duration);
             echo PHP_EOL . getPos($ikey, $key, $total) . 'Duration Determined: ' . $duration;
             $duration_stmt = $conn->prepare('update media set duration = ? WHERE hash = ? AND (duration is null OR duration = -1)');
-            $duration_stmt->execute([$duration, $row['hash']]);
+            if($duration_stmt !== false) {
+                $duration_stmt->execute([$duration, $row['hash']]);
+            }
         }
     }
 }

@@ -137,8 +137,12 @@ class mediaFile
     public function source()
     {
         $stmt = $this->pdo->prepare('SELECT * FROM media WHERE ((filename = ? AND album = ?) OR hash = ?) limit 1');
-        $stmt->execute([$this->filename, $this->album, $this->hash]);
-        $test = $stmt->fetch();
+        if ($stmt !== false) {
+            $stmt->execute([$this->filename, $this->album, $this->hash]);
+            $test = $stmt->fetch();
+        } else {
+            return false;
+        }
 
         if ($test === false) {
             return false;
@@ -343,8 +347,11 @@ class mediaFile
         from media
         where album = ?
         group by filename");
-        $stmt->execute([$this->album]);
-        $data = $stmt->fetchAll();
+        $data = [];
+        if ($stmt !== false) {
+            $stmt->execute([$this->album]);
+            $data = $stmt->fetchAll();
+        }
         return empty($data) ? [] : array_column($data, $field);
     }
 
