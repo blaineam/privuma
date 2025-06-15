@@ -65,11 +65,11 @@ foreach (array_chunk($results, 2000) as $key => $chunk) {
             if ($volume === false || is_null($volume) || empty($volume)) {
                 echo PHP_EOL . getPos($ikey, $key, $total) . 'Failed to determine media Volume: ' . $url;
                 $sound_stmt = $conn->prepare('update media set sound = ? WHERE hash = ? AND (sound is null OR sound = -91)');
-                if($sound_stmt !== false) {
+                if ($sound_stmt !== false) {
                     try {
                         $sound_stmt->execute([-91, $row['hash']]);
                     } catch (Exception $e) {
-                        
+
                     }
                 }
                 continue;
