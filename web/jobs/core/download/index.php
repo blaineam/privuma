@@ -1,5 +1,5 @@
 <?php
-ini_set('memory_limit', '2G');
+ini_set('memory_limit', '4G');
 use privuma\privuma;
 use privuma\helpers\mediaFile;
 use privuma\helpers\tokenizer;
@@ -374,32 +374,32 @@ foreach ($metaDataFiles as $prefix => $item) {
     $opsNoEncodeNoPrefix->file_put_contents($file, json_encode($item));
 }
 
-echo PHP_EOL . 'Downloading Desktop Dataset';
-$array = [];
-$dataset = json_decode($data, true);
-foreach ($dataset as $item) {
-    if (!array_key_exists($item['hash'], $array)) {
-        $filenameParts = explode('-----', $item['filename']);
-        $array[$item['hash']] = [
-           ...filterArrayByKeys($item, ['filename', 'album', 'time']),
-           'filename' => end($filenameParts),
-           'albums' => [$item['album']],
-           'times' => [$item['time']],
-         ];
-    } else {
-        $array[$item['hash']]['albums'][] = $item['album'];
-        $array[$item['hash']]['times'][] = $item['time'];
-    }
-}
-$data = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
-    array_values(array_filter($array, function ($item) {
-        return !in_array('Favorites', $item['albums']);
-    })),
-    JSON_THROW_ON_ERROR
-))));
-$data = 'const encrypted_data = ' . $data . ';';
-$ops->file_put_contents('encrypted_data.js', $data);
-unset($data);
+// echo PHP_EOL . 'Downloading Desktop Dataset';
+// $array = [];
+// $dataset = json_decode($data, true);
+// foreach ($dataset as $item) {
+//     if (!array_key_exists($item['hash'], $array)) {
+//         $filenameParts = explode('-----', $item['filename']);
+//         $array[$item['hash']] = [
+//            ...filterArrayByKeys($item, ['filename', 'album', 'time']),
+//            'filename' => end($filenameParts),
+//            'albums' => [$item['album']],
+//            'times' => [$item['time']],
+//          ];
+//     } else {
+//         $array[$item['hash']]['albums'][] = $item['album'];
+//         $array[$item['hash']]['times'][] = $item['time'];
+//     }
+// }
+// $data = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
+//     array_values(array_filter($array, function ($item) {
+//         return !in_array('Favorites', $item['albums']);
+//     })),
+//     JSON_THROW_ON_ERROR
+// ))));
+// $data = 'const encrypted_data = ' . $data . ';';
+// $ops->file_put_contents('encrypted_data.js', $data);
+// unset($data);
 
 echo PHP_EOL . 'Database Downloads have been completed';
 
