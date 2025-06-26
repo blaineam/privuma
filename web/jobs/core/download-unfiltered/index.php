@@ -168,6 +168,19 @@ function getFirst($array, $key, $value = null, $negate = false)
     }
     return null;
 }
+
+
+$previouslyDownloadedMedia = array_flip(
+    array_map(
+        fn ($item) => trim($item, "\/"),
+        array_column(
+            $ops->scandir('', true, true, null, false, true, true, true),
+            'Name'
+        )
+    )
+);
+if (!file_exists(__DIR__."/restore_point.txt")) {
+
 $array = [];
 $metaDataFiles = [];
 $dataset = json_decode($data, true);
@@ -239,15 +252,6 @@ unset($mobiledata);
 
 $opsNoEncodeNoPrefix->file_put_contents('fa/favorites.json', $favorites);
 
-$previouslyDownloadedMedia = array_flip(
-    array_map(
-        fn ($item) => trim($item, "\/"),
-        array_column(
-            $ops->scandir('', true, true, null, false, true, true, true),
-            'Name'
-        )
-    )
-);
 
 echo PHP_EOL . 'Scanning favorites';
 $favoritesJson = json_decode($favorites, true) ;
@@ -401,7 +405,7 @@ foreach ($metaDataFiles as $prefix => $item) {
 // $data = 'const encrypted_data = ' . $data . ';';
 // $ops->file_put_contents('encrypted_data.js', $data);
 // unset($data);
-
+}
 echo PHP_EOL . 'Database Downloads have been completed';
 
 echo PHP_EOL .
@@ -497,12 +501,17 @@ $progress = 0;
 $total = count($dlData);
 $lastProgress = 0;
 $newDlCount = 0;
+$lastDlTime = file_get_contents(__DIR__."/restore_point.txt");
 foreach ($dlData as $item) {
     $progress++;
     $percentage = round(($progress / $total) * 100, 2);
     if ($percentage > $lastProgress + 5) {
         echo PHP_EOL . "Overall Progress: {$percentage}% ";
         $lastProgress = $percentage;
+    }
+    
+    if ($lastDlTime !== false && $item['time'] > $lastDlTime) {
+      continue;
     }
     $album = $item['album'];
     $filename = str_replace(
@@ -601,5 +610,7 @@ foreach ($dlData as $item) {
             ])
         );
     }
+    file_put_contents(__DIR__."/restore_point.txt", $item['time']);
 }
+unlink(__DIR__."/restore_point.txt");
 echo PHP_EOL . 'Done queing ' . $newDlCount . ' Media to be downloaded';

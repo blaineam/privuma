@@ -107,8 +107,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "4.0"
-          memory: 4G
+          cpus: "2.0"
+          memory: 3G
   db:
     image: mariadb:lts-jammy
     restart: always
