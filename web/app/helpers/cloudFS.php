@@ -54,7 +54,7 @@ class cloudFS
                     $filter .= ' ' . $filterType . ($this->encoded ? $this->encode(ltrim($internal_filter, '+- ')) : ltrim($internal_filter, '+- ')) . "'";
                 }
             }
-            $files = json_decode($this->execute('lsjson', $directory, null, false, true, [ ($noMimeType ? '--no-mimetype' : ''), ($noModTime ? '--no-modtime' : ''), ($dirsOnly ? '--dirs-only' : ''), ($filesOnly ? '--files-only' : ''), ($recursive !== false) ? '--recursive': '', (!is_null($filter)) ? $filter : '']), true);
+            $files = json_decode($this->execute('lsjson', $directory, null, false, true, [ '--min-size 1B', ($noMimeType ? '--no-mimetype' : ''), ($noModTime ? '--no-modtime' : ''), ($dirsOnly ? '--dirs-only' : ''), ($filesOnly ? '--files-only' : ''), ($recursive !== false) ? '--recursive': '', (!is_null($filter)) ? $filter : '']), true);
             usort($files, function ($a, $b) {
                 return strtotime(explode('.', $b['ModTime'])[0]) <=> strtotime(explode('.', $a['ModTime'])[0]);
             });
@@ -101,6 +101,7 @@ class cloudFS
     {
         try {
             $list = json_decode($this->execute('lsjson', $path, null, false, true, [
+                '--min-size 1B',
                 '--stat',
                 $modTime ? '' : '--no-modtime',
                 $mimetype ? '' : '--no-mimetype',
@@ -197,6 +198,10 @@ class cloudFS
 
     public function file_put_contents(string $path, string $contents)
     {
+        if (empty($contents)) {
+            error_log("Not storing empty file: " . $path);
+            return false;
+        }
         $tmpfile = tempnam(sys_get_temp_dir(), 'PVMA');
         file_put_contents($tmpfile, $contents);
         try {
@@ -304,6 +309,11 @@ class cloudFS
 
     public function rename(string $oldname, string $newname, bool $remoteSource = true): bool
     {
+        clearstatcache(true, $oldname);
+        if ((!$remoteSource && filesize($oldname) == 0) || $remoteSource && $this->filesize($oldname) == 0) {
+            error_log("Not moving empty file: " . $oldname);
+            return false;
+        }
         try {
             $this->execute('moveto', $newname, $oldname, $remoteSource);
         } catch (Exception $e) {
@@ -315,6 +325,11 @@ class cloudFS
 
     public function copy(string $oldname, string $newname, bool $remoteSource = true, bool $remoteDestination = true): bool
     {
+        clearstatcache(true, $oldname);
+        if ((!$remoteSource && filesize($oldname) == 0) || $remoteSource && $this->filesize($oldname) == 0) {
+            error_log("Not moving empty file: " . $oldname);
+            return false;
+        }
         try {
             $this->execute('copyto', $newname, $oldname, $remoteSource, $remoteDestination);
         } catch (Exception $e) {
