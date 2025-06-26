@@ -199,7 +199,7 @@ class cloudFS
     public function file_put_contents(string $path, string $contents)
     {
         if (empty($contents)) {
-            error_log("Not storing empty file: " . $path);
+            error_log('Not storing empty file: ' . $path);
             return false;
         }
         $tmpfile = tempnam(sys_get_temp_dir(), 'PVMA');
@@ -311,7 +311,7 @@ class cloudFS
     {
         clearstatcache(true, $oldname);
         if ((!$remoteSource && filesize($oldname) == 0) || $remoteSource && $this->filesize($oldname) == 0) {
-            error_log("Not moving empty file: " . $oldname);
+            error_log('Not moving empty file: ' . $oldname);
             return false;
         }
         try {
@@ -327,7 +327,7 @@ class cloudFS
     {
         clearstatcache(true, $oldname);
         if ((!$remoteSource && filesize($oldname) == 0) || $remoteSource && $this->filesize($oldname) == 0) {
-            error_log("Not moving empty file: " . $oldname);
+            error_log('Not moving empty file: ' . $oldname);
             return false;
         }
         try {
