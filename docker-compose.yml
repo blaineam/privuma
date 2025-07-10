@@ -15,6 +15,7 @@ services:
       - NET_ADMIN
     ports:
       - "${TS_IP:-127.0.0.1}:8989:8989"
+      - "${TS_IP:-127.0.0.1}:8993:8993"
     networks:
       internal:
         ipv4_address: 172.20.0.100
@@ -134,7 +135,7 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 1G
+          memory: 3G
   cloudfs-http:
     image: rclone/rclone:latest
     container_name: privuma_cloudfs_http
