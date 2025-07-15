@@ -10,7 +10,7 @@ class worker
     {
         $queue = new QueueManager($name);
         for ($index = 0; $index < self::BATCH_SIZE; $index++) {
-            if(is_null($search)) {
+            if (is_null($search)) {
                 $raw = $queue->dequeue();
             } else {
                 $raw = $queue->dequeueMatching($search);
