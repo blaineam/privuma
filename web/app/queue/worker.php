@@ -6,11 +6,15 @@ use ReflectionClass;
 class worker
 {
     const BATCH_SIZE = 30000;
-    public function __construct(string $name = 'queue')
+    public function __construct(string $name = 'queue', string $search = null)
     {
         $queue = new QueueManager($name);
         for ($index = 0; $index < self::BATCH_SIZE; $index++) {
-            $raw = $queue->dequeue();
+            if(is_null($search)) {
+                $raw = $queue->dequeue();
+            } else {
+                $raw = $queue->dequeueMatching($search);
+            }
             if (is_null($raw) || empty($raw)) {
                 echo PHP_EOL . 'No Messages in Queue';
                 break;
