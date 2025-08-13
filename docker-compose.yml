@@ -15,6 +15,7 @@ services:
       - NET_ADMIN
     ports:
       - "${TS_IP:-127.0.0.1}:8989:8989"
+      - "${TS_IP:-127.0.0.1}:8993:8993"
     networks:
       internal:
         ipv4_address: 172.20.0.100
@@ -49,7 +50,7 @@ services:
     deploy:
       resources:
         limits:
-          # cpus: "1.0"
+          cpus: "1.0"
           memory: 2G
   php-web:
     build:
@@ -78,7 +79,7 @@ services:
     deploy:
       resources:
         limits:
-          #  cpus: "1.0"
+          cpus: "1.0"
           memory: 2G
   php-cron:
     build:

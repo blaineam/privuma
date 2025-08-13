@@ -110,6 +110,42 @@ class QueueManager
             flock($file, LOCK_UN);
             fclose($file);
         }
+
+        if ($duplicate) {
+            echo PHP_EOL . 'Message already in queue, skipping enqueue';
+            flock($file, LOCK_UN);
+            fclose($file);
+            return;
+        }
+
+        // Prepare entry with padding
+        $entry_len_mod = (strlen($this->delimiter) + strlen($rawMessage)) % 64;
+        $pad_len = $entry_len_mod > 0 ? 64 - $entry_len_mod : 0;
+        $entry = $this->delimiter . $rawMessage . str_repeat(' ', $pad_len);
+        $len_entry = strlen($entry);
+
+        // Shift existing content to make space at the beginning (memory efficient)
+        $old_size = $filesize;
+        if ($old_size > 0) {
+            ftruncate($file, $old_size + $len_entry);
+            $chunk_size = 4096;
+            $old_pos = $old_size;
+            while ($old_pos > 0) {
+                $this_chunk = min($chunk_size, $old_pos);
+                fseek($file, $old_pos - $this_chunk);
+                $chunk = fread($file, $this_chunk);
+                fseek($file, $old_pos - $this_chunk + $len_entry);
+                fwrite($file, $chunk);
+                $old_pos -= $this_chunk;
+            }
+        }
+
+        // Write new entry at beginning
+        fseek($file, 0);
+        fwrite($file, $entry);
+
+        flock($file, LOCK_UN);
+        fclose($file);
     }
 
     public function dequeue(): string|bool|null
@@ -228,6 +264,76 @@ class QueueManager
             flock($file, LOCK_UN);
             fclose($file);
         }
+    }
+
+    public function dequeueMatching(string $match): ?string
+    {
+        $file = @fopen($this->filename, 'c+');
+        if (!$file) {
+            return null;
+        }
+
+        if (!flock($file, LOCK_EX)) {
+            print "Could not lock $this->filename! for dequeueMatching\n";
+            fclose($file);
+            return null;
+        }
+
+        $filesize = fstat($file)['size'];
+        $pos = 0;
+        $found = null;
+        $found_start_entry = -1;
+        $found_end_entry = -1;
+
+        while ($pos < $filesize) {
+            fseek($file, $pos);
+            $del_check = fread($file, strlen($this->delimiter));
+            if ($del_check !== $this->delimiter) {
+                break;
+            }
+            $start_msg = $pos + strlen($this->delimiter);
+            $next_pos = $this->findNextDelimiter($file, $start_msg);
+            $end_entry = $next_pos !== false ? $next_pos : $filesize;
+            $len_msg = $end_entry - $start_msg;
+            fseek($file, $start_msg);
+            $msg = fread($file, $len_msg);
+            $msg_trim = rtrim($msg, ' ');
+            if (strpos($msg_trim, $match) !== false) {
+                $found = $msg_trim;
+                $found_start_entry = $pos;
+                $found_end_entry = $end_entry;
+                break; // Remove first match found (newest first)
+            }
+            if ($next_pos === false) {
+                break;
+            }
+            $pos = $next_pos;
+        }
+
+        if ($found !== null) {
+            $len_entry = $found_end_entry - $found_start_entry;
+            $write_pos = $found_start_entry;
+            $read_pos = $found_end_entry;
+            $chunk_size = 4096;
+            while ($read_pos < $filesize) {
+                fseek($file, $read_pos);
+                $chunk = fread($file, $chunk_size);
+                $len_chunk = strlen($chunk);
+                if ($len_chunk == 0) {
+                    break;
+                }
+                fseek($file, $write_pos);
+                fwrite($file, $chunk);
+                $write_pos += $len_chunk;
+                $read_pos += $len_chunk;
+            }
+            ftruncate($file, $filesize - $len_entry);
+        }
+
+        flock($file, LOCK_UN);
+        fclose($file);
+
+        return $found;
     }
 
     private function readFrame($file, $frameNumber)
