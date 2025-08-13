@@ -106,10 +106,10 @@ services:
       - gluetun
     network_mode: "service:gluetun"
     #deploy:
-     # resources:
-      #  limits:
-          # cpus: "2.0"
-         # memory: 3G
+    # resources:
+    #  limits:
+    # cpus: "2.0"
+    # memory: 3G
   db:
     image: mariadb:lts-jammy
     restart: always
@@ -131,11 +131,11 @@ services:
       - db_data:/var/lib/mysql
       - ./docker/etc/mariadb/custom.cnf:/etc/mysql/conf.d/custom.cnf
       - ./docker/images/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
-   # deploy:
-     # resources:
-      #  limits:
-          # cpus: "1.0"
-       #   memory: 1G
+    # deploy:
+    # resources:
+    #  limits:
+    # cpus: "1.0"
+    #   memory: 1G
   cloudfs-http:
     image: rclone/rclone:latest
     container_name: privuma_cloudfs_http
