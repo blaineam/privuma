@@ -21,7 +21,7 @@ if (isset($_GET['albums'])) {
     $album = " and album in ({$albums}) ";
 }
 
-$select_results = $conn->query("SELECT id, url, thumbnail FROM media where url is not null {$album} order by id asc");
+$select_results = $conn->query("SELECT id, url, thumbnail FROM media where url is not null {$album} and album != 'Favorites' order by id asc");
 $results = $select_results->fetchAll(PDO::FETCH_ASSOC);
 $checkCount = count($results);
 echo PHP_EOL . 'Checking ' . $checkCount . ' database records';

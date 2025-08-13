@@ -173,7 +173,7 @@ class processMedia
                                 $mediaPreservationPath,
                             )
                         ) {
-                            is_file($mediaPath) && unlink($mediaPath);
+                            file_exists($mediaPath) && unlink($mediaPath);
                             echo PHP_EOL .
                                 "Downloaded media to: $mediaPreservationPath";
                         } else {
@@ -214,13 +214,13 @@ class processMedia
                                     $thumbnailPreservationPath,
                                 )
                             ) {
-                                is_file($thumbnailPath) &&
+                                file_exists($thumbnailPath) &&
                                     unlink($thumbnailPath);
                                 echo PHP_EOL .
                                     "Downloaded media to: $thumbnailPreservationPath";
                             } else {
                                 echo PHP_EOL . 'Compression failed';
-                                if (is_file($thumbnailPath)) {
+                                if (file_exists($thumbnailPath)) {
                                     echo PHP_EOL .
                                         "Downloading media to: $thumbnailPreservationPath";
                                     $downloadOps->rename(
