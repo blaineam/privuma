@@ -62,6 +62,11 @@ $stmt = $conn->prepare(
 );
 $stmt->execute();
 $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
+$unstmt = $conn->prepare(
+    "SELECT filename, album, dupe, time, hash, duration, sound, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE (album = 'Favorites' or blocked = 1) and hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;"
+);
+$unstmt->execute();
+$undata = str_replace('`', '', json_encode($unstmt->fetchAll(PDO::FETCH_ASSOC)));
 function sanitizeLine($line)
 {
     return trim(preg_replace('/[^A-Za-z0-9 \\-\\_\\~\\+\\(\\)\\.\\,\\/]/', '', $line), "\r\n");
@@ -210,6 +215,28 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
             $array[$item['hash']]['times'][] = $item['time'];
         }
     }
+    $undataset = json_decode($undata, true);
+    $unarray = [];
+    foreach ($undataset as $item) {
+        $untags = substr(sanitizeLine(implode(', ', array_slice(explode(', ', explode(PHP_EOL, explode('Tags: ', $item['metadata'])[1] ?? '')[0]) ??
+        [], 0, 60))), 0, 500);
+        $item['metadata'] = is_null($item['metadata']) ? '' : (strlen($untags) < 1 ? 'Using MetaData Store...' : $untags);
+        if (!array_key_exists($item['hash'], $unarray)) {
+            $filenameParts = explode('-----', $item['filename']);
+            $unarray[$item['hash']] = [
+              'albums' => [sanitizeLine($item['album'])],
+              'filename' => sanitizeLine(substr(end($filenameParts), 0, 20)) . '.' . pathinfo($item['filename'], PATHINFO_EXTENSION),
+              'hash' => $item['hash'],
+              'times' => [$item['time']],
+              'metadata' => $item['metadata'],
+              'duration' => $item['duration'],
+              'sound' => $item['sound']
+            ];
+        } else {
+            $unarray[$item['hash']]['albums'][] = sanitizeLine($item['album']);
+            $unarray[$item['hash']]['times'][] = $item['time'];
+        }
+    }
     $mobiledata = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
         array_values(array_filter($array, function ($item) {
             return !in_array('Favorites', $item['albums']);
@@ -218,13 +245,15 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
     ))));
 
     $favorites = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
-        array_values(array_filter($array, function ($item) {
+        array_values(array_filter(array_merge($array, $unarray), function ($item) {
             return in_array('Favorites', $item['albums']);
         })),
         JSON_THROW_ON_ERROR
     ))));
 
     unset($array);
+    unset($unarray);
+    unset($undata);
 
     echo PHP_EOL . 'All Database Lookup Operations have been completed.';
 
@@ -500,7 +529,7 @@ $progress = 0;
 $total = count($dlData);
 $lastProgress = 0;
 $newDlCount = 0;
-$lastDlTime = file_get_contents(__DIR__ . '/restore_point.txt');
+$lastDlTime = file_exists(__DIR__ . '/restore_point.txt') ? file_get_contents(__DIR__ . '/restore_point.txt') : 0;
 foreach ($dlData as $item) {
     $progress++;
     $percentage = round(($progress / $total) * 100, 2);
