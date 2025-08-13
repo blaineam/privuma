@@ -20,8 +20,11 @@ services:
         ipv4_address: 172.20.0.100
     env_file:
       - "web/config/.env"
-    environment:
-      - WIREGUARD_ENDPOINT_IP=${VPN_IP:?error}
+    #environment:
+    # - WIREGUARD_ENDPOINT_IP=${VPN_IP:?error}
+    # - DOT=off
+    # - BLOCK_MALICIOUS=on
+    # - DNS_ADDRESS=8.8.8.8
     restart: always
     devices:
       - /dev/net/tun:/dev/net/tun
@@ -101,13 +104,13 @@ services:
       - cloudfs-http
       - gluetun
     network_mode: "service:gluetun"
-    deploy:
-      resources:
-        limits:
+    #deploy:
+     # resources:
+      #  limits:
           # cpus: "2.0"
-          memory: 3G
+         # memory: 3G
   db:
-    image: mariadb
+    image: mariadb:lts-jammy
     restart: always
     container_name: privuma_db
     env_file:
@@ -127,11 +130,11 @@ services:
       - db_data:/var/lib/mysql
       - ./docker/etc/mariadb/custom.cnf:/etc/mysql/conf.d/custom.cnf
       - ./docker/images/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
-    deploy:
-      resources:
-        limits:
+   # deploy:
+     # resources:
+      #  limits:
           # cpus: "1.0"
-          memory: 1G
+       #   memory: 1G
   cloudfs-http:
     image: rclone/rclone:latest
     container_name: privuma_cloudfs_http

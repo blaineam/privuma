@@ -2,6 +2,9 @@
 
 namespace privuma;
 
+ini_set('mysql.connect_timeout', 300);
+ini_set('default_socket_timeout', 300);
+
 $classes = glob(__DIR__ . '/**/*.php');
 
 foreach ($classes as $class) {
@@ -92,6 +95,8 @@ class privuma
                 `time` datetime DEFAULT NULL,
                 `metadata` varchar(9512) DEFAULT NULL,
                 `blocked` int(1) DEFAULT 1,
+                `duration` bigint(20) DEFAULT NULL,
+                `sound` FLOAT DEFAULT NULL,
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `media_id_IDX` (`id`) USING BTREE,
                 KEY `media_hash_IDX` (`hash`) USING BTREE,
@@ -128,7 +133,9 @@ class privuma
                     `thumbnail` TEXT DEFAULT NULL,
                     `time` datetime DEFAULT CURRENT_TIMESTAMP,
                     `metadata` TEXT DEFAULT NULL,
-                    `blocked` INTEGER DEFAULT 1
+                    `blocked` INTEGER DEFAULT 1,
+                    `duration` INTEGER DEFAULT NULL,
+                    `sound` REAL DEFAULT NULL
                     );');
 
                 $this->pdo->exec(

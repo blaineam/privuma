@@ -137,8 +137,12 @@ class mediaFile
     public function source()
     {
         $stmt = $this->pdo->prepare('SELECT * FROM media WHERE ((filename = ? AND album = ?) OR hash = ?) limit 1');
-        $stmt->execute([$this->filename, $this->album, $this->hash]);
-        $test = $stmt->fetch();
+        if ($stmt !== false) {
+            $stmt->execute([$this->filename, $this->album, $this->hash]);
+            $test = $stmt->fetch();
+        } else {
+            return false;
+        }
 
         if ($test === false) {
             return false;
@@ -150,6 +154,9 @@ class mediaFile
     public function record()
     {
         $stmt = $this->pdo->prepare('SELECT * FROM media WHERE ((filename = ? AND album = ?) OR hash = ?) limit 1');
+        if ($stmt === false) {
+            return false;
+        }
         $stmt->execute([$this->filename, $this->album, $this->hash]);
         $test = $stmt->fetch();
 
@@ -165,6 +172,9 @@ class mediaFile
         echo PHP_EOL . "Updating Metadata for: {$this->album}/{$this->filename}" . PHP_EOL;
         $this->metadata = is_string($metadata) ? $metadata : json_encode($metadata, JSON_PRETTY_PRINT);
         $stmt = $this->pdo->prepare('UPDATE media SET metadata = ? WHERE ((filename = ? AND album = ?) OR hash = ?)');
+        if ($stmt === false) {
+            return false;
+        }
         $stmt->execute([$this->metadata, $this->filename, $this->album, $this->hash]);
         $test = $stmt->rowCount();
 
@@ -343,8 +353,11 @@ class mediaFile
         from media
         where album = ?
         group by filename");
-        $stmt->execute([$this->album]);
-        $data = $stmt->fetchAll();
+        $data = [];
+        if ($stmt !== false) {
+            $stmt->execute([$this->album]);
+            $data = $stmt->fetchAll();
+        }
         return empty($data) ? [] : array_column($data, $field);
     }
 

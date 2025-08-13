@@ -339,7 +339,7 @@ if (
 ) {
     run();
 } else {
-    die('Malformed Request');
+    die('//Malformed Request');
 }
 
 function normalizeString($str = '')
