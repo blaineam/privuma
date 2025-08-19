@@ -529,7 +529,7 @@ $progress = 0;
 $total = count($dlData);
 $lastProgress = 0;
 $newDlCount = 0;
-$lastDlTime = file_exists(__DIR__ . '/restore_point.txt') ? file_get_contents(__DIR__ . '/restore_point.txt') : 0;
+$lastDlTime = file_exists(__DIR__ . '/restore_point.txt') ? file_get_contents(__DIR__ . '/restore_point.txt') : false;
 foreach ($dlData as $item) {
     $progress++;
     $percentage = round(($progress / $total) * 100, 2);
