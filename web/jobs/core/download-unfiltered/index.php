@@ -612,6 +612,28 @@ foreach ($dlData as $item) {
         $newDlCount++;
     } elseif (
         (strpos($filename, '.webm') !== false || strpos($filename, '.mp4') !== false) &&
+        !is_null($item['thumbnail']) &&
+        !$ops->is_file($thumbnailPreserve)
+    ) {
+        echo PHP_EOL .
+          'Queue Downloading of media file: ' .
+          $thumbnailPreserve .
+          ' from album: ' .
+          $item['album'];
+        $privuma->getQueueManager()->enqueue(
+            json_encode([
+              'type' => 'processMedia',
+              'data' => [
+                'album' => $album,
+                'filename' => str_replace('.webm', '.jpg', str_replace('.mp4', '.jpg', $filename)),
+                'url' => $item['thumbnail'],
+                'download' => $downloadLocation . 'un' . DIRECTORY_SEPARATOR,
+                'hash' => $item['hash'],
+              ],
+            ])
+        );
+    } elseif (
+        (strpos($filename, '.webm') !== false || strpos($filename, '.mp4') !== false) &&
         is_null($item['thumbnail']) &&
         !$ops->is_file($thumbnailPreserve) &&
         ($item['thumbnail'] =

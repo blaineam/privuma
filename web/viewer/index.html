@@ -2511,7 +2511,7 @@
                 let videoElement = document.getElementsByTagName("video")[0];
                 if (videoElement) {
                   videoElement.currentTime =
-                    window.currentAlbumPosition.currentTime ?? 0;
+                    window.currentAlbumPosition?.currentTime ?? 0;
                 }
               }
             });
@@ -2534,7 +2534,7 @@
               let bext = b["filename"].split(".").pop();
               let atime = a["time"];
               let btime = b["time"];
-              if (album.toLowerCase().includes("comic")) {
+              if (album.toLowerCase().includes("comic") && !album.toLowerCase().includes("-comic")) {
                 return a["filename"].localeCompare(b["filename"], undefined, {
                   numeric: true,
                   sensitivity: "base",
@@ -2740,7 +2740,7 @@
                         : vr
                           ? jQuery("#content").append(
                               `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}" ` +
-                                (duration ? `data-duration="true"` : "") +
+                                (duration ? `data-duration="${duration}"` : "") +
                                 `  ` +
                                 (sound ? `data-sound="true"` : "") +
                                 ` ><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-filehash="${hash}" loading="lazy" alt="" /></div>` +
@@ -2760,7 +2760,7 @@
                           : isVideo
                             ? jQuery("#content").append(
                                 `<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery"  data-filehash="${hash}"  href="${videoResource}" ` +
-                                  (duration ? `data-duration="true"` : "") +
+                                  (duration ? `data-duration="${duration}"` : "") +
                                   `  ` +
                                   (sound ? `data-sound="true"` : "") +
                                   ` >
@@ -3086,7 +3086,7 @@
                 let player = videojs(vjsplayer);
                 player.play();
                 player.currentTime(
-                  window.currentAlbumPosition.currentTime ?? 0,
+                  window.currentAlbumPosition?.currentTime ?? 0,
                 );
                 player.on("timeupdate", function () {
                   updatePlaybackTimestamp(
@@ -3249,7 +3249,10 @@
             }
             try {
               $("video").trigger("pause");
-              var videoDuration = $("video").attr("duration");
+              var videoDuration = originalLink.attr("data-duration") ?? $("video").attr("duration");
+              if(videoDuration > 0 && videoDuration < 90) {
+                $("video").attr('loop','loop');
+              }
 
               var updateProgressBar = function () {
                 if ($("video").attr("readyState")) {
@@ -3299,7 +3302,7 @@
 
                     $("video").prop(
                       "currentTime",
-                      window.currentAlbumPosition.currentTime ?? 0,
+                      window.currentAlbumPosition?.currentTime ?? 0,
                     );
                     $("video").trigger("play");
                   }, 1000);
@@ -3313,13 +3316,13 @@
 
               $("video").prop(
                 "currentTime",
-                window.currentAlbumPosition.currentTime ?? 0,
+                window.currentAlbumPosition?.currentTime ?? 0,
               );
               $("video").trigger("play");
               $("video").on("loadedmetadata", function () {
                 $(this).prop(
                   "currentTime",
-                  window.currentAlbumPosition.currentTime ?? 0,
+                  window.currentAlbumPosition?.currentTime ?? 0,
                 );
                 $("video").trigger("play");
               });
@@ -3347,7 +3350,7 @@
                 currentTime:
                   window.currentAlbumPosition.src ===
                   originalLink.data("filehash")
-                    ? window.currentAlbumPosition.currentTime
+                    ? window.currentAlbumPosition?.currentTime
                     : 0,
               },
               window.currentAlbum,
