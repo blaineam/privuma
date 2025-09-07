@@ -2534,7 +2534,10 @@
               let bext = b["filename"].split(".").pop();
               let atime = a["time"];
               let btime = b["time"];
-              if (album.toLowerCase().includes("comic") && !album.toLowerCase().includes("-comic")) {
+              if (
+                album.toLowerCase().includes("comic") &&
+                !album.toLowerCase().includes("-comic")
+              ) {
                 return a["filename"].localeCompare(b["filename"], undefined, {
                   numeric: true,
                   sensitivity: "base",
@@ -2740,7 +2743,9 @@
                         : vr
                           ? jQuery("#content").append(
                               `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}" ` +
-                                (duration ? `data-duration="${duration}"` : "") +
+                                (duration
+                                  ? `data-duration="${duration}"`
+                                  : "") +
                                 `  ` +
                                 (sound ? `data-sound="true"` : "") +
                                 ` ><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-filehash="${hash}" loading="lazy" alt="" /></div>` +
@@ -2760,7 +2765,9 @@
                           : isVideo
                             ? jQuery("#content").append(
                                 `<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery"  data-filehash="${hash}"  href="${videoResource}" ` +
-                                  (duration ? `data-duration="${duration}"` : "") +
+                                  (duration
+                                    ? `data-duration="${duration}"`
+                                    : "") +
                                   `  ` +
                                   (sound ? `data-sound="true"` : "") +
                                   ` >
@@ -3249,9 +3256,11 @@
             }
             try {
               $("video").trigger("pause");
-              var videoDuration = originalLink.attr("data-duration") ?? $("video").attr("duration");
-              if(videoDuration > 0 && videoDuration < 90) {
-                $("video").attr('loop','loop');
+              var videoDuration =
+                originalLink.attr("data-duration") ??
+                $("video").attr("duration");
+              if (videoDuration > 0 && videoDuration < 90) {
+                $("video").attr("loop", "loop");
               }
 
               var updateProgressBar = function () {
