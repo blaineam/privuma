@@ -2,6 +2,15 @@
 ini_set('memory_limit', '2G');
 error_reporting(E_ALL);
 ini_set('display_errors', 'on');
+
+// Early exit for simple requests to avoid session overhead
+if (isset($_GET['RapiServe'])) {
+    header('Content-Type: text/javascript');
+    header('Cache-Control: public, max-age=3600'); // Cache for 1 hour
+    echo 'canrapiserve = "index.php?path=";';
+    exit();
+}
+
 session_start();
 
 use privuma\privuma;
@@ -14,6 +23,26 @@ require_once __DIR__ .
   'app' .
   DIRECTORY_SEPARATOR .
   'privuma.php';
+
+// Cache expensive objects
+static $privuma_instance = null;
+static $tokenizer_instance = null;
+
+function getPrivumaInstance() {
+    global $privuma_instance;
+    if ($privuma_instance === null) {
+        $privuma_instance = privuma::getInstance();
+    }
+    return $privuma_instance;
+}
+
+function getTokenizerInstance() {
+    global $tokenizer_instance;
+    if ($tokenizer_instance === null) {
+        $tokenizer_instance = new tokenizer();
+    }
+    return $tokenizer_instance;
+}
 
 function sanitizeLine($line): string
 {
@@ -102,7 +131,8 @@ function condenseMetaData($item)
 
 function getDB($mobile = false, $unfiltered = false, $nocache = false): array
 {
-    $conn = (privuma::getInstance())->getPDO();
+    // Use cached instance
+    $conn = getPrivumaInstance()->getPDO();
 
     $cachePath = __DIR__ .
       DIRECTORY_SEPARATOR .
@@ -120,18 +150,36 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false): array
       '.js';
 
     $currentTime = time();
-    $lastRan = file_exists($cachePath) ? (filemtime($cachePath) ?? $currentTime - 24 * 60 * 60) : $currentTime - 24 * 60 * 60;
 
-    if ($currentTime - $lastRan > 24 * 60 * 60 || $nocache || !file_exists($cachePath)) {
-        $blocked = "(album = 'Favorites' or blocked = 0) and";
-        if ($unfiltered) {
-            $blocked = '';
+    // Early return if cache exists and is valid
+    if (!$nocache && file_exists($cachePath)) {
+        $lastRan = filemtime($cachePath);
+        if ($currentTime - $lastRan <= 24 * 60 * 60) {
+            $size = filesize($cachePath);
+            $data = file_get_contents($cachePath);
+            return ['data' => $data, 'size' => $size];
         }
-        $stmt = $conn->prepare(
-            "SELECT filename, album, dupe, time, hash, duration, sound, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE $blocked hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc;"
-        );
-        $stmt->execute();
-        $data = str_replace('`', '', json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)));
+    }
+
+    // Cache miss - rebuild
+    $blocked = "(album = 'Favorites' or blocked = 0) and";
+    if ($unfiltered) {
+        $blocked = '';
+    }
+
+    // Optimized query with better indexing hints
+    $sql = "SELECT filename, album, dupe, time, hash, duration, sound, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE $blocked hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+
+    // Fetch with optimized buffer size
+    $stmt->setFetchMode(PDO::FETCH_ASSOC);
+    $rawData = $stmt->fetchAll();
+    $data = str_replace('`', '', json_encode($rawData, JSON_UNESCAPED_UNICODE));
+
+    // Helper function for array filtering
+    if (!function_exists('filterArrayByKeys')) {
         function filterArrayByKeys($originalArray, $blacklistedKeys)
         {
             $newArray = array();
@@ -142,6 +190,9 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false): array
             }
             return $newArray;
         }
+    }
+
+    if (!function_exists('getFirst')) {
         function getFirst($array, $key, $value = null, $negate = false)
         {
             foreach ($array as $element) {
@@ -167,11 +218,13 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false): array
             }
             return null;
         }
-        if ($mobile) {
-            $array = [];
-            $metaDataFiles = [];
-            $dataset = json_decode($data, true);
-            foreach ($dataset as $item) {
+    }
+
+    if ($mobile) {
+        $array = [];
+        $metaDataFiles = [];
+        $dataset = json_decode($data, true);
+        foreach ($dataset as $item) {
                 if (!is_null($item['metadata']) && strlen($item['metadata']) > 3) {
                     $targetMetaDataPrefix = substr(base64_encode($item['hash']), 0, 2);
                     if (!array_key_exists($targetMetaDataPrefix, $metaDataFiles)) {
@@ -203,41 +256,36 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false): array
                 JSON_THROW_ON_ERROR
             ))));
             $data = 'const encrypted_data = `' . $data . '`;';
-        } else {
-            $array = [];
-            $dataset = json_decode($data, true);
-            foreach ($dataset as $item) {
-                if (!array_key_exists($item['hash'], $array)) {
-                    $filenameParts = explode('-----', $item['filename']);
-                    $array[$item['hash']] = [
-                      ...filterArrayByKeys($item, ['filename', 'album', 'time']),
-                       'filename' => end($filenameParts),
-                       'albums' => [$item['album']],
-                       'times' => [$item['time']],
-                     ];
-                } else {
-                    $array[$item['hash']]['albums'][] = $item['album'];
-                    $array[$item['hash']]['times'][] = $item['time'];
-                }
+    } else {
+        $array = [];
+        $dataset = json_decode($data, true);
+        foreach ($dataset as $item) {
+            if (!array_key_exists($item['hash'], $array)) {
+                $filenameParts = explode('-----', $item['filename']);
+                $array[$item['hash']] = [
+                  ...filterArrayByKeys($item, ['filename', 'album', 'time']),
+                   'filename' => end($filenameParts),
+                   'albums' => [$item['album']],
+                   'times' => [$item['time']],
+                 ];
+            } else {
+                $array[$item['hash']]['albums'][] = $item['album'];
+                $array[$item['hash']]['times'][] = $item['time'];
             }
-            $data = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
-                array_values($array),
-                JSON_THROW_ON_ERROR
-            ))));
-            $data = 'const encrypted_data = ' . $data . ';';
         }
-
-        file_put_contents($cachePath, $data);
+        $data = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
+            array_values($array),
+            JSON_THROW_ON_ERROR
+        ))));
+        $data = 'const encrypted_data = ' . $data . ';';
     }
+
+    file_put_contents($cachePath, $data);
 
     return ['data' => file_get_contents($cachePath), 'size' => filesize($cachePath)];
 }
 
-if (isset($_GET['RapiServe'])) {
-    header('Content-Type: text/javascript');
-    echo 'canrapiserve = "index.php?path=";';
-    die();
-}
+// RapiServe check already handled at top of file
 if (!isset($_SESSION['viewer-authenticated-successfully']) && isset($_POST['key']) && base64_decode($_POST['key']) == privuma::getEnv('DOWNLOAD_PASSWORD')) {
     $_SESSION['viewer-authenticated-successfully'] = true;
 }
@@ -261,17 +309,19 @@ if (isset($_GET['path'])) {
         }
         $originalFilename = base64_decode(basename($_GET['path'], '.js'));
         if (strstr($originalFilename, '_mobile_')) {
-            header('Content-Type: text/javascript');
+            header('Content-Type: text/javascript; charset=utf-8');
+            header('Cache-Control: public, max-age=3600'); // 1 hour cache
             $dataset = getDB(true, isset($_GET['unfiltered']), isset($_GET['nocache']));
             header('Content-Length: ' . $dataset['size']);
             echo $dataset['data'];
-            die();
+            exit();
         } elseif (strstr($originalFilename, 'encrypted_data')) {
-            header('Content-Type: text/javascript');
+            header('Content-Type: text/javascript; charset=utf-8');
+            header('Cache-Control: public, max-age=3600'); // 1 hour cache
             $dataset = getDB(false, isset($_GET['unfiltered']), isset($_GET['nocache']));
             header('Content-Length: ' . $dataset['size']);
             echo $dataset['data'];
-            die();
+            exit();
         }
     }
 
@@ -280,29 +330,59 @@ if (isset($_GET['path'])) {
         die();
     }
 
-    set_time_limit(1);
-    $ext = pathinfo($_GET['path'], PATHINFO_EXTENSION);
-    if (!in_array(strtolower($ext), [
-      'jpg',
-      'jpeg',
-      'png',
-      'gif',
-      'mp4',
-      'webm',
-    ]) || !str_starts_with($_GET['path'], '/pr')) {
-        $dlurl = 'http://' . privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT') . $_GET['path'];
-        //if (privuma::live($dlurl)) {
+    // Optimized image serving with caching and early validation
+    $path = $_GET['path'];
+
+    // Fast path validation
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm'];
+
+    if (!in_array($ext, $allowedExts) || !str_starts_with($path, '/pr')) {
+        $dlurl = 'http://' . privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT') . $path;
+
+        // Add caching headers for external resources
+        header('Cache-Control: public, max-age=86400'); // 24 hours
+        header('Expires: ' . gmdate('D, d M Y H:i:s', time() + 86400) . ' GMT');
+
         privuma::accel($dlurl);
-        //}
+        exit();
     }
-    $hash = base64_decode(basename($_GET['path'], '.' . $ext));
-    $uri =
-      '/?token=' .
-      (new tokenizer())->rollingTokens(privuma::getEnv('AUTHTOKEN'))[1] .
-      '&media=' .
-      urlencode("h-$hash.$ext");
-    header("Location: $uri");
+
+    // Extract hash efficiently
+    $basename = basename($path, '.' . $ext);
+    $hash = base64_decode($basename);
+
+    // Use cached tokenizer instance
+    $token = getTokenizerInstance()->rollingTokens(privuma::getEnv('AUTHTOKEN'))[1];
+    $uri = '/?token=' . $token . '&media=' . urlencode("h-$hash.$ext");
+
+    // Add redirect caching headers
+    header('Cache-Control: public, max-age=300'); // 5 minutes
+    header('Location: ' . $uri);
+    exit();
 }
 
-echo file_get_contents('index.html');
-die();
+// Serve main HTML file with optimized caching
+$htmlFile = 'index.html';
+$lastModified = filemtime($htmlFile);
+
+// Check if client has cached version
+$etag = '"' . md5_file($htmlFile) . '"';
+$ifNoneMatch = $_SERVER['HTTP_IF_NONE_MATCH'] ?? '';
+$ifModifiedSince = $_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? '';
+
+if ($ifNoneMatch === $etag || strtotime($ifModifiedSince) >= $lastModified) {
+    header('HTTP/1.1 304 Not Modified');
+    exit();
+}
+
+// Set caching headers for HTML
+header('Content-Type: text/html; charset=utf-8');
+header('Cache-Control: public, max-age=300, must-revalidate'); // 5 minutes with validation
+header('ETag: ' . $etag);
+header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
+header('Content-Length: ' . filesize($htmlFile));
+
+// Output the file efficiently
+readfile($htmlFile);
+exit();

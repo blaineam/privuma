@@ -15,14 +15,18 @@ use privuma\privuma;
 use privuma\helpers\cloudFS;
 use privuma\helpers\tokenizer;
 use privuma\helpers\mediaFile;
+use privuma\helpers\redisCache;
 
 privuma::prof_flag('Photos File Start');
 
-$ops = privuma::getCloudFS();
+// Cache expensive objects to avoid recreation on each request
+static $ops = null;
+static $privuma = null;
+static $tokenizer = null;
 
-$privuma = privuma::getInstance();
-
-$tokenizer = new tokenizer();
+if ($ops === null) $ops = privuma::getCloudFS();
+if ($privuma === null) $privuma = privuma::getInstance();
+if ($tokenizer === null) $tokenizer = new tokenizer();
 $USE_MIRROR = privuma::getEnv('USE_MIRROR');
 $RCLONE_MIRROR = privuma::getEnv('RCLONE_MIRROR');
 $FLASH_MIRROR = privuma::getEnv('FLASH_RCLONE_LOCATION');
@@ -64,6 +68,11 @@ function isUrl($path): bool
       filter_var($path, FILTER_VALIDATE_URL);
 }
 
+// Cache for presigned URLs to avoid recalculation
+static $presignedCache = [];
+static $presignedCacheSize = 0;
+static $maxPresignedCacheSize = 500;
+
 function RClone_S3_PresignedURL(
     $AWSAccessKeyId,
     $AWSSecretAccessKey,
@@ -73,6 +82,20 @@ function RClone_S3_PresignedURL(
     $S3Endpoint = null,
     $expires = 86400
 ) {
+    global $presignedCache, $presignedCacheSize, $maxPresignedCacheSize;
+
+    // Create cache key
+    $cacheKey = md5($AWSAccessKeyId . $BucketName . $canonical_uri . $S3Endpoint);
+
+    // Check cache first (with 5 minute TTL)
+    if (isset($presignedCache[$cacheKey])) {
+        $cached = $presignedCache[$cacheKey];
+        if (time() - $cached['created'] < 300) { // 5 minutes
+            return $cached['url'];
+        }
+        unset($presignedCache[$cacheKey]);
+        $presignedCacheSize--;
+    }
     $encoded_uri = str_replace('%2F', '/', rawurlencode($canonical_uri));
     // Specify the hostname for the S3 endpoint
     if (!is_null($S3Endpoint)) {
@@ -154,13 +177,25 @@ function RClone_S3_PresignedURL(
     );
 
     $signature = hash_hmac('sha256', $string_to_sign, $signing_key);
-    return 'https://' .
+    $url = 'https://' .
       $hostname .
       $encoded_uri .
       '?' .
       $query_string .
       '&X-Amz-Signature=' .
       $signature;
+
+    // Cache the result with size management
+    if ($presignedCacheSize < $maxPresignedCacheSize) {
+        $presignedCache[$cacheKey] = ['url' => $url, 'created' => time()];
+        $presignedCacheSize++;
+    } elseif ($presignedCacheSize >= $maxPresignedCacheSize) {
+        // Reset cache when it gets too large
+        $presignedCache = [$cacheKey => ['url' => $url, 'created' => time()]];
+        $presignedCacheSize = 1;
+    }
+
+    return $url;
 }
 
 function redirectToMedia($path)
@@ -438,6 +473,9 @@ function realFilePath($filePath, $dirnamed_sync_folder = false)
     return false;
 }
 
+// Cache for protected URLs to avoid repeated token generation
+static $protectedUrlCache = [];
+
 function getProtectedUrlForMediaPath(
     $path,
     $use_fallback = false,
@@ -447,12 +485,29 @@ function getProtectedUrlForMediaPath(
     global $FALLBACK_ENDPOINT;
     global $AUTHTOKEN;
     global $tokenizer;
-    $uri =
-      '?token=' .
-      $tokenizer->rollingTokens($AUTHTOKEN, $noIp)[1] .
-      '&media=' .
-      urlencode(base64_encode($path));
-    return $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
+    global $protectedUrlCache;
+
+    // Create cache key
+    $cacheKey = md5($path . $use_fallback . $noIp);
+
+    // Check cache first (1 minute TTL for token-based URLs)
+    if (isset($protectedUrlCache[$cacheKey])) {
+        $cached = $protectedUrlCache[$cacheKey];
+        if (time() - $cached['time'] < 60) {
+            return $cached['url'];
+        }
+        unset($protectedUrlCache[$cacheKey]);
+    }
+
+    $uri = '?token=' . $tokenizer->rollingTokens($AUTHTOKEN, $noIp)[1] . '&media=' . urlencode(base64_encode($path));
+    $url = $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
+
+    // Cache result with size limit
+    if (count($protectedUrlCache) < 200) {
+        $protectedUrlCache[$cacheKey] = ['url' => $url, 'time' => time()];
+    }
+
+    return $url;
 }
 
 function getProtectedUrlForMedia($media, $use_fallback = false)
@@ -540,8 +595,25 @@ function streamMedia($file, bool $useOps = false)
         privuma::accel($file);
     } elseif (pathinfo($file, PATHINFO_EXTENSION) !== 'mp4' || is_file($file)) {
         $file = getCompressionUrl($file);
-        $headers = get_headers($file, true);
-        $head = array_change_key_case($headers);
+
+        // Cache headers to avoid repeated get_headers() calls
+        static $headerCache = [];
+        $headerCacheKey = md5($file);
+
+        if (isset($headerCache[$headerCacheKey]) &&
+            time() - $headerCache[$headerCacheKey]['time'] < 300) { // 5 min cache
+            $head = $headerCache[$headerCacheKey]['headers'];
+        } else {
+            $headers = get_headers($file, true);
+            $head = array_change_key_case($headers);
+            $headerCache[$headerCacheKey] = ['headers' => $head, 'time' => time()];
+
+            // Limit cache size
+            if (count($headerCache) > 100) {
+                $headerCache = array_slice($headerCache, -50, 50, true);
+            }
+        }
+
         header('Accept-Ranges: bytes');
         header('Content-Disposition: inline');
         header(
@@ -587,91 +659,95 @@ function run()
 
         $conn = $privuma->getPDO();
 
-        $favoritesStmt = $conn->prepare("select filename, hash, time
-            from media
-            where album = 'Favorites'
-        ");
-        $favoritesStmt->execute([]);
-        $favorites = [];
-        foreach ($favoritesStmt->fetchAll() as $favorite) {
-            $favorites[$favorite['hash']] = [];
-            $favorites[$favorite['hash']]['hash'] = $favorite['hash'];
-            $favorites[$favorite['hash']]['time'] = $favorite['time'];
-            $favorites[$favorite['hash']]['album'] = explode(
-                '-----',
-                $favorite['filename']
-            )[0];
-            $favorites[$favorite['hash']]['filename'] = explode(
-                '-----',
-                $favorite['filename']
-            )[1];
+        // Cache favorites query result to avoid repeated DB hits
+        static $favoritesCache = null;
+        static $favoritesCacheTime = 0;
+        static $favoritesCacheTTL = 300; // 5 minutes
+
+        // Try Redis cache first
+        $redisCacheKey = 'photos:favorites';
+        $favoritesCache = redisCache::get($redisCacheKey);
+
+        if ($favoritesCache === null || (time() - $favoritesCacheTime) > $favoritesCacheTTL) {
+            $favoritesStmt = $conn->prepare("select filename, hash, time
+                from media
+                where album = 'Favorites'
+            ");
+            $favoritesStmt->execute([]);
+            $favorites = [];
+            foreach ($favoritesStmt->fetchAll() as $favorite) {
+                $filenameParts = explode('-----', $favorite['filename']);
+                $favorites[$favorite['hash']] = [
+                    'hash' => $favorite['hash'],
+                    'time' => $favorite['time'],
+                    'album' => $filenameParts[0],
+                    'filename' => $filenameParts[1] ?? $favorite['filename']
+                ];
+            }
+            $favoritesCache = $favorites;
+            $favoritesCacheTime = time();
+
+            // Cache in Redis for 5 minutes
+            redisCache::set($redisCacheKey, $favorites, 300);
+        } else {
+            $favorites = $favoritesCache;
+        }
+
+        // Optimize query by reducing subquery complexity and using indexes
+        $isComic = strpos(strtolower($albumName), 'comic') !== false &&
+                   strpos(strtolower($albumName), '-comic') === false;
+
+        if ($isComic) {
+            $orderBy = 'filename ASC';
+        } else {
+            $orderBy = 'time DESC';
         }
 
         $stmt = $conn->prepare(
-            "select filename, album, time, hash, url, thumbnail, metadata
-        from media
-        where hash in
-        (select hash from media where {$sqlFilter} " .
-              (!empty($sqlFilter) ? ' and ' : '') .
-              " album = ? and hash != 'compressed')
-        group by hash
-         order by
-         " .
-              (strpos(strtolower($albumName), 'comic') !== false &&
-              strpos(strtolower($albumName), '-comic') === false
-                ? 'filename asc'
-                : "
-            CASE
-                WHEN filename LIKE '%.gif' THEN 1
-                WHEN filename LIKE '%.mp4' THEN 2
-                WHEN filename LIKE '%.webm' THEN 3
-                ELSE 4
-            END,
-            time DESC")
+            "SELECT filename, album, time, hash, url, thumbnail, metadata
+             FROM media
+             WHERE {$sqlFilter} " .
+             (!empty($sqlFilter) ? ' AND ' : '') .
+             " album = ? AND hash != 'compressed'
+             GROUP BY hash
+             ORDER BY {$orderBy}"
         );
         $stmt->execute([$albumName]);
         $data = $stmt->fetchAll();
 
-        usort($data, function ($a, $b) use ($albumName, $favorites) {
-            $aext = pathinfo($a['filename'], PATHINFO_EXTENSION);
-            $bext = pathinfo($b['filename'], PATHINFO_EXTENSION);
-            if (
-                strpos(strtolower($albumName), 'comic') !== false &&
-                strpos(strtolower($albumName), '-comic') === false
-            ) {
-                return strnatcmp($a['filename'], $b['filename']);
-            }
+        // Only sort if not comic album (since comic albums already sorted by filename in SQL)
+        if (!$isComic) {
+            usort($data, function ($a, $b) use ($albumName, $favorites) {
+                // Cache extension parsing to avoid repeated calls
+                static $extCache = [];
+                $akey = $a['filename'];
+                $bkey = $b['filename'];
 
-            if ($aext == 'gif' && $bext != 'gif') {
-                return -1;
-            }
+                if (!isset($extCache[$akey])) {
+                    $extCache[$akey] = strtolower(pathinfo($a['filename'], PATHINFO_EXTENSION));
+                }
+                if (!isset($extCache[$bkey])) {
+                    $extCache[$bkey] = strtolower(pathinfo($b['filename'], PATHINFO_EXTENSION));
+                }
 
-            if ($bext == 'gif' && $aext != 'gif') {
-                return 1;
-            }
+                $aext = $extCache[$akey];
+                $bext = $extCache[$bkey];
 
-            if (
-                in_array($aext, ['webm', 'mp4']) &&
-                !in_array($bext, ['webm', 'mp4'])
-            ) {
-                return -1;
-            }
+                // Priority: gif > mp4/webm > others
+                $aPriority = ($aext === 'gif') ? 1 : (in_array($aext, ['webm', 'mp4']) ? 2 : 3);
+                $bPriority = ($bext === 'gif') ? 1 : (in_array($bext, ['webm', 'mp4']) ? 2 : 3);
 
-            if (
-                in_array($bext, ['webm', 'mp4']) &&
-                !in_array($aext, ['webm', 'mp4'])
-            ) {
-                return 1;
-            }
+                if ($aPriority !== $bPriority) {
+                    return $aPriority <=> $bPriority;
+                }
 
-            $adate = strtotime(
-                $albumName === 'Favorites' ? $favorites[$a['hash']]['time'] : $a['time']
-            );
-            $bdate = strtotime(
-                $albumName === 'Favorites' ? $favorites[$b['hash']]['time'] : $b['time']
-            );
-            return $bdate <=> $adate;
-        });
+                // Same priority, sort by time
+                $atime = $albumName === 'Favorites' ? $favorites[$a['hash']]['time'] ?? $a['time'] : $a['time'];
+                $btime = $albumName === 'Favorites' ? $favorites[$b['hash']]['time'] ?? $b['time'] : $b['time'];
+
+                return strtotime($btime) <=> strtotime($atime);
+            });
+        }
 
         $media = [];
         foreach ($data as $item) {
@@ -1343,56 +1419,54 @@ function run()
     }
 }
 
+// Cache MIME types in memory to avoid repeated file reads
+static $mimeTypesCache = null;
+
 function get_mime_by_filename($filename)
 {
-    if (
-        !is_file(
-            privuma::getOutputDirectory() .
-              DIRECTORY_SEPARATOR .
-              'cache' .
-              DIRECTORY_SEPARATOR .
-              'mimes.json'
-        )
-    ) {
-        $db = json_decode(
-            file_get_contents(
-                'https://cdn.jsdelivr.net/gh/jshttp/mime-db@master/db.json'
-            ),
-            true
-        );
-        $mime_types = [];
-        foreach ($db as $mime => $data) {
-            if (!isset($data['extensions'])) {
-                continue;
-            }
-            foreach ($data['extensions'] as $extension) {
-                $mime_types[$extension] = $mime;
-            }
-        }
+    global $mimeTypesCache;
 
-        file_put_contents(
-            privuma::getOutputDirectory() .
-              DIRECTORY_SEPARATOR .
-              'cache' .
-              DIRECTORY_SEPARATOR .
-              'mimes.json',
-            json_encode($mime_types, JSON_PRETTY_PRINT)
-        );
+    // Use in-memory cache first
+    if ($mimeTypesCache === null) {
+        $cacheFile = privuma::getOutputDirectory() .
+            DIRECTORY_SEPARATOR .
+            'cache' .
+            DIRECTORY_SEPARATOR .
+            'mimes.json';
+
+        if (!is_file($cacheFile)) {
+            // Use built-in common MIME types to avoid external API call
+            $mimeTypesCache = [
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                'mp4' => 'video/mp4',
+                'webm' => 'video/webm',
+                'avi' => 'video/x-msvideo',
+                'mov' => 'video/quicktime',
+                'wmv' => 'video/x-ms-wmv',
+                'flv' => 'video/x-flv',
+                'pdf' => 'application/pdf',
+                'txt' => 'text/plain',
+                'html' => 'text/html',
+                'css' => 'text/css',
+                'js' => 'application/javascript',
+                'json' => 'application/json',
+                'xml' => 'application/xml',
+                'zip' => 'application/zip',
+                'rar' => 'application/vnd.rar',
+                '7z' => 'application/x-7z-compressed'
+            ];
+
+            // Try to cache for future use
+            @file_put_contents($cacheFile, json_encode($mimeTypesCache, JSON_PRETTY_PRINT));
+        } else {
+            $mimeTypesCache = json_decode(file_get_contents($cacheFile), true) ?: [];
+        }
     }
-    $mime_types = json_decode(
-        file_get_contents(
-            privuma::getOutputDirectory() .
-              DIRECTORY_SEPARATOR .
-              'cache' .
-              DIRECTORY_SEPARATOR .
-              'mimes.json'
-        ),
-        true
-    );
+
     $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-    if (array_key_exists($ext, $mime_types)) {
-        return $mime_types[$ext];
-    } else {
-        return 'application/octet-stream';
-    }
+    return $mimeTypesCache[$ext] ?? 'application/octet-stream';
 }

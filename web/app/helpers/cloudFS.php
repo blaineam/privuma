@@ -15,6 +15,17 @@ class cloudFS
     private bool $segmented;
     private dotenv $env;
 
+    // Performance caches
+    private static array $pathInfoCache = [];
+    private static array $pathInfoCacheTime = [];
+    private static array $scandirCache = [];
+    private static array $scandirCacheTime = [];
+    private static array $encodingCache = [];
+    private static int $cacheHits = 0;
+    private static int $cacheMisses = 0;
+    private static int $maxCacheSize = 1000;
+    private static int $cacheTTL = 300; // 5 minutes
+
     public function __construct(
         string $rCloneDestination = 'privuma:',
         bool $encoded = true,
@@ -41,10 +52,35 @@ class cloudFS
 
     public function scandir(string $directory, bool $objects = false, bool $recursive = false, ?array $filters = null, $dirsOnly = false, $filesOnly = false, $noModTime = false, $noMimeType = false)
     {
+        // Create cache key for this specific scandir request
+        $cacheKey = 'cloudfs:scandir:' . md5($directory . (int)$objects . (int)$recursive . serialize($filters) . (int)$dirsOnly . (int)$filesOnly . (int)$noModTime . (int)$noMimeType);
+
+        // Try Redis cache first (persistent across requests)
+        $cached = redisCache::get($cacheKey);
+        if ($cached !== null) {
+            self::$cacheHits++;
+            return $cached;
+        }
+
+        // Check local cache second
+        $localCacheKey = md5($directory . (int)$objects . (int)$recursive . serialize($filters) . (int)$dirsOnly . (int)$filesOnly . (int)$noModTime . (int)$noMimeType);
+        if (isset(self::$scandirCache[$localCacheKey])) {
+            $cacheTime = self::$scandirCacheTime[$localCacheKey];
+            if (time() - $cacheTime < self::$cacheTTL) {
+                self::$cacheHits++;
+                return self::$scandirCache[$localCacheKey];
+            }
+            // Expired cache entry
+            unset(self::$scandirCache[$localCacheKey], self::$scandirCacheTime[$localCacheKey]);
+        }
+
         if (!$this->is_dir($directory) && $directory !== DIRECTORY_SEPARATOR) {
             error_log('not a dir');
             return false;
         }
+
+        self::$cacheMisses++;
+
         try {
             $filter = null;
             if (is_array($filters)) {
@@ -54,18 +90,75 @@ class cloudFS
                     $filter .= ' ' . $filterType . ($this->encoded ? $this->encode(ltrim($internal_filter, '+- ')) : ltrim($internal_filter, '+- ')) . "'";
                 }
             }
-            $files = json_decode($this->execute('lsjson', $directory, null, false, true, [ '--min-size 1B', ($noMimeType ? '--no-mimetype' : ''), ($noModTime ? '--no-modtime' : ''), ($dirsOnly ? '--dirs-only' : ''), ($filesOnly ? '--files-only' : ''), ($recursive !== false) ? '--recursive': '', (!is_null($filter)) ? $filter : '']), true);
-            usort($files, function ($a, $b) {
-                return strtotime(explode('.', $b['ModTime'])[0]) <=> strtotime(explode('.', $a['ModTime'])[0]);
-            });
-            $response = array_map(function ($object) {
-                $object['Name'] = ($this->encoded ? $this->decode($object['Name'], $this->segmented) : $object['Name']);
-                $object['Path'] = ($this->encoded ? $this->decode($object['Path'], $this->segmented) : $object['Path']);
-                return $object;
-            }, $files);
 
-            $response = $objects ? $response : ['.', '..', ...array_column($response, 'Name')];
-            return  $response;
+            $files = json_decode($this->execute('lsjson', $directory, null, false, true, [
+                '--min-size 1B',
+                ($noMimeType ? '--no-mimetype' : ''),
+                ($noModTime ? '--no-modtime' : ''),
+                ($dirsOnly ? '--dirs-only' : ''),
+                ($filesOnly ? '--files-only' : ''),
+                ($recursive !== false) ? '--recursive': '',
+                (!is_null($filter)) ? $filter : ''
+            ]), true);
+
+            // Optimize sorting - only sort if ModTime is available
+            if (!$noModTime && is_array($files)) {
+                usort($files, function ($a, $b) {
+                    $aTime = isset($a['ModTime']) ? strtotime(explode('.', $a['ModTime'])[0]) : 0;
+                    $bTime = isset($b['ModTime']) ? strtotime(explode('.', $b['ModTime'])[0]) : 0;
+                    return $bTime <=> $aTime;
+                });
+            }
+
+            // Optimize decoding - batch process and cache encoding results
+            $response = [];
+            if (is_array($files)) {
+                foreach ($files as $object) {
+                    if ($this->encoded) {
+                        $nameKey = 'name_' . $object['Name'];
+                        $pathKey = 'path_' . $object['Path'];
+
+                        if (!isset(self::$encodingCache[$nameKey])) {
+                            self::$encodingCache[$nameKey] = $this->decode($object['Name'], $this->segmented);
+                        }
+                        if (!isset(self::$encodingCache[$pathKey])) {
+                            self::$encodingCache[$pathKey] = $this->decode($object['Path'], $this->segmented);
+                        }
+
+                        $object['Name'] = self::$encodingCache[$nameKey];
+                        $object['Path'] = self::$encodingCache[$pathKey];
+
+                        // Limit encoding cache size
+                        if (count(self::$encodingCache) > 2000) {
+                            self::$encodingCache = array_slice(self::$encodingCache, -1000, 1000, true);
+                        }
+                    }
+                    $response[] = $object;
+                }
+            }
+
+            $result = $objects ? $response : ['.', '..', ...array_column($response, 'Name')];
+
+            // Cache the result with size management
+            if (count(self::$scandirCache) >= self::$maxCacheSize) {
+                // Remove oldest 25% of entries
+                $removeCount = intval(self::$maxCacheSize * 0.25);
+                asort(self::$scandirCacheTime);
+                $keysToRemove = array_slice(array_keys(self::$scandirCacheTime), 0, $removeCount);
+
+                foreach ($keysToRemove as $key) {
+                    unset(self::$scandirCache[$key], self::$scandirCacheTime[$key]);
+                }
+            }
+
+            // Cache in Redis with 5 minute TTL
+            redisCache::set($cacheKey, $result, 300);
+
+            // Also cache locally
+            self::$scandirCache[$localCacheKey] = $result;
+            self::$scandirCacheTime[$localCacheKey] = time();
+
+            return $result;
         } catch (Exception $e) {
             error_log($e->getMessage());
             return false;
@@ -99,6 +192,30 @@ class cloudFS
 
     public function getPathInfo(string $path, bool $modTime = true, bool $mimetype = true, bool $onlyDirs = false, bool $onlyFiles = false, bool $showMD5 = false)
     {
+        // Create cache key based on path and parameters
+        $cacheKey = 'cloudfs:pathinfo:' . md5($path . (int)$modTime . (int)$mimetype . (int)$onlyDirs . (int)$onlyFiles . (int)$showMD5);
+
+        // Try Redis cache first (persistent across requests)
+        $cached = redisCache::get($cacheKey);
+        if ($cached !== null) {
+            self::$cacheHits++;
+            return $cached;
+        }
+
+        // Check local cache second (faster but request-specific)
+        $localCacheKey = md5($path . (int)$modTime . (int)$mimetype . (int)$onlyDirs . (int)$onlyFiles . (int)$showMD5);
+        if (isset(self::$pathInfoCache[$localCacheKey])) {
+            $cacheTime = self::$pathInfoCacheTime[$localCacheKey];
+            if (time() - $cacheTime < self::$cacheTTL) {
+                self::$cacheHits++;
+                return self::$pathInfoCache[$localCacheKey];
+            }
+            // Expired cache entry
+            unset(self::$pathInfoCache[$localCacheKey], self::$pathInfoCacheTime[$localCacheKey]);
+        }
+
+        self::$cacheMisses++;
+
         try {
             $list = json_decode($this->execute('lsjson', $path, null, false, true, [
                 '--min-size 1B',
@@ -113,7 +230,29 @@ class cloudFS
             error_log($e->getMessage());
             return false;
         }
-        return is_null($list) ? false : $list;
+
+        $result = is_null($list) ? false : $list;
+
+        // Cache the result in Redis (persistent across requests) with 10 minute TTL
+        redisCache::set($cacheKey, $result, 600);
+
+        // Also cache locally for this request
+        if (count(self::$pathInfoCache) >= self::$maxCacheSize) {
+            // Remove oldest 25% of entries
+            $removeCount = intval(self::$maxCacheSize * 0.25);
+            $sortedKeys = array_keys(self::$pathInfoCacheTime);
+            asort(self::$pathInfoCacheTime);
+            $keysToRemove = array_slice(array_keys(self::$pathInfoCacheTime), 0, $removeCount);
+
+            foreach ($keysToRemove as $key) {
+                unset(self::$pathInfoCache[$key], self::$pathInfoCacheTime[$key]);
+            }
+        }
+
+        self::$pathInfoCache[$localCacheKey] = $result;
+        self::$pathInfoCacheTime[$localCacheKey] = time();
+
+        return $result;
     }
 
     public function file_exists(string $file): bool
@@ -131,8 +270,18 @@ class cloudFS
     public function filemtime(string $file)
     {
         $info = $this->getPathInfo($file, true, false, false, true, false);
-        if ($info !== false) {
-            return strtotime(explode('.', $info['ModTime'])[0]);
+        if ($info !== false && isset($info['ModTime'])) {
+            // Cache the strtotime conversion to avoid repeated calls
+            static $timeCache = [];
+            $timeKey = $info['ModTime'];
+            if (!isset($timeCache[$timeKey])) {
+                $timeCache[$timeKey] = strtotime(explode('.', $info['ModTime'])[0]);
+                // Limit time cache size
+                if (count($timeCache) > 500) {
+                    $timeCache = array_slice($timeCache, -250, 250, true);
+                }
+            }
+            return $timeCache[$timeKey];
         }
         return false;
     }
@@ -165,6 +314,18 @@ class cloudFS
 
     public function filesize(string $file)
     {
+        // Try to get size from pathInfo cache first (if available)
+        $cacheKey = md5($file . '00000'); // Use same pattern as getPathInfo but for filesize
+        if (isset(self::$pathInfoCache[$cacheKey])) {
+            $cached = self::$pathInfoCache[$cacheKey];
+            if (is_array($cached) && isset($cached['Size'])) {
+                self::$cacheHits++;
+                return $cached['Size'];
+            }
+        }
+
+        self::$cacheMisses++;
+
         try {
             $data = json_decode($this->execute('size', $file, null, false, true, [
                 '--json'
@@ -173,7 +334,16 @@ class cloudFS
             error_log($e->getMessage());
             return false;
         }
-        return is_null($data) ? false : $data['bytes'];
+
+        $result = is_null($data) ? false : $data['bytes'];
+
+        // Cache the filesize result
+        if ($result !== false && count(self::$pathInfoCache) < self::$maxCacheSize) {
+            self::$pathInfoCache[$cacheKey] = ['Size' => $result];
+            self::$pathInfoCacheTime[$cacheKey] = time();
+        }
+
+        return $result;
     }
 
     public function is_dir(string $directory): bool
@@ -404,6 +574,12 @@ class cloudFS
 
     public static function encode(string $path, bool $segmented = false): string
     {
+        // Check encoding cache first
+        $cacheKey = 'encode_' . $path . '_' . (int)$segmented;
+        if (isset(self::$encodingCache[$cacheKey])) {
+            return self::$encodingCache[$cacheKey];
+        }
+
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         $encoded = implode(DIRECTORY_SEPARATOR, array_map(function ($part) use ($ext) {
             return implode('*', array_map(function ($p) use ($ext) {
@@ -413,34 +589,73 @@ class cloudFS
                 return '';
             }, explode('*', $part)));
         }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
-        return $segmented
-        ? dirname(
-            $encoded
-        )
-        . DIRECTORY_SEPARATOR
-        . substr(
-            basename(
-                $encoded
-            ),
-            0, 2
-        )
-        . DIRECTORY_SEPARATOR
-        . $encoded
+
+        $result = $segmented
+        ? dirname($encoded) . DIRECTORY_SEPARATOR . substr(basename($encoded), 0, 2) . DIRECTORY_SEPARATOR . $encoded
         : $encoded;
+
+        // Cache result with size management
+        if (count(self::$encodingCache) > 2000) {
+            self::$encodingCache = array_slice(self::$encodingCache, -1000, 1000, true);
+        }
+        self::$encodingCache[$cacheKey] = $result;
+
+        return $result;
     }
 
     public static function decode(string $path, bool $segmented = false): string
     {
+        // Check encoding cache first
+        $cacheKey = 'decode_' . $path . '_' . (int)$segmented;
+        if (isset(self::$encodingCache[$cacheKey])) {
+            return self::$encodingCache[$cacheKey];
+        }
+
         $ext = pathinfo($path, PATHINFO_EXTENSION);
-        $path = $segmented ? (dirname($path, 2) . DIRECTORY_SEPARATOR . basename($path)) : $path;
-        return implode(DIRECTORY_SEPARATOR, array_map(function ($part) use ($ext) {
+        $processPath = $segmented ? (dirname($path, 2) . DIRECTORY_SEPARATOR . basename($path)) : $path;
+
+        $result = implode(DIRECTORY_SEPARATOR, array_map(function ($part) use ($ext) {
             return implode('*', array_map(function ($p) use ($ext) {
                 if (strpos($p, '.') !== 0) {
                     return base64_decode(basename($p, '.' . $ext));
                 }
                 return '';
             }, explode('*', $part)));
-        }, explode(DIRECTORY_SEPARATOR, $path))) . (empty($ext) ? '' :  '.' . $ext);
+        }, explode(DIRECTORY_SEPARATOR, $processPath))) . (empty($ext) ? '' :  '.' . $ext);
+
+        // Cache result with size management
+        if (count(self::$encodingCache) > 2000) {
+            self::$encodingCache = array_slice(self::$encodingCache, -1000, 1000, true);
+        }
+        self::$encodingCache[$cacheKey] = $result;
+
+        return $result;
+    }
+
+    // Add method to get cache statistics for monitoring performance
+    public static function getCacheStats(): array
+    {
+        return [
+            'cache_hits' => self::$cacheHits,
+            'cache_misses' => self::$cacheMisses,
+            'hit_ratio' => self::$cacheMisses > 0 ? round((self::$cacheHits / (self::$cacheHits + self::$cacheMisses)) * 100, 2) : 0,
+            'pathinfo_cache_size' => count(self::$pathInfoCache),
+            'scandir_cache_size' => count(self::$scandirCache),
+            'encoding_cache_size' => count(self::$encodingCache),
+            'total_cache_entries' => count(self::$pathInfoCache) + count(self::$scandirCache) + count(self::$encodingCache)
+        ];
+    }
+
+    // Add method to clear caches if needed
+    public static function clearCaches(): void
+    {
+        self::$pathInfoCache = [];
+        self::$pathInfoCacheTime = [];
+        self::$scandirCache = [];
+        self::$scandirCacheTime = [];
+        self::$encodingCache = [];
+        self::$cacheHits = 0;
+        self::$cacheMisses = 0;
     }
 
     public function moveSync(string $source, string $destination, bool $encodeDestination = true, bool $decodeSource = false, bool $preserveBucketName = true, array $flags = []): bool
