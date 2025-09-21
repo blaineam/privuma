@@ -28,7 +28,8 @@ require_once __DIR__ .
 static $privuma_instance = null;
 static $tokenizer_instance = null;
 
-function getPrivumaInstance() {
+function getPrivumaInstance()
+{
     global $privuma_instance;
     if ($privuma_instance === null) {
         $privuma_instance = privuma::getInstance();
@@ -36,7 +37,8 @@ function getPrivumaInstance() {
     return $privuma_instance;
 }
 
-function getTokenizerInstance() {
+function getTokenizerInstance()
+{
     global $tokenizer_instance;
     if ($tokenizer_instance === null) {
         $tokenizer_instance = new tokenizer();
@@ -225,37 +227,37 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false): array
         $metaDataFiles = [];
         $dataset = json_decode($data, true);
         foreach ($dataset as $item) {
-                if (!is_null($item['metadata']) && strlen($item['metadata']) > 3) {
-                    $targetMetaDataPrefix = substr(base64_encode($item['hash']), 0, 2);
-                    if (!array_key_exists($targetMetaDataPrefix, $metaDataFiles)) {
-                        $metaDataFiles[$targetMetaDataPrefix] = [];
-                    }
-                    $metaDataFiles[$targetMetaDataPrefix][$item['hash']] = $item['metadata'];
+            if (!is_null($item['metadata']) && strlen($item['metadata']) > 3) {
+                $targetMetaDataPrefix = substr(base64_encode($item['hash']), 0, 2);
+                if (!array_key_exists($targetMetaDataPrefix, $metaDataFiles)) {
+                    $metaDataFiles[$targetMetaDataPrefix] = [];
                 }
-                $tags = substr(sanitizeLine(implode(', ', array_slice(explode(', ', explode(PHP_EOL, explode('Tags: ', $item['metadata'])[1] ?? '')[0]) ??
-                [], 0, 60))), 0, 500);
-                $item['metadata'] = is_null($item['metadata']) ? '' : (strlen($tags) < 1 ? 'Using MetaData Store...' : $tags);
-                if (!array_key_exists($item['hash'], $array)) {
-                    $filenameParts = explode('-----', $item['filename']);
-                    $array[$item['hash']] = [
-                      'albums' => [sanitizeLine($item['album'])],
-                      'filename' => sanitizeLine(substr(end($filenameParts), 0, 20)) . '.' . pathinfo($item['filename'], PATHINFO_EXTENSION),
-                      'hash' => $item['hash'],
-                      'times' => [$item['time']],
-                      'metadata' => $item['metadata'],
-                      'duration' => $item['duration'],
-                      'sound' => $item['sound']
-                    ];
-                } else {
-                    $array[$item['hash']]['albums'][] = sanitizeLine($item['album']);
-                    $array[$item['hash']]['times'][] = $item['time'];
-                }
+                $metaDataFiles[$targetMetaDataPrefix][$item['hash']] = $item['metadata'];
             }
-            $data = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
-                array_values($array),
-                JSON_THROW_ON_ERROR
-            ))));
-            $data = 'const encrypted_data = `' . $data . '`;';
+            $tags = substr(sanitizeLine(implode(', ', array_slice(explode(', ', explode(PHP_EOL, explode('Tags: ', $item['metadata'])[1] ?? '')[0]) ??
+            [], 0, 60))), 0, 500);
+            $item['metadata'] = is_null($item['metadata']) ? '' : (strlen($tags) < 1 ? 'Using MetaData Store...' : $tags);
+            if (!array_key_exists($item['hash'], $array)) {
+                $filenameParts = explode('-----', $item['filename']);
+                $array[$item['hash']] = [
+                  'albums' => [sanitizeLine($item['album'])],
+                  'filename' => sanitizeLine(substr(end($filenameParts), 0, 20)) . '.' . pathinfo($item['filename'], PATHINFO_EXTENSION),
+                  'hash' => $item['hash'],
+                  'times' => [$item['time']],
+                  'metadata' => $item['metadata'],
+                  'duration' => $item['duration'],
+                  'sound' => $item['sound']
+                ];
+            } else {
+                $array[$item['hash']]['albums'][] = sanitizeLine($item['album']);
+                $array[$item['hash']]['times'][] = $item['time'];
+            }
+        }
+        $data = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
+            array_values($array),
+            JSON_THROW_ON_ERROR
+        ))));
+        $data = 'const encrypted_data = `' . $data . '`;';
     } else {
         $array = [];
         $dataset = json_decode($data, true);
