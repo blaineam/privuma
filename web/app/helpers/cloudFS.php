@@ -53,7 +53,7 @@ class cloudFS
     public function scandir(string $directory, bool $objects = false, bool $recursive = false, ?array $filters = null, $dirsOnly = false, $filesOnly = false, $noModTime = false, $noMimeType = false)
     {
         // Create cache key for this specific scandir request
-        $cacheKey = 'cloudfs:scandir:' . md5($directory . (int)$objects . (int)$recursive . serialize($filters) . (int)$dirsOnly . (int)$filesOnly . (int)$noModTime . (int)$noMimeType);
+        $cacheKey = 'cloudfs:scandir:' . md5($directory . (int) $objects . (int) $recursive . serialize($filters) . (int) $dirsOnly . (int) $filesOnly . (int) $noModTime . (int) $noMimeType);
 
         // Try Redis cache first (persistent across requests)
         $cached = redisCache::get($cacheKey);
@@ -63,7 +63,7 @@ class cloudFS
         }
 
         // Check local cache second
-        $localCacheKey = md5($directory . (int)$objects . (int)$recursive . serialize($filters) . (int)$dirsOnly . (int)$filesOnly . (int)$noModTime . (int)$noMimeType);
+        $localCacheKey = md5($directory . (int) $objects . (int) $recursive . serialize($filters) . (int) $dirsOnly . (int) $filesOnly . (int) $noModTime . (int) $noMimeType);
         if (isset(self::$scandirCache[$localCacheKey])) {
             $cacheTime = self::$scandirCacheTime[$localCacheKey];
             if (time() - $cacheTime < self::$cacheTTL) {
@@ -193,7 +193,7 @@ class cloudFS
     public function getPathInfo(string $path, bool $modTime = true, bool $mimetype = true, bool $onlyDirs = false, bool $onlyFiles = false, bool $showMD5 = false)
     {
         // Create cache key based on path and parameters
-        $cacheKey = 'cloudfs:pathinfo:' . md5($path . (int)$modTime . (int)$mimetype . (int)$onlyDirs . (int)$onlyFiles . (int)$showMD5);
+        $cacheKey = 'cloudfs:pathinfo:' . md5($path . (int) $modTime . (int) $mimetype . (int) $onlyDirs . (int) $onlyFiles . (int) $showMD5);
 
         // Try Redis cache first (persistent across requests)
         $cached = redisCache::get($cacheKey);
@@ -203,7 +203,7 @@ class cloudFS
         }
 
         // Check local cache second (faster but request-specific)
-        $localCacheKey = md5($path . (int)$modTime . (int)$mimetype . (int)$onlyDirs . (int)$onlyFiles . (int)$showMD5);
+        $localCacheKey = md5($path . (int) $modTime . (int) $mimetype . (int) $onlyDirs . (int) $onlyFiles . (int) $showMD5);
         if (isset(self::$pathInfoCache[$localCacheKey])) {
             $cacheTime = self::$pathInfoCacheTime[$localCacheKey];
             if (time() - $cacheTime < self::$cacheTTL) {
@@ -575,7 +575,7 @@ class cloudFS
     public static function encode(string $path, bool $segmented = false): string
     {
         // Check encoding cache first
-        $cacheKey = 'encode_' . $path . '_' . (int)$segmented;
+        $cacheKey = 'encode_' . $path . '_' . (int) $segmented;
         if (isset(self::$encodingCache[$cacheKey])) {
             return self::$encodingCache[$cacheKey];
         }
@@ -606,7 +606,7 @@ class cloudFS
     public static function decode(string $path, bool $segmented = false): string
     {
         // Check encoding cache first
-        $cacheKey = 'decode_' . $path . '_' . (int)$segmented;
+        $cacheKey = 'decode_' . $path . '_' . (int) $segmented;
         if (isset(self::$encodingCache[$cacheKey])) {
             return self::$encodingCache[$cacheKey];
         }

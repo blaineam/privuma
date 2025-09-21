@@ -24,9 +24,15 @@ static $ops = null;
 static $privuma = null;
 static $tokenizer = null;
 
-if ($ops === null) $ops = privuma::getCloudFS();
-if ($privuma === null) $privuma = privuma::getInstance();
-if ($tokenizer === null) $tokenizer = new tokenizer();
+if ($ops === null) {
+    $ops = privuma::getCloudFS();
+}
+if ($privuma === null) {
+    $privuma = privuma::getInstance();
+}
+if ($tokenizer === null) {
+    $tokenizer = new tokenizer();
+}
 $USE_MIRROR = privuma::getEnv('USE_MIRROR');
 $RCLONE_MIRROR = privuma::getEnv('RCLONE_MIRROR');
 $FLASH_MIRROR = privuma::getEnv('FLASH_RCLONE_LOCATION');
