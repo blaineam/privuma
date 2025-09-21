@@ -16,6 +16,8 @@ location ~* ^/media/(.*?)/(.*?)/(.*)/$ {
     # other headers from Django, proxy_hide_header ensures the header from the
     # remote server isn't passed through.
     proxy_hide_header Content-Disposition;
+    proxy_hide_header Access-Control-Allow-Origin;
+    add_header Access-Control-Allow-Origin *;
     add_header Content-Disposition $upstream_http_content_disposition;
     # Stops the local disk from being written to (just forwards data through)
     proxy_max_temp_file_size 0;

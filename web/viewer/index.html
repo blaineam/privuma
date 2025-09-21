@@ -432,133 +432,661 @@
           var ext = re.exec(resource)[1];
           return ["mp4", "webm", "gif"].includes(ext);
         },
-        requestQueue: [],
+        requestQueue: {
+          high: [],    // Viewport images
+          medium: [],  // Near viewport (±2 screens)
+          low: []      // Far from viewport
+        },
+        activeRequests: new Map(), // Track active requests for cancellation
+        pendingRequests: new Set(), // Prevent duplicate requests
+        corsFailedUrls: new Set(), // Track URLs that have CORS issues
+        decryptionStatus: new Map(), // Track whether paths need decryption: true/false/unknown
+        activeImageLoads: new Map(), // Track active image elements being loaded
+        rapidScrolling: false, // Track if we're in rapid scroll mode
+        imageFetches: new Map(), // Track active image fetch requests
+        blobCache: new Map(), // Cache blob URLs to avoid re-downloading
         dirCache: {},
         startQueue: async () => {
-          var chunkSize = 4;
-          while (medcrypt.requestQueue.length) {
-            if (medcrypt.requestQueue.length >= chunkSize) {
-              await Promise.allSettled(
-                Array(chunkSize)
-                  .fill()
-                  .map((v, i) => {
-                    const item = medcrypt.requestQueue.shift();
-                    if (typeof item == "function") {
-                      return item();
-                    }
-                    return item;
-                  }),
-              );
-            } else {
-              const item = medcrypt.requestQueue.shift();
-              if (typeof item == "function") {
-                await item();
+          const maxConcurrency = 8; // Increased from 4
+          while (Object.values(medcrypt.requestQueue).some(q => q.length > 0)) {
+            const batch = [];
+
+            // Process high priority first
+            for (const priority of ['high', 'medium', 'low']) {
+              const queue = medcrypt.requestQueue[priority];
+              while (queue.length > 0 && batch.length < maxConcurrency) {
+                batch.push(queue.shift());
               }
+              if (batch.length >= maxConcurrency) break;
+            }
+
+            if (batch.length > 0) {
+              await Promise.allSettled(
+                batch.map(item => typeof item === 'function' ? item() : item)
+              );
+            }
+          }
+          medcrypt.processingQueue = false; // Reset so new requests can start the queue again
+        },
+        flushQueue: () => {
+          medcrypt.requestQueue = {
+            high: [],
+            medium: [],
+            low: []
+          };
+          // Clear CORS failures on navigation to allow retry
+          medcrypt.corsFailedUrls.clear();
+
+          // Clean up old blob URLs to prevent memory leaks
+          const now = Date.now();
+          const maxAge = 10 * 60 * 1000; // 10 minutes
+          medcrypt.blobCache.forEach((blobInfo, key) => {
+            if (now - blobInfo.timestamp > maxAge) {
+              if (!blobInfo.revoked) {
+                URL.revokeObjectURL(blobInfo.url);
+                blobInfo.revoked = true;
+              }
+              medcrypt.blobCache.delete(key);
+            }
+          });
+        },
+        cancelAllRequests: function() {
+          // Cancel all active requests with Safari compatibility
+          medcrypt.activeRequests.forEach((controller, resource) => {
+            try {
+              if (controller && typeof controller.abort === 'function') {
+                controller.abort();
+              }
+            } catch (e) {
+              console.warn('Error aborting request:', e);
+            }
+          });
+          medcrypt.activeRequests.clear();
+          medcrypt.pendingRequests.clear();
+
+          // Cancel active image loads and fetches
+          medcrypt.cancelImageLoadsOutsideViewport(true); // Force cancel all
+          medcrypt.cancelImageFetchesOutsideViewport(true); // Force cancel all fetches
+
+          // Clear all queues
+          medcrypt.flushQueue();
+          console.log('All requests cancelled and queues cleared');
+        },
+        fetchImageAsBlob: async function(imageUrl, resourceKey, imageElement) {
+          // For HTTP, skip blob conversion and return direct URL
+          if (window.location.protocol === 'http:') {
+            return imageUrl;
+          }
+
+          // Check if we already have a blob for this resource
+          if (medcrypt.blobCache.has(resourceKey)) {
+            const cachedBlob = medcrypt.blobCache.get(resourceKey);
+            if (cachedBlob && !cachedBlob.revoked) {
+              return cachedBlob.url;
+            }
+          }
+
+          // Create AbortController for this image fetch - Safari/HTTP fallback
+          let controller;
+          try {
+            controller = new AbortController();
+          } catch (e) {
+            // Fallback for older Safari versions or HTTP restrictions
+            controller = {
+              signal: { aborted: false },
+              abort: function() {
+                this.signal.aborted = true;
+              }
+            };
+          }
+          medcrypt.imageFetches.set(resourceKey, {
+            controller: controller,
+            imageElement: imageElement,
+            url: imageUrl
+          });
+
+          try {
+            const fetchOptions = {
+              cache: 'force-cache' // Use browser cache if available
+            };
+
+            // Only add signal if AbortController is properly supported
+            if (controller.signal && typeof controller.signal.addEventListener === 'function') {
+              fetchOptions.signal = controller.signal;
+            }
+
+            const response = await fetch(imageUrl, fetchOptions);
+
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+
+            // Check if URL.createObjectURL is available (might be restricted on HTTP)
+            if (typeof URL.createObjectURL !== 'function') {
+              medcrypt.imageFetches.delete(resourceKey);
+              return imageUrl; // Fallback to direct URL
+            }
+
+            const blobUrl = URL.createObjectURL(blob);
+
+            // Cache the blob URL
+            medcrypt.blobCache.set(resourceKey, {
+              url: blobUrl,
+              revoked: false,
+              timestamp: Date.now()
+            });
+
+            // Clean up fetch tracking
+            medcrypt.imageFetches.delete(resourceKey);
+            return blobUrl;
+
+          } catch (error) {
+            // Clean up fetch tracking
+            medcrypt.imageFetches.delete(resourceKey);
+
+            if (error.name === 'AbortError') {
+              throw new Error('Fetch cancelled');
+            } else {
+              throw error;
             }
           }
         },
-        flushQueue: () => {
-          medcrypt.requestQueue = [];
+        cancelImageFetchesOutsideViewport: function(forceAll = false) {
+          const viewportTop = window.scrollY;
+          const viewportHeight = window.innerHeight;
+          const cancelRange = viewportHeight * 2;
+
+          medcrypt.imageFetches.forEach((fetchInfo, resourceKey) => {
+            const { controller, imageElement } = fetchInfo;
+
+            if (!imageElement || !imageElement.parentNode) {
+              // Element was removed from DOM
+              controller.abort();
+              medcrypt.imageFetches.delete(resourceKey);
+              return;
+            }
+
+            if (forceAll) {
+              // Force cancel all fetches
+              controller.abort();
+              medcrypt.imageFetches.delete(resourceKey);
+              return;
+            }
+
+            const rect = imageElement.getBoundingClientRect();
+            const elementTop = rect.top + viewportTop;
+            const distance = Math.min(
+              Math.abs(elementTop - viewportTop),
+              Math.abs(elementTop - (viewportTop + viewportHeight))
+            );
+
+            if (distance > cancelRange) {
+              // Cancel fetch for out-of-viewport images
+              controller.abort();
+              medcrypt.imageFetches.delete(resourceKey);
+            }
+          });
+        },
+        cancelImageLoadsOutsideViewport: function(forceAll = false) {
+          const viewportTop = window.scrollY;
+          const viewportHeight = window.innerHeight;
+          const cancelRange = viewportHeight * 2;
+
+          medcrypt.activeImageLoads.forEach((imageElement, resource) => {
+            if (!imageElement || !imageElement.parentNode) {
+              // Element was removed from DOM
+              medcrypt.activeImageLoads.delete(resource);
+              return;
+            }
+
+            if (forceAll) {
+              // Force cancel all images
+              imageElement.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+              imageElement.classList.remove("lazy-loaded");
+              imageElement.classList.add("lazy-waiting");
+              medcrypt.activeImageLoads.delete(resource);
+              return;
+            }
+
+            const rect = imageElement.getBoundingClientRect();
+            const elementTop = rect.top + viewportTop;
+            const distance = Math.min(
+              Math.abs(elementTop - viewportTop),
+              Math.abs(elementTop - (viewportTop + viewportHeight))
+            );
+
+            if (distance > cancelRange) {
+              // Reset image to placeholder and mark as not loaded
+              imageElement.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+              imageElement.classList.remove("lazy-loaded");
+              imageElement.classList.add("lazy-waiting");
+              medcrypt.activeImageLoads.delete(resource);
+            }
+          });
+        },
+        cancelOutOfRangeRequests: function() {
+          const viewportTop = window.scrollY;
+          const viewportHeight = window.innerHeight;
+          const cancelRange = viewportHeight * 2; // Cancel if >2 screens away (more aggressive)
+
+          // Cancel active requests that are outside viewport range
+          medcrypt.activeRequests.forEach((controller, resource) => {
+            const element = document.querySelector(`[data-resource="${resource}"]`);
+            if (element) {
+              const rect = element.getBoundingClientRect();
+              const elementTop = rect.top + viewportTop;
+              const distance = Math.min(
+                Math.abs(elementTop - viewportTop),
+                Math.abs(elementTop - (viewportTop + viewportHeight))
+              );
+
+              if (distance > cancelRange) {
+                try {
+                  if (controller && typeof controller.abort === 'function') {
+                    controller.abort();
+                  }
+                } catch (e) {
+                  console.warn('Error aborting request:', e);
+                }
+                medcrypt.activeRequests.delete(resource);
+                medcrypt.pendingRequests.delete(resource);
+              }
+            } else {
+              // Element not found, cancel the request
+              try {
+                if (controller && typeof controller.abort === 'function') {
+                  controller.abort();
+                }
+              } catch (e) {
+                console.warn('Error aborting request:', e);
+              }
+              medcrypt.activeRequests.delete(resource);
+              medcrypt.pendingRequests.delete(resource);
+            }
+          });
+
+          // Cancel image loads and fetches outside viewport
+          medcrypt.cancelImageLoadsOutsideViewport();
+          medcrypt.cancelImageFetchesOutsideViewport();
+
+          // Clear all low priority requests during rapid scrolling
+          medcrypt.requestQueue.low = [];
+
+          // Aggressively reduce medium priority queue
+          if (medcrypt.requestQueue.medium.length > 10) {
+            medcrypt.requestQueue.medium = medcrypt.requestQueue.medium.slice(0, 5);
+          }
+
+          // Cancel requests in queue that are outside viewport
+          ['high', 'medium', 'low'].forEach(priority => {
+            medcrypt.requestQueue[priority] = medcrypt.requestQueue[priority].filter(item => {
+              // This is a basic filter - in practice you'd need to associate queue items with elements
+              return true; // Keep for now, but could be improved
+            });
+          });
         },
         processingQueue: false,
         maxTries: 2,
-        getSrc: function (resource, action = () => {}, currentTries = 0) {
-          if (usingRapiServe.length) {
-            return medcrypt.getSrcRaw(resource, action, currentTries);
-          }
-          medcrypt.requestQueue.push(async () => {
-            return medcrypt.getSrcRaw(resource, action, currentTries);
+        getSrc: function (resource, action = () => {}, currentTries = 0, priority = 'medium') {
+          medcrypt.requestQueue[priority].push(async () => {
+            try {
+              const result = await medcrypt.getSrcRaw(resource, action, currentTries);
+              action(result);
+              return result;
+            } catch (error) {
+              console.error(`[getSrc] getSrcRaw failed for ${resource}:`, error);
+              throw error;
+            }
           });
-          medcrypt.processingQueue = medcrypt.startQueue();
+
+          if (!medcrypt.processingQueue) {
+            medcrypt.processingQueue = medcrypt.startQueue();
+          }
           return medcrypt.processingQueue;
         },
         getSrcRaw: function (resource, action = () => {}, currentTries = 0) {
-          return new Promise(async (resolve, reject) => {
-            if (medcrypt.loadedCache[resource]) {
-              return resolve(medcrypt.loadedCache[resource]);
+          return new Promise((resolve, reject) => {
+            (async () => {
+              try {
+                if (medcrypt.loadedCache[resource]) {
+                  return resolve(medcrypt.loadedCache[resource]);
+                }
+
+                if (resource.includes("blob:")) {
+                  return resolve(resource);
+                }
+
+            // Check if request is already pending to prevent duplicates
+            if (medcrypt.pendingRequests.has(resource)) {
+              // Wait for the existing request instead of rejecting
+              const waitForExisting = () => {
+                return new Promise((resolve) => {
+                  const checkInterval = setInterval(() => {
+                    if (!medcrypt.pendingRequests.has(resource)) {
+                      clearInterval(checkInterval);
+                      if (medcrypt.loadedCache[resource]) {
+                        resolve(medcrypt.loadedCache[resource]);
+                      } else {
+                        resolve(resource); // Fallback to resource URL
+                      }
+                    }
+                  }, 100);
+
+                  // Don't wait forever
+                  setTimeout(() => {
+                    clearInterval(checkInterval);
+                    resolve(resource);
+                  }, 3000);
+                });
+              };
+              return waitForExisting();
             }
 
-            if (resource.includes("blob:")) {
-              return resolve(resource);
+            // Check if this URL has previously failed with CORS
+            const urlBase = resource.split('?')[0]; // Remove query params for CORS check
+            if (medcrypt.corsFailedUrls.has(urlBase)) {
+              return resolve(resource); // Return direct URL without making request
             }
+
+            // Check if we already know the decryption status for this resource path
+            const resourcePath = resource.split('/').slice(0, -1).join('/'); // Get path without filename
+            const serverType = usingRapiServe.length ? 'rapiServe' : 'direct';
+            const decryptionKey = `${serverType}:${resourcePath}`;
+            const decryptionStatus = medcrypt.decryptionStatus.get(decryptionKey);
+
+            // If we know this path doesn't need decryption, skip straight to direct URL
+            if (decryptionStatus === false) {
+              // For RapiServe, ensure we use the proper URL format
+              if (usingRapiServe.length) {
+                let targetSrc = usingRapiServe + "/" + resource;
+                if (resource.startsWith(usingRapiServe + "/")) {
+                  targetSrc = resource;
+                }
+                medcrypt.loadedCache[resource] = targetSrc;
+                return resolve(targetSrc);
+              } else {
+                medcrypt.loadedCache[resource] = resource;
+                return resolve(resource);
+              }
+            }
+
+            // If we know this path needs decryption, skip straight to decryption
+            if (decryptionStatus === true) {
+              try {
+                const decrypted = window.rcloneCrypt.render(
+                  await window.rcloneCrypt.decrypt(
+                    "crypt/" +
+                      (await window.rcloneCrypt.encryptPath(
+                        resource,
+                        passphrase,
+                      )),
+                    passphrase,
+                  ),
+                  "",
+                  false,
+                  false,
+                );
+                medcrypt.loadedCache[resource] = decrypted;
+                return resolve(decrypted);
+              } catch (e) {
+                // If decryption fails, fall through to normal flow
+                console.warn(`Decryption failed for known encrypted path ${resource}, falling back to normal flow:`, e);
+              }
+            }
+
+            // Mark as pending and create AbortController for this request
+            medcrypt.pendingRequests.add(resource);
+
+            // Safari-compatible AbortController creation
+            let controller;
+            let isAborted = false;
+
+            try {
+              controller = new AbortController();
+            } catch (e) {
+              // Fallback for older Safari versions
+              controller = {
+                signal: { aborted: false },
+                abort: function() {
+                  this.signal.aborted = true;
+                  isAborted = true;
+                }
+              };
+            }
+
+            medcrypt.activeRequests.set(resource, controller);
+
+            // Safari fallback: timeout-based cancellation
+            const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+            let timeoutId;
+            if (isSafari) {
+              timeoutId = setTimeout(() => {
+                try {
+                  controller.abort();
+                } catch (e) {
+                  console.warn('Error in timeout abort:', e);
+                }
+                cleanup();
+              }, 120*1000); // 120 second timeout for Safari
+            }
+
+            // Clean up controller when request completes
+            const cleanup = () => {
+              if (timeoutId) clearTimeout(timeoutId);
+              medcrypt.activeRequests.delete(resource);
+              medcrypt.pendingRequests.delete(resource);
+            };
+
+            // Check for abort before making request
+            if (isAborted || (controller.signal && controller.signal.aborted)) {
+              cleanup();
+              return reject(new Error('Request cancelled'));
+            }
+
 
             if (usingRapiServe.length) {
               let targetSrc = usingRapiServe + "/" + resource;
               if (resource.startsWith(usingRapiServe + "/")) {
                 targetSrc = resource;
               }
-              return fetch(targetSrc, { headers: { range: "bytes=0-1" } })
+
+              // Mark that RapiServe paths don't need decryption
+              const resourcePath = resource.split('/').slice(0, -1).join('/');
+              const decryptionKey = `rapiServe:${resourcePath}`;
+              medcrypt.decryptionStatus.set(decryptionKey, false);
+
+              // Safari-specific fetch handling
+              const fetchOptions = {
+                headers: { range: "bytes=0-1" }
+              };
+
+              // Only add signal if AbortController is properly supported
+              if (controller.signal && typeof controller.signal.addEventListener === 'function') {
+                fetchOptions.signal = controller.signal;
+              }
+
+              return fetch(targetSrc, fetchOptions)
                 .then(function (response) {
+                  // Double-check abort status (Safari workaround)
+                  if (isAborted || (controller.signal && controller.signal.aborted)) {
+                    throw new Error('Request cancelled');
+                  }
+
                   if (!response.ok) {
                     throw new Error("HTTP status " + response.status);
                   }
                   return true;
                 })
                 .then(() => {
+                  cleanup();
+                  medcrypt.loadedCache[resource] = targetSrc; // Cache the result
                   resolve(targetSrc);
                 })
-                .catch((e) => reject(e));
+                .catch((e) => {
+                  cleanup();
+                  if (e.name === 'AbortError' || e.message === 'Request cancelled' || isAborted) {
+                    reject(new Error('Request cancelled'));
+                  } else if (e.message && e.message.includes('CORS') || e.message.includes('access control')) {
+                    console.warn(`CORS error for ${resource}, falling back to direct URL`);
+                    medcrypt.corsFailedUrls.add(resource.split('?')[0]); // Track CORS failure
+                    resolve(targetSrc); // Fallback to direct URL despite CORS
+                  } else {
+                    reject(e);
+                  }
+                });
             }
 
-            await fetch(resource, { method: "HEAD" })
+            // For direct mode, skip HEAD request for common static file types
+            const isStaticFile = /\.(js|json|jpg|jpeg|png|gif|mp4|webm|css|svg|wasm)$/i.test(resource);
+
+            if (!usingRapiServe.length && isStaticFile) {
+              // Skip HEAD request for static files in direct mode
+              const resourcePath = resource.split('/').slice(0, -1).join('/');
+              const decryptionKey = `direct:${resourcePath}`;
+              medcrypt.decryptionStatus.set(decryptionKey, false);
+              cleanup();
+              medcrypt.loadedCache[resource] = resource;
+              resolve(resource);
+              return;
+            }
+
+            // Safari-compatible HEAD request
+            const headFetchOptions = { method: "HEAD" };
+            if (controller.signal && typeof controller.signal.addEventListener === 'function') {
+              headFetchOptions.signal = controller.signal;
+            }
+
+            await fetch(resource, headFetchOptions)
               .then(function (response) {
                 const mimeType = response.headers
                   .get("Content-Type")
                   ?.split(";")[0]
                   .trim();
-                if (!mimeType.includes("text/plain")) {
-                  resolve(resource);
+
+                const resourcePath = resource.split('/').slice(0, -1).join('/');
+                const serverType = usingRapiServe.length ? 'rapiServe' : 'direct';
+                const decryptionKey = `${serverType}:${resourcePath}`;
+
+                // For .js and .json files, always treat as non-encrypted in direct mode
+                const isJsFile = resource.endsWith('.js');
+                const isJsonFile = resource.endsWith('.json');
+
+
+                if (!mimeType.includes("text/plain") || (isJsFile && !usingRapiServe.length) || (isJsonFile && !usingRapiServe.length)) {
+                  // This path doesn't need decryption - record it
+                  medcrypt.decryptionStatus.set(decryptionKey, false);
+                  cleanup();
+
+                  // Return proper URL format based on server type
+                  if (usingRapiServe.length) {
+                    let targetSrc = usingRapiServe + "/" + resource;
+                    if (resource.startsWith(usingRapiServe + "/")) {
+                      targetSrc = resource;
+                    }
+                    medcrypt.loadedCache[resource] = targetSrc;
+                    resolve(targetSrc);
+                  } else {
+                    medcrypt.loadedCache[resource] = resource;
+                    resolve(resource);
+                  }
                 } else {
+                  // This path needs decryption - record it
+                  medcrypt.decryptionStatus.set(decryptionKey, true);
                   throw new Error("Maybe its encrypted? " + mimeType);
                 }
               })
-              .catch(async () => {
+              .catch(async (e) => {
+
+                if (e.name === 'AbortError') {
+                  cleanup();
+                  reject(new Error('Request cancelled'));
+                  return;
+                }
+
+                if (e.message && (e.message.includes('CORS') || e.message.includes('access control'))) {
+                  console.warn(`CORS error for HEAD request ${resource}, skipping encryption check`);
+                  medcrypt.corsFailedUrls.add(resource.split('?')[0]); // Track CORS failure
+                  cleanup();
+                  resolve(resource); // Fallback to direct URL
+                  return;
+                }
+
+                // For direct mode, if HEAD request fails, assume it's a valid static file
+                if (!usingRapiServe.length) {
+                  console.warn(`HEAD request failed for ${resource} in direct mode, using direct URL`);
+                  const resourcePath = resource.split('/').slice(0, -1).join('/');
+                  const decryptionKey = `direct:${resourcePath}`;
+                  medcrypt.decryptionStatus.set(decryptionKey, false);
+                  cleanup();
+                  resolve(resource);
+                  return;
+                }
                 try {
-                  return resolve(
-                    window.rcloneCrypt.render(
-                      await window.rcloneCrypt.decrypt(
-                        "crypt/" +
-                          (await window.rcloneCrypt.encryptPath(
-                            resource,
-                            passphrase,
-                          )),
-                        passphrase,
-                      ),
-                      "",
-                      false,
-                      false,
+                  const decrypted = window.rcloneCrypt.render(
+                    await window.rcloneCrypt.decrypt(
+                      "crypt/" +
+                        (await window.rcloneCrypt.encryptPath(
+                          resource,
+                          passphrase,
+                        )),
+                      passphrase,
                     ),
+                    "",
+                    false,
+                    false,
                   );
+                  cleanup();
+                  medcrypt.loadedCache[resource] = decrypted; // Cache the result
+                  return resolve(decrypted);
                 } catch (e) {
                   if (resource.includes("fa/")) {
-                    return medcrypt.getSrcRaw(
+                    cleanup();
+                    medcrypt.getSrcRaw(
                       resource.replace("fa/", ""),
-                      action,
+                      () => {}, // Don't call action here, it will be called by main promise
                       0,
-                    );
+                    ).then(resolve).catch(reject);
+                    return;
                   }
                   if (resource.includes("pr/")) {
-                    return medcrypt.getSrcRaw(
+                    cleanup();
+                    medcrypt.getSrcRaw(
                       resource.replace("pr/", "fa/"),
-                      action,
+                      () => {}, // Don't call action here, it will be called by main promise
                       0,
-                    );
+                    ).then(resolve).catch(reject);
+                    return;
                   }
+                  cleanup();
                   reject(e);
                 }
               });
+              } catch (error) {
+                reject(error);
+              }
+            })().catch(reject);
           })
-            .then(action)
             .catch((err) => {
+              // Don't retry if request was cancelled
+              if (err.message === 'Request cancelled') {
+                return Promise.reject(err);
+              }
+
               medcrypt.finishProgress();
               if (currentTries < medcrypt.maxTries) {
                 let delay = currentTries + 1 * 100;
-                setTimeout(
-                  () => medcrypt.getSrc(resource, action, currentTries + 1),
-                  delay,
-                );
+                return new Promise((resolve, reject) => {
+                  setTimeout(() => {
+                    medcrypt.getSrcRaw(resource, action, currentTries + 1)
+                      .then(resolve)
+                      .catch(reject);
+                  }, delay);
+                });
               } else {
-                action(resource);
+                // Final fallback - return resource URL
+                return resource;
               }
             });
         },
@@ -1207,8 +1735,8 @@
       </li>
     </ul>
     <div id="inline-player"></div>
-    <script src="index.php?RapiServe=1"></script>
-    <script src="../index.php?RapiServe=1"></script>
+    <script src="index.php?RapiServe=1" onerror="if(typeof canrapiserve === 'undefined') canrapiserve = false;"></script>
+    <script src="../index.php?RapiServe=1" onerror="if(typeof canrapiserve === 'undefined') canrapiserve = false;"></script>
     <script>
       // Track active requests and their progress
       let activeRequests = 0;
@@ -2096,159 +2624,140 @@
       }
 
       function loadPacks() {
-        medcrypt.getSrc("flash/index.json", (uri) => {
-          fetch(uri)
-            .then((response) => response.text())
-            .then((text) => {
-              window.flashdataset = JSON.parse(atob(text));
-              window.flashmedia = [];
-              let count = 0;
-              for (const [album, items] of Object.entries(
-                window.flashdataset,
-              )) {
-                count++;
-                window.flashmedia = window.flashmedia.concat(
-                  items.map((item) => ({
-                    album: "Flash---" + album,
-                    filename: "flash/" + btoa(album) + item.url,
-                    hash: item.hash,
-                    time: epochToDateTime(count),
-                    metadata:
-                      "Title: " +
-                      item.title +
-                      "\n\nTags: " +
-                      (item.tags.general ?? []).join(","),
-                    flash: 1,
-                    title: item.title,
-                  })),
-                );
-                window.alldata = [
-                  ...(window.alldata ?? []),
-                  ...window.flashmedia,
-                ].sort((a, b) =>
-                  a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-                );
 
-                window.allAlbums = window.groupByKey(alldata, "album");
-                window.allAlbums = Object.values(window.allAlbums).map(
-                  (album) => album[0],
-                );
-                window.allAlbums = window.allAlbums.sort((a, b) =>
-                  a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-                );
+        // Failsafe: ensure runApp is called even if pack loading fails
+        let runAppCalled = false;
+        const ensureRunApp = () => {
+          if (!runAppCalled) {
+            runAppCalled = true;
+            runApp();
+          }
+        };
+
+        // Set a timeout to ensure runApp is called within 10 seconds
+        setTimeout(ensureRunApp, 10000);
+
+        // Load flash data
+        medcrypt.getSrcRaw("flash/index.json")
+          .then((uri) => {
+            return fetch(uri);
+          })
+          .then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.text();
+          })
+          .then((text) => {
+            window.flashdataset = JSON.parse(atob(text));
+            window.flashmedia = [];
+            let count = 0;
+            for (const [album, items] of Object.entries(window.flashdataset)) {
+              count++;
+              window.flashmedia = window.flashmedia.concat(
+                items.map((item) => ({
+                  album: "Flash---" + album,
+                  filename: "flash/" + btoa(album) + item.url,
+                  hash: item.hash,
+                  time: epochToDateTime(count),
+                  metadata: "Title: " + item.title + "\n\nTags: " + (item.tags.general ?? []).join(","),
+                  flash: 1,
+                  title: item.title,
+                })),
+              );
+            }
+            window.alldata = [...(window.alldata ?? []), ...window.flashmedia].sort((a, b) =>
+              a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+            );
+            window.allAlbums = window.groupByKey(alldata, "album");
+            window.allAlbums = Object.values(window.allAlbums).map((album) => album[0]);
+            window.allAlbums = window.allAlbums.sort((a, b) =>
+              a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+            );
+
+            // Load ruffle script
+            medcrypt.getSrcRaw("flash/ruffle/ruffle.js").then((scriptUrl) => {
+              try {
+                loadScript(scriptUrl);
+              } catch (e) {
+                console.warn("Failed to load ruffle script:", e);
               }
-              medcrypt.getSrc(
-                "flash/ruffle/ruffle.js",
-                (encrypted_data_file) => {
-                  loadScript(encrypted_data_file);
-                },
-              );
-            })
-            .catch((error) => {
-              console.error(
-                "There has been a problem with your fetch operation:",
-                error,
-              );
-            })
-            .finally(() => {
-              medcrypt.getSrc("vr/deovr-fs.json", (uri) => {
-                fetch(uri)
-                  .then((response) => response.json())
-                  .then((data) => {
-                    window.videos = (data ?? []).filter(
-                      (file) => file.MimeType === "video/mp4",
-                    );
-                    window.videos.sort((a, b) => {
-                      const dateA = new Date(a.ModTime);
-                      const dateB = new Date(b.ModTime);
-                      return dateB - dateA;
-                    });
-                    window.vrmedia = window.videos.map((item) => {
-                      return {
-                        album: "VR---" + getDirname(item.Path),
-                        filename: "vr/" + encodePath(item.Path),
-                        hash: md5("vr/" + encodePath(item.Path)),
-                        time: item["ModTime"].split(".")[0].replace("T", " "),
-                        metadata: "",
-                        vr: 1,
-                        duration: item["Duration"] ?? 0,
-                        sound: item["Sound"] ?? -91,
-                      };
-                    });
-                    window.alldata = [
-                      ...(window.alldata ?? []),
-                      ...window.vrmedia,
-                    ].sort((a, b) =>
-                      a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-                    );
+            }).catch(e => console.warn("Failed to get ruffle script:", e));
 
-                    window.allAlbums = window.groupByKey(alldata, "album");
-                    window.allAlbums = Object.values(window.allAlbums).map(
-                      (album) => album[0],
-                    );
-                    window.allAlbums = window.allAlbums.sort((a, b) =>
-                      a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-                    );
-                  })
-                  .catch((error) => {
-                    console.error(
-                      "There has been a problem with your fetch operation:",
-                      error,
-                    );
-                  })
-                  .finally(() => {
-                    medcrypt.getSrc("fa/favorites.json", (uri) => {
-                      fetch(uri)
-                        .then((response) => response.json())
-                        .then((data) => {
-                          let decompressedArray = [];
-                          data.forEach((item) => {
-                            if (item.albums.length) {
-                              item.albums.forEach((album, index) => {
-                                decompressedArray.push({
-                                  album,
-                                  filename: item.filename,
-                                  hash: item.hash,
-                                  metadata: item.metadata,
-                                  time: item.times[index],
-                                  duration: item.duration,
-                                  sound: item.sound,
-                                });
-                              });
-                            } else {
-                              decompressedArray.push(item);
-                            }
-                          });
-                          window.alldata = [
-                            ...(window.alldata ?? []),
-                            ...decompressedArray,
-                          ].sort((a, b) =>
-                            a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-                          );
+            // Continue with VR data
+            return medcrypt.getSrcRaw("vr/deovr-fs.json");
+          })
+          .then((uri) => {
+            return fetch(uri);
+          })
+          .then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then((data) => {
+            window.videos = (data ?? []).filter((file) => file.MimeType === "video/mp4");
+            window.videos.sort((a, b) => new Date(b.ModTime) - new Date(a.ModTime));
+            window.vrmedia = window.videos.map((item) => ({
+              album: "VR---" + getDirname(item.Path),
+              filename: "vr/" + encodePath(item.Path),
+              hash: md5("vr/" + encodePath(item.Path)),
+              time: item["ModTime"].split(".")[0].replace("T", " "),
+              metadata: "",
+              vr: 1,
+              duration: item["Duration"] ?? 0,
+              sound: item["Sound"] ?? -91,
+            }));
+            window.alldata = [...(window.alldata ?? []), ...window.vrmedia].sort((a, b) =>
+              a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+            );
+            window.allAlbums = window.groupByKey(alldata, "album");
+            window.allAlbums = Object.values(window.allAlbums).map((album) => album[0]);
+            window.allAlbums = window.allAlbums.sort((a, b) =>
+              a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+            );
 
-                          window.allAlbums = window.groupByKey(
-                            alldata,
-                            "album",
-                          );
-                          window.allAlbums = Object.values(
-                            window.allAlbums,
-                          ).map((album) => album[0]);
-                          window.allAlbums = window.allAlbums.sort((a, b) =>
-                            a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-                          );
-                        })
-                        .catch((error) => {
-                          console.error(
-                            "There has been a problem with your fetch operation:",
-                            error,
-                          );
-                        })
-                        .finally(runApp);
-                    });
+            // Continue with favorites data
+            return medcrypt.getSrcRaw("fa/favorites.json");
+          })
+          .then((uri) => {
+            return fetch(uri);
+          })
+          .then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then((data) => {
+            let decompressedArray = [];
+            data.forEach((item) => {
+              if (item.albums.length) {
+                item.albums.forEach((album, index) => {
+                  decompressedArray.push({
+                    album,
+                    filename: item.filename,
+                    hash: item.hash,
+                    metadata: item.metadata,
+                    time: item.times[index],
+                    duration: item.duration,
+                    sound: item.sound,
                   });
-              });
+                });
+              } else {
+                decompressedArray.push(item);
+              }
             });
-        });
+            window.alldata = [...(window.alldata ?? []), ...decompressedArray].sort((a, b) =>
+              a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+            );
+            window.allAlbums = window.groupByKey(alldata, "album");
+            window.allAlbums = Object.values(window.allAlbums).map((album) => album[0]);
+            window.allAlbums = window.allAlbums.sort((a, b) =>
+              a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+            );
+          })
+          .catch((error) => {
+            console.error("[loadPacks] Error during pack loading:", error);
+          })
+          .finally(() => {
+            ensureRunApp();
+          });
       }
 
       function runApp() {
@@ -2738,7 +3247,7 @@
                     ]) =>
                       flash
                         ? jQuery("#content").append(
-                            `<a class="gallerypicture flash-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-hash="${hash}" data-src="${uri}" loading="lazy" alt="" /></div></a>`,
+                            `<a class="gallerypicture flash-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-hash="${hash}" data-src="${uri}" data-resource="${uri}" loading="lazy" alt="" /></div></a>`,
                           )
                         : vr
                           ? jQuery("#content").append(
@@ -2748,7 +3257,7 @@
                                   : "") +
                                 `  ` +
                                 (sound ? `data-sound="true"` : "") +
-                                ` ><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-filehash="${hash}" loading="lazy" alt="" /></div>` +
+                                ` ><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-resource="${uri}" data-filehash="${hash}" loading="lazy" alt="" /></div>` +
                                 (duration
                                   ? `<span class="thumb-duration">${formatSeconds(duration)}</span>`
                                   : "") +
@@ -2771,7 +3280,7 @@
                                   `  ` +
                                   (sound ? `data-sound="true"` : "") +
                                   ` >
-          <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt=""></div>` +
+          <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-resource="${uri}" loading="lazy" alt=""></div>` +
                                   (duration
                                     ? `<span class="thumb-duration">${formatSeconds(duration)}</span>`
                                     : "") +
@@ -2790,7 +3299,7 @@
                               )
                             : jQuery("#content").append(
                                 `<a class="gallerypicture" data-width="1920" href="${uri}" title="${filename}"  data-filehash="${hash}"  data-fancybox="gallery">
-          <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)"></div><script type="text/json">${meta}<\/script></a>`,
+          <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-resource="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)"></div><script type="text/json">${meta}<\/script></a>`,
                               ),
                   );
               })
@@ -3049,7 +3558,7 @@
                 );
                 window.localStorage.setItem("vr-type", hash);
                 reloadPlayer(uri);
-              });
+              }, 0, "high");
             } else if (slide.opts.$orig.hasClass("flash-link")) {
               const player = ruffle.createPlayer();
               $("#inline-player").empty().html(player);
@@ -3169,7 +3678,7 @@
                   slide.isLoaded = false;
                   instance.loadSlide(slide);
                 }
-              });
+              }, 0, "high");
               if ($.fancybox.getInstance().SlideShow.isActive) {
                 $.fancybox.getInstance().SlideShow.stop();
                 window.slideshowStarted = true;
@@ -3343,7 +3852,7 @@
                   $("video").get(0),
                 );
               });
-            });
+            }, 0, "high");
             $("video").removeAttr("controls");
             $("video").click(function toggleControls() {
               if (this.hasAttribute("controls")) {
@@ -3494,22 +4003,31 @@
 
       function processLazyLoad() {
         var lazyImages = [].slice.call(document.querySelectorAll("img.lazy"));
-        if ("IntersectionObserver" in window) {
+        if ("IntersectionObserver" in window && window.location.protocol === 'https:') {
           let lazyImageObserver = new IntersectionObserver(function (
             entries,
             observer,
           ) {
             entries.forEach(function (entry) {
               let lazyImage = entry.target;
+              const rect = lazyImage.getBoundingClientRect();
+              const viewportHeight = window.innerHeight;
+
+              // Calculate priority based on viewport distance
+              let priority = 'low';
+              if (entry.isIntersecting) {
+                priority = 'medium';
+              } else if (Math.abs(rect.top) < viewportHeight * 2) {
+                priority = 'medium';
+              }
+
               if (entry.isIntersecting && lazyImage.dataset.src != "") {
-                lazyImage.onerror = function () {
-                  lazyImage.src = md5ToImage(lazyImage.dataset.hash);
-                };
-                medcrypt.getSrc(lazyImage.dataset.src, (uri) => {
-                  lazyImage.src = uri;
-                });
-                lazyImage.classList.remove("lazy-waiting");
-                lazyImage.classList.add("lazy-loaded");
+                // Don't start loading during rapid scrolling
+                if (medcrypt.rapidScrolling) {
+                  return;
+                }
+
+                loadLazyImage(lazyImage, priority);
               } else if (
                 lazyImage.classList.contains("lazy-loaded") &&
                 lazyImage.src !==
@@ -3522,12 +4040,150 @@
                 lazyImage.classList.add("lazy-waiting");
               }
             });
+          }, {
+            rootMargin: '200px 0px 200px 0px', // Preload 200px ahead
+            threshold: [0, 0.1]
           });
           lazyImages.forEach(function (lazyImage) {
             lazyImageObserver.observe(lazyImage);
           });
+        } else {
+          // Fallback for HTTP or when IntersectionObserver isn't available
+          console.warn('Using scroll-based lazy loading fallback (HTTP mode or no IntersectionObserver)');
+
+          function checkLazyImages() {
+            lazyImages.forEach(function (lazyImage, index) {
+              if (lazyImage.dataset.src && !lazyImage.classList.contains("lazy-loaded")) {
+                const rect = lazyImage.getBoundingClientRect();
+                const viewportHeight = window.innerHeight;
+
+                // Load if within 500px of viewport (more generous for HTTP mode)
+                if (rect.top < viewportHeight + 500 && rect.bottom > -500) {
+                  loadLazyImage(lazyImage, 'medium');
+                }
+              }
+            });
+          }
+
+          // Initial check - load first few images immediately for testing
+          lazyImages.slice(0, 10).forEach(function (lazyImage, index) {
+            if (lazyImage.dataset.src && !lazyImage.classList.contains("lazy-loaded")) {
+              loadLazyImage(lazyImage, 'high');
+            }
+          });
+
+          // Then do regular check
+          checkLazyImages();
+
+          // Add scroll listener for fallback
+          let scrollTimer;
+          window.addEventListener('scroll', function() {
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(checkLazyImages, 100);
+          }, { passive: true });
+        }
+
+        function loadLazyImage(lazyImage, priority) {
+          lazyImage.onerror = function () {
+            lazyImage.src = md5ToImage(lazyImage.dataset.hash);
+            medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+          };
+
+          lazyImage.onload = function () {
+            medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+          };
+
+          medcrypt.getSrc(lazyImage.dataset.src, async (uri) => {
+            if (medcrypt.rapidScrolling) {
+              return;
+            }
+
+            const currentRect = lazyImage.getBoundingClientRect();
+            const currentViewportHeight = window.innerHeight;
+            const stillVisible = currentRect.top < (currentViewportHeight * 1.5) && currentRect.bottom > -(currentViewportHeight * 1.5);
+
+            if (stillVisible) {
+              // For HTTP, skip blob conversion and use direct URL
+              if (window.location.protocol === 'http:') {
+                lazyImage.src = uri;
+              } else {
+                try {
+                  const blobUrl = await medcrypt.fetchImageAsBlob(uri, lazyImage.dataset.src, lazyImage);
+                  const finalRect = lazyImage.getBoundingClientRect();
+                  const finalViewportHeight = window.innerHeight;
+                  const stillVisibleAfterFetch = finalRect.top < (finalViewportHeight * 1.5) && finalRect.bottom > -(finalViewportHeight * 1.5);
+
+                  if (stillVisibleAfterFetch && !medcrypt.rapidScrolling) {
+                    lazyImage.src = blobUrl;
+                  }
+                } catch (error) {
+                  if (error.message !== 'Fetch cancelled') {
+                    lazyImage.src = uri;
+                  }
+                }
+              }
+            }
+          }, 0, priority);
+
+          lazyImage.classList.remove("lazy-waiting");
+          lazyImage.classList.add("lazy-loaded");
         }
       }
+
+      // Optimized scroll handler for performance
+      let scrollTimeout;
+      let lastScrollTime = 0;
+      let scrollVelocity = 0;
+      let lastScrollTop = 0;
+
+      function handleScroll() {
+        const now = Date.now();
+        const currentScrollTop = window.scrollY;
+
+        // Calculate scroll velocity
+        scrollVelocity = Math.abs(currentScrollTop - lastScrollTop) / Math.max(now - lastScrollTime, 1);
+        lastScrollTop = currentScrollTop;
+
+        if (now - lastScrollTime < 16) return; // Throttle to ~60fps
+        lastScrollTime = now;
+
+        // Immediate cancellation during rapid scrolling
+        if (scrollVelocity > 1.5) { // Lower threshold for rapid scrolling detection
+          medcrypt.rapidScrolling = true;
+          medcrypt.cancelOutOfRangeRequests();
+        } else {
+          medcrypt.rapidScrolling = false;
+        }
+
+        // Safari-specific: Emergency cancellation if too many requests or image loads are active
+        const maxRequests = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent) ? 15 : 30;
+        const totalActiveLoads = medcrypt.activeRequests.size + medcrypt.activeImageLoads.size + medcrypt.imageFetches.size;
+        if (totalActiveLoads > maxRequests) {
+          console.warn(`Too many active loads (${totalActiveLoads}: ${medcrypt.activeRequests.size} requests + ${medcrypt.activeImageLoads.size} images + ${medcrypt.imageFetches.size} fetches), cancelling all`);
+          medcrypt.cancelAllRequests();
+        }
+
+        clearTimeout(scrollTimeout);
+
+        // Shorter timeout for rapid scrolling
+        const timeout = scrollVelocity > 2 ? 50 : 100;
+        scrollTimeout = setTimeout(() => {
+          medcrypt.rapidScrolling = false; // Clear rapid scrolling flag
+          medcrypt.cancelOutOfRangeRequests();
+          processLazyLoad(); // Re-evaluate visible images
+        }, timeout);
+      }
+
+      // Add scroll listener with passive option for better performance
+      window.addEventListener('scroll', handleScroll, { passive: true });
+
+      // Also handle resize events
+      window.addEventListener('resize', () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          processLazyLoad();
+        }, 150);
+      }, { passive: true });
     </script>
   </body>
 </html>

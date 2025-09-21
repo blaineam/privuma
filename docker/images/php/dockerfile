@@ -125,6 +125,10 @@ RUN cd /usr/local/ruffle \
         && /root/.cargo/bin/cargo build --release --package=exporter --bin=exporter \
         && /usr/local/ruffle/target/release/exporter --version
 
+# Install Redis php extension
+RUN pecl install redis && \
+    docker-php-ext-enable redis
+
 # Cleanup extra packages
 RUN apt-get remove --autoremove --purge -y gcc make cmake autoconf g++ yasm pkg-config libpng-dev libjpeg62-turbo-dev libde265-dev libx265-dev libxml2-dev libtiff-dev libfontconfig1-dev libfreetype6-dev
 

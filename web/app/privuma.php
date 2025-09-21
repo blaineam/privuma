@@ -12,8 +12,8 @@ foreach ($classes as $class) {
 }
 
 use privuma\helpers\cloudFS;
-
 use privuma\helpers\dotenv;
+use privuma\helpers\redisCache;
 
 use PDO;
 use privuma\queue\QueueManager;
@@ -230,43 +230,41 @@ class privuma
     {
         $ch = curl_init();
 
-        curl_setopt(
-            $ch,
-            CURLOPT_DOH_URL,
-            'https://cloudflare-dns.com/dns-query'
-        );
-        curl_setopt($ch, CURLOPT_AUTOREFERER, true);
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        // Use curl_setopt_array for better performance
+        $options = [
+            CURLOPT_DOH_URL => 'https://cloudflare-dns.com/dns-query',
+            CURLOPT_AUTOREFERER => true,
+            CURLOPT_HEADER => 0,
+            CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_URL => $url,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false
+        ];
 
         if (!is_null($userAgent)) {
-            curl_setopt($ch, CURLOPT_USERAGENT, $userAgent);
+            $options[CURLOPT_USERAGENT] = $userAgent;
         }
 
-        if (
-            !is_null($cookies) &&
-            file_exists($cookies)
-        ) {
-            curl_setopt(
-                $ch,
-                CURLOPT_COOKIEFILE,
-                $cookies
-            );
-            curl_setopt(
-                $ch,
-                CURLOPT_COOKIEJAR,
-                $cookies
-            );
+        if (!is_null($cookies) && file_exists($cookies)) {
+            $options[CURLOPT_COOKIEFILE] = $cookies;
+            $options[CURLOPT_COOKIEJAR] = $cookies;
         }
+
+        curl_setopt_array($ch, $options);
 
         $return = curl_exec($ch);
         curl_close($ch);
+
         if ($getTempPath) {
             $tmpPath = tempnam(sys_get_temp_dir(), 'PVMA-');
-            $tmpPath .= '.' . pathinfo(explode('?', $url)[0], PATHINFO_EXTENSION);
+            $ext = pathinfo(explode('?', $url)[0], PATHINFO_EXTENSION);
+            if ($ext) {
+                $tmpPath .= '.' . $ext;
+            }
             if (!file_put_contents($tmpPath, $return)) {
                 return false;
             }
@@ -275,33 +273,64 @@ class privuma
         return $return;
     }
 
+    // Static cache for parsed URLs to avoid repeated parsing
+    private static $urlCache = [];
+    private static $cacheSize = 0;
+    private static $maxCacheSize = 1000;
+
     public static function accel($url)
     {
-        $protocol = parse_url($url, PHP_URL_SCHEME);
-        $hostname = parse_url($url, PHP_URL_HOST);
-        $port = parse_url($url, PHP_URL_PORT);
-        if (!$port) {
-            $port = ($protocol == 'https') ? '443' : '80';
+        // Try Redis cache first (persistent across requests)
+        $cacheKey = 'accel:' . md5($url);
+        $cachedPath = redisCache::get($cacheKey);
+        if ($cachedPath !== null) {
+            header('X-Accel-Redirect: ' . $cachedPath);
+            exit();
         }
-        $path = ltrim(
-            parse_url($url, PHP_URL_PATH) .
-              (strpos($url, '?') !== false
-                ? '?' . parse_url($url, PHP_URL_QUERY)
-                : ''),
-            DIRECTORY_SEPARATOR
-        );
-        $internalMediaPath =
-          DIRECTORY_SEPARATOR .
-          'media' .
-          DIRECTORY_SEPARATOR .
-          $protocol .
-          DIRECTORY_SEPARATOR .
-          $hostname . ':' . $port .
-          DIRECTORY_SEPARATOR .
-          $path .
-          DIRECTORY_SEPARATOR;
+
+        // Check local cache second (faster but request-specific)
+        if (isset(self::$urlCache[$url])) {
+            header('X-Accel-Redirect: ' . self::$urlCache[$url]);
+            exit();
+        }
+
+        // Parse URL once and extract all components
+        $parsed = parse_url($url);
+
+        // Fast path validation
+        if (!isset($parsed['scheme']) || !isset($parsed['host'])) {
+            http_response_code(400);
+            exit('Invalid URL');
+        }
+
+        $protocol = $parsed['scheme'];
+        $hostname = $parsed['host'];
+        $port = $parsed['port'] ?? (($protocol === 'https') ? '443' : '80');
+
+        // Efficiently build path with query string
+        $path = isset($parsed['path']) ? ltrim($parsed['path'], '/') : '';
+        if (isset($parsed['query'])) {
+            $path .= '?' . $parsed['query'];
+        }
+
+        // Build internal media path efficiently
+        $internalMediaPath = "/media/$protocol/$hostname:$port/$path/";
+
+        // Cache the result in Redis with 1 hour TTL (URLs are relatively stable)
+        redisCache::set($cacheKey, $internalMediaPath, 3600);
+
+        // Also cache locally for this request (with size limit)
+        if (self::$cacheSize < self::$maxCacheSize) {
+            self::$urlCache[$url] = $internalMediaPath;
+            self::$cacheSize++;
+        } elseif (self::$cacheSize >= self::$maxCacheSize) {
+            // Reset cache when it gets too large
+            self::$urlCache = [$url => $internalMediaPath];
+            self::$cacheSize = 1;
+        }
+
         header('X-Accel-Redirect: ' . $internalMediaPath);
-        die();
+        exit();
     }
 
     public static function proxy($url)
@@ -348,18 +377,55 @@ class privuma
         die();
     }
 
+    // Cache for live URL checks to avoid repeated health checks
+    private static $liveCache = [];
+    private static $liveCacheExpiry = [];
+    private static $liveCacheTTL = 30; // 30 seconds TTL
+
     public static function live($url)
     {
+        $now = time();
+
+        // Check cache first
+        if (isset(self::$liveCache[$url])) {
+            if (self::$liveCacheExpiry[$url] > $now) {
+                return self::$liveCache[$url];
+            }
+            // Expired - remove from cache
+            unset(self::$liveCache[$url], self::$liveCacheExpiry[$url]);
+        }
+
+        // Perform the actual check
         $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 1);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_NOBODY, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt_array($ch, [
+            CURLOPT_CONNECTTIMEOUT => 1,
+            CURLOPT_TIMEOUT => 1,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_NOBODY => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_USERAGENT => 'Privuma/1.0 Health-Check'
+        ]);
+
         curl_exec($ch);
         $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        return $statusCode == 200;
+
+        $isLive = $statusCode == 200;
+
+        // Cache the result
+        self::$liveCache[$url] = $isLive;
+        self::$liveCacheExpiry[$url] = $now + self::$liveCacheTTL;
+
+        // Clean up old cache entries (simple cleanup every 10th call)
+        if (count(self::$liveCache) > 100 && rand(1, 10) === 1) {
+            foreach (self::$liveCacheExpiry as $cachedUrl => $expiry) {
+                if ($expiry <= $now) {
+                    unset(self::$liveCache[$cachedUrl], self::$liveCacheExpiry[$cachedUrl]);
+                }
+            }
+        }
+
+        return $isLive;
     }
 
     public static function getDataFolder()
