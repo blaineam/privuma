@@ -34,8 +34,7 @@ class redisCache
                 }
 
                 self::$connected = true;
-                error_log('Redis connected successfully');
-
+            
             } catch (\Exception $e) {
                 error_log('Redis connection error: ' . $e->getMessage());
                 self::$enabled = false;
