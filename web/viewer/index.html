@@ -1026,7 +1026,12 @@
                       ? "rapiServe"
                       : "direct";
                     const decryptionKey = `${serverType}:${resourcePath}`;
-
+                    if (response.ok) {
+                      medcrypt.decryptionStatus.set(decryptionKey, false);
+                      cleanup();
+                      resolve(resource);
+                      return;
+                    }
                     medcrypt.decryptionStatus.set(decryptionKey, true);
                     throw new Error("Maybe its encrypted? " + mimeType);
                   })
@@ -1050,6 +1055,7 @@
                       resolve(resource); // Fallback to direct URL
                       return;
                     }
+                    
                     try {
                       const decrypted = window.rcloneCrypt.render(
                         await window.rcloneCrypt.decrypt(
