@@ -1,6 +1,7 @@
 <?php
 
 namespace privuma\helpers;
+use privuma\privuma;
 
 class redisCache
 {
@@ -23,7 +24,7 @@ class redisCache
 
                 // Try to connect to Redis
                 // Redis is on internal network at 172.20.0.98
-                $connected = self::$redis->connect('172.20.0.98', 6379, 1); // 1 second timeout
+                $connected = self::$redis->connect(privuma::getEnv("REDIS_HOST"), privuma::getEnv("REDIS_PORT"), 1); // 1 second timeout
 
                 if (!$connected) {
                     error_log('Redis connection failed');
