@@ -1027,7 +1027,6 @@
                       : "direct";
                     const decryptionKey = `${serverType}:${resourcePath}`;
 
-                    
                     medcrypt.decryptionStatus.set(decryptionKey, true);
                     throw new Error("Maybe its encrypted? " + mimeType);
                   })
