@@ -153,7 +153,7 @@ class processMedia
                                 ) . '.jpg';
                             $cmediapath = escapeshellarg($mediaPath);
                             exec(
-                                "nice convert '{$cmediapath}[0]' -monitor -sampling-factor 4:2:0 -strip -interlace JPEG -colorspace sRGB -resize 1000 -compress JPEG -quality 70 '$dlThumbDest'"
+                                "nice magick '{$cmediapath}[0]' -monitor -sampling-factor 4:2:0 -strip -interlace JPEG -colorspace sRGB -resize 1000 -compress JPEG -quality 70 '$dlThumbDest'"
                             );
                             echo PHP_EOL .
                                 "Downloading media thumbnail to: $dlThumbPreservationPath";

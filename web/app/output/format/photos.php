@@ -545,7 +545,7 @@ function compressImage($url, $quality = 70, $maxWidth = 2048, $maxHeight = 2048)
 {
     $extension = strtolower(pathinfo(explode('?', $url)[0], PATHINFO_EXTENSION));
     $command = implode(' ', [
-      'convert',
+      'magick',
       escapeshellarg($url),
       '-resize',
       escapeshellarg($maxWidth . 'x' . $maxHeight . '>'),
