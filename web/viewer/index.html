@@ -2539,7 +2539,7 @@
       $("body").on("click", "[data-fancybox-favorite]", function (e) {
         let hash = $.fancybox
           .getInstance()
-          .current.$thumb.data("src")
+          .current.$thumb.data("data-resource")
           .split("/")
           .reverse()[0]
           .split(".")[0];
@@ -3712,7 +3712,7 @@
             let hash = atob(
               $.fancybox
                 .getInstance()
-                .current.$thumb.data("src")
+                .current.$thumb.data("data-resource")
                 .split("/")
                 .reverse()[0]
                 .split(".")[0],
