@@ -683,7 +683,7 @@
             }
           });
         },
-        cancelOutOfRangeRequests: function () {
+        cancelNonViewport: function () {
           const viewportTop = window.scrollY;
           const viewportHeight = window.innerHeight;
           const cancelRange = viewportHeight * 2; // Cancel if >2 screens away (more aggressive)
@@ -2266,7 +2266,7 @@
           return (
             (n = (function (n, t, r) {
               if (!t && !r && n instanceof Uint8Array && !n.copy) return n;
-              (t >>>= 0), null == r && (r = n.byteLength - t);
+              ((t >>>= 0), null == r && (r = n.byteLength - t));
               return new Uint8Array(n.buffer, n.byteOffset + t, r);
             })(n)),
             t.apply(String, n)
@@ -2284,7 +2284,7 @@
           return n;
         }
         function i(n, t) {
-          (n = String(n)),
+          ((n = String(n)),
             null == t &&
               (t = (function (n) {
                 var t = a.exec(n);
@@ -2293,7 +2293,7 @@
             t &&
               (n = (function (n) {
                 return unescape(encodeURI(n));
-              })(n));
+              })(n)));
           for (var r = n.length, e = new Uint8Array(r); r--; )
             e[r] = n.charCodeAt(r);
           return e;
@@ -2539,7 +2539,7 @@
       $("body").on("click", "[data-fancybox-favorite]", function (e) {
         let hash = $.fancybox
           .getInstance()
-          .current.$thumb.data("data-resource")
+          .current.$thumb.data("resource")
           .split("/")
           .reverse()[0]
           .split(".")[0];
@@ -3060,6 +3060,10 @@
             run();
           });
           function showAlbum(album, kind) {
+            // Cancel all pending requests for quick album switch
+            medcrypt.cancelAllRequests();
+            console.log("Queue flushed for new album: " + album);
+
             window.currentAlbum = album;
             delete window.currentAlbumPosition;
             syncPlayBackPositionsReal(false, () => {
@@ -3712,7 +3716,7 @@
             let hash = atob(
               $.fancybox
                 .getInstance()
-                .current.$thumb.data("data-resource")
+                .current.$thumb.data("resource")
                 .split("/")
                 .reverse()[0]
                 .split(".")[0],
@@ -4065,6 +4069,7 @@
 
           $(window).on("hashchange", function (e) {
             medcrypt.flushQueue();
+            medcrypt.cancelNonViewport();
             let newhash = window.location?.hash;
             if (!newhash) {
               newhash = "none";
@@ -4261,7 +4266,7 @@
         if (scrollVelocity > 1.5) {
           // Lower threshold for rapid scrolling detection
           medcrypt.rapidScrolling = true;
-          medcrypt.cancelOutOfRangeRequests();
+          medcrypt.cancelNonViewport();
         } else {
           medcrypt.rapidScrolling = false;
         }
@@ -4289,7 +4294,7 @@
         const timeout = scrollVelocity > 2 ? 50 : 100;
         scrollTimeout = setTimeout(() => {
           medcrypt.rapidScrolling = false; // Clear rapid scrolling flag
-          medcrypt.cancelOutOfRangeRequests();
+          medcrypt.cancelNonViewport();
           processLazyLoad(); // Re-evaluate visible images
         }, timeout);
       }
