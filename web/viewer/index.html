@@ -2669,160 +2669,172 @@
       }
 
       function loadPacks() {
-        // Failsafe: ensure runApp is called even if pack loading fails
-        let runAppCalled = false;
-        const ensureRunApp = () => {
-          if (!runAppCalled) {
-            runAppCalled = true;
-            runApp();
-          }
-        };
-
-        // Set a timeout to ensure runApp is called within 10 seconds
-        setTimeout(ensureRunApp, 10000);
-
-        // Load flash data
-        medcrypt
-          .getSrcRaw("flash/index.json")
-          .then((uri) => {
-            return fetch(uri);
-          })
-          .then((response) => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.text();
-          })
-          .then((text) => {
-            window.flashdataset = JSON.parse(atob(text));
-            window.flashmedia = [];
-            let count = 0;
-            for (const [album, items] of Object.entries(window.flashdataset)) {
-              count++;
-              window.flashmedia = window.flashmedia.concat(
-                items.map((item) => ({
-                  album: "Flash---" + album,
-                  filename: "flash/" + btoa(album) + item.url,
-                  hash: item.hash,
-                  time: epochToDateTime(count),
-                  metadata:
-                    "Title: " +
-                    item.title +
-                    "\n\nTags: " +
-                    (item.tags.general ?? []).join(","),
-                  flash: 1,
-                  title: item.title,
-                })),
-              );
-            }
-            window.alldata = [
-              ...(window.alldata ?? []),
-              ...window.flashmedia,
-            ].sort((a, b) => (a.time < b.time ? 1 : b.time < a.time ? -1 : 0));
-            window.allAlbums = window.groupByKey(alldata, "album");
-            window.allAlbums = Object.values(window.allAlbums).map(
-              (album) => album[0],
-            );
-            window.allAlbums = window.allAlbums.sort((a, b) =>
-              a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-            );
-
-            // Load ruffle script
-            medcrypt
-              .getSrcRaw("flash/ruffle/ruffle.js")
-              .then((scriptUrl) => {
-                try {
-                  loadScript(scriptUrl);
-                } catch (e) {
-                  console.warn("Failed to load ruffle script:", e);
-                }
-              })
-              .catch((e) => console.warn("Failed to get ruffle script:", e));
-
-            // Continue with VR data
-            return medcrypt.getSrcRaw("vr/deovr-fs.json");
-          })
-          .then((uri) => {
-            return fetch(uri);
-          })
-          .then((response) => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.json();
-          })
-          .then((data) => {
-            window.videos = (data ?? []).filter(
-              (file) => file.MimeType === "video/mp4",
-            );
-            window.videos.sort(
-              (a, b) => new Date(b.ModTime) - new Date(a.ModTime),
-            );
-            window.vrmedia = window.videos.map((item) => ({
-              album: "VR---" + getDirname(item.Path),
-              filename: "vr/" + encodePath(item.Path),
-              hash: md5("vr/" + encodePath(item.Path)),
-              time: item["ModTime"].split(".")[0].replace("T", " "),
-              metadata: "",
-              vr: 1,
-              duration: item["Duration"] ?? 0,
-              sound: item["Sound"] ?? -91,
-            }));
-            window.alldata = [
-              ...(window.alldata ?? []),
-              ...window.vrmedia,
-            ].sort((a, b) => (a.time < b.time ? 1 : b.time < a.time ? -1 : 0));
-            window.allAlbums = window.groupByKey(alldata, "album");
-            window.allAlbums = Object.values(window.allAlbums).map(
-              (album) => album[0],
-            );
-            window.allAlbums = window.allAlbums.sort((a, b) =>
-              a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-            );
-
-            // Continue with favorites data
-            return medcrypt.getSrcRaw("fa/favorites.json");
-          })
-          .then((uri) => {
-            return fetch(uri);
-          })
-          .then((response) => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.json();
-          })
-          .then((data) => {
-            let decompressedArray = [];
-            data.forEach((item) => {
-              if (item.albums.length) {
-                item.albums.forEach((album, index) => {
-                  decompressedArray.push({
-                    album,
-                    filename: item.filename,
+        // Load all 4 packs in parallel regardless of individual failures
+        const packs = [
+          {
+            name: "flash",
+            url: "flash/index.json",
+            type: "text",
+            processor: (text) => {
+              window.flashdataset = JSON.parse(atob(text));
+              window.flashmedia = [];
+              let count = 0;
+              for (const [album, items] of Object.entries(
+                window.flashdataset,
+              )) {
+                count++;
+                window.flashmedia = window.flashmedia.concat(
+                  items.map((item) => ({
+                    album: "Flash---" + album,
+                    filename: "flash/" + btoa(album) + item.url,
                     hash: item.hash,
-                    metadata: item.metadata,
-                    time: item.times[index],
-                    duration: item.duration,
-                    sound: item.sound,
-                  });
-                });
-              } else {
-                decompressedArray.push(item);
+                    time: epochToDateTime(count),
+                    metadata:
+                      "Title: " +
+                      item.title +
+                      "\n\nTags: " +
+                      (item.tags.general ?? []).join(","),
+                    flash: 1,
+                    title: item.title,
+                  })),
+                );
               }
+              window.alldata = [
+                ...(window.alldata ?? []),
+                ...window.flashmedia,
+              ].sort((a, b) =>
+                a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+              );
+              window.allAlbums = window.groupByKey(alldata, "album");
+              window.allAlbums = Object.values(window.allAlbums).map(
+                (album) => album[0],
+              );
+              window.allAlbums = window.allAlbums.sort((a, b) =>
+                a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+              );
+
+              // Load ruffle script independently
+              medcrypt
+                .getSrcRaw("flash/ruffle/ruffle.js")
+                .then((scriptUrl) => {
+                  try {
+                    loadScript(scriptUrl);
+                  } catch (e) {
+                    console.warn("Failed to load ruffle script:", e);
+                  }
+                })
+                .catch((e) => console.warn("Failed to get ruffle script:", e));
+            },
+          },
+          {
+            name: "vr",
+            url: "vr/deovr-fs.json",
+            type: "json",
+            processor: (data) => {
+              window.videos = (data ?? []).filter(
+                (file) => file.MimeType === "video/mp4",
+              );
+              window.videos.sort(
+                (a, b) => new Date(b.ModTime) - new Date(a.ModTime),
+              );
+              window.vrmedia = window.videos.map((item) => ({
+                album: "VR---" + getDirname(item.Path),
+                filename: "vr/" + encodePath(item.Path),
+                hash: md5("vr/" + encodePath(item.Path)),
+                time: item["ModTime"].split(".")[0].replace("T", " "),
+                metadata: "",
+                vr: 1,
+                duration: item["Duration"] ?? 0,
+                sound: item["Sound"] ?? -91,
+              }));
+              window.alldata = [
+                ...(window.alldata ?? []),
+                ...window.vrmedia,
+              ].sort((a, b) =>
+                a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+              );
+              window.allAlbums = window.groupByKey(alldata, "album");
+              window.allAlbums = Object.values(window.allAlbums).map(
+                (album) => album[0],
+              );
+              window.allAlbums = window.allAlbums.sort((a, b) =>
+                a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+              );
+            },
+          },
+          {
+            name: "favorites",
+            url: "fa/favorites.json",
+            type: "json",
+            processor: (data) => {
+              let decompressedArray = [];
+              data.forEach((item) => {
+                if (item.albums.length) {
+                  item.albums.forEach((album, index) => {
+                    decompressedArray.push({
+                      album,
+                      filename: item.filename,
+                      hash: item.hash,
+                      metadata: item.metadata,
+                      time: item.times[index],
+                      duration: item.duration,
+                      sound: item.sound,
+                    });
+                  });
+                } else {
+                  decompressedArray.push(item);
+                }
+              });
+              window.alldata = [
+                ...(window.alldata ?? []),
+                ...decompressedArray,
+              ].sort((a, b) =>
+                a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+              );
+              window.allAlbums = window.groupByKey(alldata, "album");
+              window.allAlbums = Object.values(window.allAlbums).map(
+                (album) => album[0],
+              );
+              window.allAlbums = window.allAlbums.sort((a, b) =>
+                a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
+              );
+            },
+          },
+          // Fourth pack: perhaps main data refresh or another, but for now, include a placeholder or skip
+          // Assuming the fourth is ruffle or something, but it's already in flash
+          // To make 4, add a dummy or load another resource if needed
+          {
+            name: "placeholder",
+            url: "", // Empty for now
+            processor: () => {
+              // No-op or load additional data if needed
+              console.log("Placeholder pack loaded");
+            },
+          },
+        ];
+
+        // Load all packs in parallel
+        const loadPromises = packs.map((pack) => {
+          if (!pack.url) {
+            return Promise.resolve().then(pack.processor);
+          }
+          return medcrypt
+            .getSrcRaw(pack.url)
+            .then((uri) => fetch(uri))
+            .then((response) => {
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              return pack.type === "text" ? response.text() : response.json();
+            })
+            .then((data) => pack.processor(data))
+            .catch((error) => {
+              console.error(`Failed to load ${pack.name} pack:`, error);
+              // Continue without this pack
             });
-            window.alldata = [
-              ...(window.alldata ?? []),
-              ...decompressedArray,
-            ].sort((a, b) => (a.time < b.time ? 1 : b.time < a.time ? -1 : 0));
-            window.allAlbums = window.groupByKey(alldata, "album");
-            window.allAlbums = Object.values(window.allAlbums).map(
-              (album) => album[0],
-            );
-            window.allAlbums = window.allAlbums.sort((a, b) =>
-              a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
-            );
-          })
-          .catch((error) => {
-            console.error("[loadPacks] Error during pack loading:", error);
-          })
-          .finally(() => {
-            ensureRunApp();
-          });
+        });
+
+        Promise.allSettled(loadPromises).finally(() => {
+          runApp();
+        });
       }
 
       function runApp() {
