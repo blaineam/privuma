@@ -184,6 +184,21 @@ $previouslyDownloadedMedia = array_flip(
     )
 );
 
+
+$viewerHTML = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'viewer' . DIRECTORY_SEPARATOR . 'index.html');
+
+$viewerHTML = str_replace(
+    '{{ENDPOINT}}',
+    privuma::getEnv('ENDPOINT'),
+    $viewerHTML
+);
+
+echo PHP_EOL . 'Downloading Offline Web App Viewer HTML File';
+$opsPlain->file_put_contents('index.html', $viewerHTML);
+$opsNoEncodeNoPrefix->file_put_contents('index.html', $viewerHTML);
+$opsNoEncodeNoPrefix->file_put_contents('fa/index.html', $viewerHTML);
+unset($viewerHTML);
+
 if (!file_exists(__DIR__ . '/restore_point.txt')) {
     $array = [];
     $metaDataFiles = [];
@@ -256,20 +271,6 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
     unset($undata);
 
     echo PHP_EOL . 'All Database Lookup Operations have been completed.';
-
-    $viewerHTML = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'viewer' . DIRECTORY_SEPARATOR . 'index.html');
-
-    $viewerHTML = str_replace(
-        '{{ENDPOINT}}',
-        privuma::getEnv('ENDPOINT'),
-        $viewerHTML
-    );
-
-    echo PHP_EOL . 'Downloading Offline Web App Viewer HTML File';
-    $opsPlain->file_put_contents('index.html', $viewerHTML);
-    $opsNoEncodeNoPrefix->file_put_contents('index.html', $viewerHTML);
-    $opsNoEncodeNoPrefix->file_put_contents('fa/index.html', $viewerHTML);
-    unset($viewerHTML);
 
     echo PHP_EOL . 'Downloading encrypted database offline website payload';
     echo PHP_EOL . 'Downloading Mobile Dataset';
