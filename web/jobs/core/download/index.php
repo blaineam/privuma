@@ -184,7 +184,6 @@ $previouslyDownloadedMedia = array_flip(
     )
 );
 
-
 $viewerHTML = file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'viewer' . DIRECTORY_SEPARATOR . 'index.html');
 
 $viewerHTML = str_replace(
