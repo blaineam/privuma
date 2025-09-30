@@ -2200,7 +2200,7 @@
           return (
             (n = (function (n, t, r) {
               if (!t && !r && n instanceof Uint8Array && !n.copy) return n;
-              ((t >>>= 0), null == r && (r = n.byteLength - t));
+              (t >>>= 0), null == r && (r = n.byteLength - t);
               return new Uint8Array(n.buffer, n.byteOffset + t, r);
             })(n)),
             t.apply(String, n)
@@ -2218,7 +2218,7 @@
           return n;
         }
         function i(n, t) {
-          ((n = String(n)),
+          (n = String(n)),
             null == t &&
               (t = (function (n) {
                 var t = a.exec(n);
@@ -2227,7 +2227,7 @@
             t &&
               (n = (function (n) {
                 return unescape(encodeURI(n));
-              })(n)));
+              })(n));
           for (var r = n.length, e = new Uint8Array(r); r--; )
             e[r] = n.charCodeAt(r);
           return e;
@@ -3551,9 +3551,9 @@
           });
 
           $(document).on("beforeShow.fb", function (e, instance, slide) {
-            const div = document.getElementById('content');
-            const height = window.getComputedStyle(div).height; 
-            $('#fb-bg-overlay').css('height', height);
+            const div = document.getElementById("content");
+            const height = window.getComputedStyle(div).height;
+            $("#fb-bg-overlay").css("height", height);
             if (slide.opts.$orig.hasClass("vr-link")) {
               const playerUrl = slide.opts.$orig.data("url");
               medcrypt.getSrc(
