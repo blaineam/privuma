@@ -1326,7 +1326,7 @@
           data: { actions: request },
         })
           .then((data) => {
-            if(data && data["playbackSync"] && data["playbackSync"]["out"]) {
+            if (data && data["playbackSync"] && data["playbackSync"]["out"]) {
               window.localStorage.setItem(
                 "PDLAP",
                 btoa(JSON.stringify(data["playbackSync"]["out"])),
