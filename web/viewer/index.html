@@ -2066,6 +2066,13 @@
           videoUrl = $("#inline-player").find("video source").attr("src");
         }
 
+        if (!videoUrl) {
+          console.warn(
+            "reloadPlayer: No videoUrl provided and no existing video source found",
+          );
+          return;
+        }
+
         const thumbnail = videoUrl
           .replace(".mp4", ".jpg")
           .replace(".webm", ".jpg");
@@ -2202,7 +2209,7 @@
           return (
             (n = (function (n, t, r) {
               if (!t && !r && n instanceof Uint8Array && !n.copy) return n;
-              (t >>>= 0), null == r && (r = n.byteLength - t);
+              ((t >>>= 0), null == r && (r = n.byteLength - t));
               return new Uint8Array(n.buffer, n.byteOffset + t, r);
             })(n)),
             t.apply(String, n)
@@ -2220,7 +2227,7 @@
           return n;
         }
         function i(n, t) {
-          (n = String(n)),
+          ((n = String(n)),
             null == t &&
               (t = (function (n) {
                 var t = a.exec(n);
@@ -2229,7 +2236,7 @@
             t &&
               (n = (function (n) {
                 return unescape(encodeURI(n));
-              })(n));
+              })(n)));
           for (var r = n.length, e = new Uint8Array(r); r--; )
             e[r] = n.charCodeAt(r);
           return e;
@@ -4249,7 +4256,63 @@
           clearTimeout(scrollTimeout);
           scrollTimeout = setTimeout(() => {
             processLazyLoad();
+            // Handle VR player recreation
+            handleVRPlayerResize();
           }, 150);
+        },
+        { passive: true },
+      );
+
+      // Function to handle VR player recreation on orientation/size changes
+      function handleVRPlayerResize() {
+        const vrPlayer = document.getElementById("videojs-vr-player");
+        if (vrPlayer && window.player) {
+          const wasPlaying = !window.player.paused();
+          const currentTime = window.player.currentTime();
+
+          // Get the current video source before disposing
+          const currentSrc = window.player.currentSrc() || window.player.src();
+
+          // Dispose the current player
+          window.player.dispose();
+
+          // Clear the player reference
+          window.player = null;
+
+          // Recreate the player with the saved video source
+          reloadPlayer(currentSrc);
+
+          // Wait for player to be ready, then restore playback state
+          const checkPlayerReady = () => {
+            if (window.player && window.player.readyState() >= 1) {
+              // Player is ready, restore state
+              window.player.currentTime(currentTime);
+              if (wasPlaying) {
+                window.player.play().catch((e) => {
+                  console.warn("Auto-play failed after resize:", e);
+                });
+              }
+            } else {
+              // Player not ready yet, check again
+              setTimeout(checkPlayerReady, 50);
+            }
+          };
+
+          // Start checking after a brief delay
+          setTimeout(checkPlayerReady, 200);
+        }
+      }
+
+      // Handle orientation change for iOS Safari lazy loading issues
+      window.addEventListener(
+        "orientationchange",
+        () => {
+          // Wait for orientation change to complete
+          setTimeout(() => {
+            processLazyLoad();
+            // Handle VR player recreation
+            handleVRPlayerResize();
+          }, 300);
         },
         { passive: true },
       );
