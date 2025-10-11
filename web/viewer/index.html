@@ -4325,37 +4325,62 @@
             "Using scroll-based lazy loading fallback (HTTP mode or no IntersectionObserver)",
           );
 
-          function checkLazyImages() {
-            lazyImages.forEach(function (lazyImage, index) {
-              if (
-                lazyImage.dataset.src &&
-                !lazyImage.classList.contains("lazy-loaded")
-              ) {
-                const rect = lazyImage.getBoundingClientRect();
-                const viewportHeight = window.innerHeight;
+          // Use the same checkLazyLoad function for consistency
+          const checkLazyImages = () => {
+            if (medcrypt.rapidScrolling) return;
 
-                // Load if within ~2-3 rows of viewport (more generous for HTTP mode)
-                if (rect.top < viewportHeight + 800 && rect.bottom > -800) {
+            const lazyImages = [].slice.call(document.querySelectorAll("img.lazy"));
+            const viewportHeight = window.innerHeight;
+            const now = Date.now();
+
+            lazyImages.forEach((lazyImage) => {
+              if (!lazyImage.dataset.src) return;
+
+              const rect = lazyImage.getBoundingClientRect();
+              const isInViewport = rect.top < viewportHeight && rect.bottom > 0;
+              const isNearViewport = (rect.top >= -800 && rect.top < viewportHeight + 800) ||
+                                    (rect.bottom > -800 && rect.bottom < viewportHeight + 800);
+
+              // Reset stuck images that have been loading for too long (5 seconds)
+              if (lazyImage.classList.contains("lazy-loading")) {
+                const loadingStart = lazyImage.dataset.loadingStart ? parseInt(lazyImage.dataset.loadingStart) : 0;
+                if (loadingStart && (now - loadingStart > 5000)) {
+                  lazyImage.classList.remove("lazy-loading");
+                  lazyImage.classList.add("lazy-waiting");
+                  delete lazyImage.dataset.loadingStart;
+                }
+              }
+
+              // Fix broken state: if marked as lazy-loaded but still has placeholder src
+              if (lazyImage.classList.contains("lazy-loaded") &&
+                  lazyImage.src === "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7") {
+                lazyImage.classList.remove("lazy-loaded");
+                lazyImage.classList.add("lazy-waiting");
+              }
+
+              // Load images that are waiting and in/near viewport
+              if (!lazyImage.classList.contains("lazy-loading") &&
+                  !lazyImage.classList.contains("lazy-loaded")) {
+
+                if (isInViewport) {
+                  loadLazyImage(lazyImage, "high");
+                } else if (isNearViewport) {
                   loadLazyImage(lazyImage, "medium");
                 }
               }
             });
-          }
+          };
 
-          // Initial check - load first few images immediately for testing
-          lazyImages.slice(0, 10).forEach(function (lazyImage, index) {
-            if (
-              lazyImage.dataset.src &&
-              !lazyImage.classList.contains("lazy-loaded")
-            ) {
-              loadLazyImage(lazyImage, "high");
-            }
-          });
+          // Store globally
+          window.checkLazyLoad = checkLazyImages;
 
-          // Then do regular check
-          checkLazyImages();
+          // Initial check
+          setTimeout(checkLazyImages, 100);
 
-          // Add scroll listener for fallback
+          // Run interval-based check
+          setInterval(checkLazyImages, 300);
+
+          // Add scroll listener
           let scrollTimer;
           window.addEventListener(
             "scroll",
