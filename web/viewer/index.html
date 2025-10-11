@@ -466,6 +466,41 @@
         rapidScrolling: false, // Track if we're in rapid scroll mode
         imageFetches: new Map(), // Track active image fetch requests
         blobCache: new Map(), // Cache blob URLs to avoid re-downloading
+        blobCacheMaxSize: 50, // Maximum number of blobs to cache
+        blobCacheMaxAge: 15 * 60 * 1000, // 15 minutes
+        getBlobUrlForResource: function(resourceKey) {
+          // Check if we have a cached blob for this resource
+          if (this.blobCache.has(resourceKey)) {
+            const cachedBlob = this.blobCache.get(resourceKey);
+            if (cachedBlob && !cachedBlob.revoked) {
+              return cachedBlob.url;
+            }
+          }
+          return null;
+        },
+        cleanupBlobCache: function() {
+          const now = Date.now();
+          const entries = Array.from(this.blobCache.entries());
+
+          // Sort by timestamp, oldest first
+          entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+
+          // Remove expired or excess blobs
+          entries.forEach(([key, blobInfo], index) => {
+            const isExpired = now - blobInfo.timestamp > this.blobCacheMaxAge;
+            const isExcess = index < entries.length - this.blobCacheMaxSize;
+
+            if ((isExpired || isExcess) && !blobInfo.revoked) {
+              try {
+                URL.revokeObjectURL(blobInfo.url);
+                blobInfo.revoked = true;
+                this.blobCache.delete(key);
+              } catch (e) {
+                console.warn("Error revoking blob URL:", e);
+              }
+            }
+          });
+        },
         dirCache: {},
         startQueue: async () => {
           const maxConcurrency = 8;
@@ -558,12 +593,47 @@
             return imageUrl;
           }
 
+          // Never create blob URLs for placeholder images
+          if (imageUrl.startsWith('data:image/gif;base64,R0lGOD') ||
+              imageUrl.includes('placeholder')) {
+            throw new Error("Cannot create blob for placeholder image");
+          }
+
           // Check if we already have a blob for this resource
           if (medcrypt.blobCache.has(resourceKey)) {
             const cachedBlob = medcrypt.blobCache.get(resourceKey);
             if (cachedBlob && !cachedBlob.revoked) {
               return cachedBlob.url;
             }
+          }
+
+          // Check if a fetch is already in progress for this resource
+          if (medcrypt.imageFetches.has(resourceKey)) {
+            // Wait for the existing fetch to complete
+            return new Promise((resolve, reject) => {
+              const checkInterval = setInterval(() => {
+                // Check if the blob is now available
+                if (medcrypt.blobCache.has(resourceKey)) {
+                  clearInterval(checkInterval);
+                  const cachedBlob = medcrypt.blobCache.get(resourceKey);
+                  if (cachedBlob && !cachedBlob.revoked) {
+                    resolve(cachedBlob.url);
+                  } else {
+                    resolve(imageUrl);
+                  }
+                } else if (!medcrypt.imageFetches.has(resourceKey)) {
+                  // Fetch completed but no blob (error case)
+                  clearInterval(checkInterval);
+                  resolve(imageUrl);
+                }
+              }, 100);
+
+              // Timeout after 10 seconds
+              setTimeout(() => {
+                clearInterval(checkInterval);
+                resolve(imageUrl);
+              }, 10000);
+            });
           }
 
           // Create AbortController for this image fetch - Safari/HTTP fallback
@@ -640,7 +710,7 @@
         cancelImageFetchesOutsideViewport: function (forceAll = false) {
           const viewportTop = window.scrollY;
           const viewportHeight = window.innerHeight;
-          const cancelRange = viewportHeight * 2;
+          const cancelRange = viewportHeight * 1.2;
 
           medcrypt.imageFetches.forEach((fetchInfo, resourceKey) => {
             const { controller, imageElement } = fetchInfo;
@@ -676,7 +746,7 @@
         cancelImageLoadsOutsideViewport: function (forceAll = false) {
           const viewportTop = window.scrollY;
           const viewportHeight = window.innerHeight;
-          const cancelRange = viewportHeight * 2;
+          const cancelRange = viewportHeight * 1.2;
 
           medcrypt.activeImageLoads.forEach((imageElement, resource) => {
             if (!imageElement || !imageElement.parentNode) {
@@ -715,7 +785,7 @@
         cancelNonViewport: function () {
           const viewportTop = window.scrollY;
           const viewportHeight = window.innerHeight;
-          const cancelRange = viewportHeight * 2; // Cancel if >2 screens away (more aggressive)
+          const cancelRange = viewportHeight * 1.2; // More aggressive - 1.2 screens
 
           // Cancel active requests that are outside viewport range
           medcrypt.activeRequests.forEach((controller, resource) => {
@@ -759,8 +829,9 @@
           medcrypt.cancelImageLoadsOutsideViewport();
           medcrypt.cancelImageFetchesOutsideViewport();
 
-          // Clear all low priority requests during rapid scrolling
+          // Clear all low and medium priority queued requests during rapid scrolling
           medcrypt.requestQueue.low = [];
+          medcrypt.requestQueue.medium = [];
 
           // Aggressively reduce medium priority queue
           if (medcrypt.requestQueue.medium.length > 10) {
@@ -781,13 +852,54 @@
           });
         },
         processingQueue: false,
-        maxTries: 2,
+        maxTries: 3,
         getSrc: function (
           resource,
           action = () => {},
           currentTries = 0,
           priority = "medium",
         ) {
+          // Skip data URIs and blob URLs - return immediately
+          if (resource.startsWith('data:') || resource.startsWith('blob:')) {
+            action(resource);
+            return Promise.resolve(resource);
+          }
+
+          // Check if we already have a blob URL cached for this resource
+          const cachedBlobUrl = medcrypt.getBlobUrlForResource(resource);
+          if (cachedBlobUrl) {
+            action(cachedBlobUrl);
+            return Promise.resolve(cachedBlobUrl);
+          }
+
+          // Check viewport before queueing (except for high priority)
+          if (priority !== "high") {
+            const element = document.querySelector(`[data-resource="${resource}"]`);
+            if (element) {
+              const rect = element.getBoundingClientRect();
+              const viewportHeight = window.innerHeight;
+              const isNearViewport = rect.top < viewportHeight * 2 &&
+                                    rect.bottom > -(viewportHeight * 2);
+
+              if (!isNearViewport) {
+                return Promise.reject(new Error("Skipped - outside viewport"));
+              }
+            }
+
+            // Don't queue if rapid scrolling
+            if (medcrypt.rapidScrolling) {
+              return Promise.reject(new Error("Skipped - rapid scrolling"));
+            }
+          }
+
+          // Limit queue size by purging old items if queue is too large
+          const maxQueueSize = priority === "high" ? 20 : (priority === "medium" ? 15 : 8);
+          if (medcrypt.requestQueue[priority].length >= maxQueueSize) {
+            // Remove oldest items from the queue (from the front)
+            const itemsToRemove = medcrypt.requestQueue[priority].length - maxQueueSize + 1;
+            medcrypt.requestQueue[priority].splice(0, itemsToRemove);
+          }
+
           medcrypt.requestQueue[priority].push(async () => {
             try {
               const result = await medcrypt.getSrcRaw(
@@ -851,6 +963,23 @@
                     });
                   };
                   return waitForExisting();
+                }
+
+                // Check if element is still in viewport before making request
+                if (medcrypt.rapidScrolling) {
+                  throw new Error("Request cancelled - rapid scrolling");
+                }
+
+                const element = document.querySelector(`[data-resource="${resource}"]`);
+                if (element) {
+                  const rect = element.getBoundingClientRect();
+                  const viewportHeight = window.innerHeight;
+                  const isNearViewport = rect.top < viewportHeight * 1.5 &&
+                                        rect.bottom > -(viewportHeight * 1.5);
+
+                  if (!isNearViewport) {
+                    throw new Error("Request cancelled - outside viewport");
+                  }
                 }
 
                 // Check if this URL has previously failed with CORS
@@ -1009,11 +1138,12 @@
                 } catch (error) {
                   cleanup();
 
-                  if (
-                    error.name === "AbortError" ||
-                    error.message.includes("timeout")
-                  ) {
-                    throw new Error("Request cancelled or timed out");
+                  if (error.name === "AbortError") {
+                    throw new Error("Request cancelled");
+                  }
+
+                  if (error.message.includes("timeout")) {
+                    throw new Error("Request timed out");
                   }
 
                   if (
@@ -1045,12 +1175,23 @@
                 }
               } catch (error) {
                 medcrypt.finishProgress();
+
+                // Check if cancelled due to viewport - don't retry these
+                if (error.message && error.message.includes("cancelled")) {
+                  throw error;
+                }
+
+                // Retry on timeouts and other errors
                 if (currentTries < medcrypt.maxTries) {
                   const delay = Math.pow(2, currentTries) * 1000; // Exponential backoff
+                  console.log(`Retrying ${resource} (attempt ${currentTries + 1}/${medcrypt.maxTries}) after ${delay}ms`);
                   await sleep(delay);
                   return medcrypt.getSrcRaw(resource, action, currentTries + 1);
                 }
-                return resource; // Final fallback
+
+                // Final fallback - return original resource but signal it failed
+                console.error(`getSrc failed after ${medcrypt.maxTries} tries for ${resource}`);
+                throw new Error(`Failed to load resource after ${medcrypt.maxTries} attempts`);
               }
             })()
               .then(resolve)
@@ -1101,6 +1242,11 @@
           );
         }
       }, 5 * 1000);
+
+      // Periodic blob cache cleanup
+      setInterval(() => {
+        medcrypt.cleanupBlobCache();
+      }, 60 * 1000); // Every minute
 
       function loadScript(url, callback) {
         var head = document.head;
@@ -2471,8 +2617,19 @@
             (obj1, i, arr) =>
               arr.findIndex((obj2) => obj2.hash === obj1.hash) === i,
           );
-        window.alldata = cachedFavorites
-          .concat(window.alldata.filter((item) => item.album !== "Favorites"))
+
+        // Get existing favorites and non-favorites
+        const existingFavorites = window.alldata.filter((item) => item.album === "Favorites");
+        const nonFavorites = window.alldata.filter((item) => item.album !== "Favorites");
+
+        // Merge cached favorites with existing favorites, deduplicating by hash
+        const allFavorites = cachedFavorites.concat(existingFavorites)
+          .filter(
+            (obj1, i, arr) =>
+              arr.findIndex((obj2) => obj2.hash === obj1.hash) === i,
+          );
+
+        window.alldata = allFavorites.concat(nonFavorites)
           .sort((a, b) => (a.time < b.time ? 1 : b.time < a.time ? -1 : 0));
       }
 
@@ -3695,7 +3852,10 @@
                   if (slide.hasError && attempts < 3) {
                     elementa.attr("data-attempts", attempts + 1);
                     $(".fancybox-content.fancybox-error").remove();
-                    $.fancybox.getInstance().current.$slide.trigger("onReset");
+                    const fancyInstance = $.fancybox.getInstance();
+                    if (fancyInstance && fancyInstance.current && fancyInstance.current.$slide) {
+                      fancyInstance.current.$slide.trigger("onReset");
+                    }
                     slide.hasError = false;
                     slide.isLoading = false;
                     slide.isLoaded = false;
@@ -4039,49 +4199,126 @@
           "IntersectionObserver" in window &&
           window.location.protocol === "https:"
         ) {
+          // Debounced handler for IntersectionObserver
+          let observerTimeout;
+          const pendingEntries = new Map();
+
           let lazyImageObserver = new IntersectionObserver(
             function (entries, observer) {
+              // Batch entries by target for debouncing
               entries.forEach(function (entry) {
-                let lazyImage = entry.target;
-                const rect = lazyImage.getBoundingClientRect();
-                const viewportHeight = window.innerHeight;
+                pendingEntries.set(entry.target, entry);
+              });
 
-                // Calculate priority based on viewport distance
-                let priority = "low";
-                if (entry.isIntersecting) {
-                  priority = "medium";
-                } else if (Math.abs(rect.top) < viewportHeight * 2) {
-                  priority = "medium";
-                }
+              clearTimeout(observerTimeout);
+              observerTimeout = setTimeout(() => {
+                pendingEntries.forEach(function (entry, lazyImage) {
+                  const rect = lazyImage.getBoundingClientRect();
+                  const viewportHeight = window.innerHeight;
 
-                if (entry.isIntersecting && lazyImage.dataset.src != "") {
-                  // Don't start loading during rapid scrolling
-                  if (medcrypt.rapidScrolling) {
-                    return;
+                  // Calculate priority based on viewport position
+                  let priority = "low";
+                  const isInViewport = rect.top < viewportHeight && rect.bottom > 0;
+
+                  if (isInViewport) {
+                    // Images currently visible in viewport get HIGH priority
+                    priority = "high";
+                  } else if (entry.isIntersecting ||
+                             (rect.top >= -800 && rect.top < 0) || // Above viewport (within 800px)
+                             (rect.bottom > viewportHeight && rect.top < viewportHeight + 800)) { // Below viewport (within 800px)
+                    // Images just beyond top or bottom of viewport get medium priority
+                    priority = "medium";
                   }
 
-                  loadLazyImage(lazyImage, priority);
-                } else if (
-                  lazyImage.classList.contains("lazy-loaded") &&
-                  lazyImage.src !==
-                    "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-                ) {
-                  lazyImage.dataset.src = lazyImage.src;
-                  lazyImage.src =
-                    "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-                  lazyImage.classList.remove("lazy-loaded");
-                  lazyImage.classList.add("lazy-waiting");
-                }
-              });
+                  if ((isInViewport || entry.isIntersecting) && lazyImage.dataset.src != "") {
+                    // Don't start loading during rapid scrolling
+                    if (medcrypt.rapidScrolling) {
+                      return;
+                    }
+
+                    loadLazyImage(lazyImage, priority);
+                  } else if (
+                    !entry.isIntersecting &&
+                    lazyImage.classList.contains("lazy-loaded") &&
+                    lazyImage.src !==
+                      "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                  ) {
+                    // Only unload if far from viewport to reduce thrashing
+                    if (Math.abs(rect.top) > viewportHeight * 3) {
+                      lazyImage.dataset.src = lazyImage.src;
+                      lazyImage.src =
+                        "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+                      lazyImage.classList.remove("lazy-loaded");
+                      lazyImage.classList.add("lazy-waiting");
+                    }
+                  }
+                });
+                pendingEntries.clear();
+              }, 50); // 50ms debounce
             },
             {
-              rootMargin: "200px 0px 200px 0px", // Preload 200px ahead
-              threshold: [0, 0.1],
+              rootMargin: "800px 0px 800px 0px", // Load ~2-3 rows above and below viewport
+              threshold: [0, 0.1, 0.5], // More granular visibility detection
             },
           );
           lazyImages.forEach(function (lazyImage) {
             lazyImageObserver.observe(lazyImage);
           });
+
+          // Function to check and load lazy images
+          const checkLazyLoad = () => {
+            if (medcrypt.rapidScrolling) return;
+
+            const lazyImages = [].slice.call(document.querySelectorAll("img.lazy"));
+            const viewportHeight = window.innerHeight;
+            const now = Date.now();
+
+            lazyImages.forEach((lazyImage) => {
+              if (!lazyImage.dataset.src) return;
+
+              const rect = lazyImage.getBoundingClientRect();
+              const isInViewport = rect.top < viewportHeight && rect.bottom > 0;
+              const isNearViewport = (rect.top >= -800 && rect.top < viewportHeight + 800) ||
+                                    (rect.bottom > -800 && rect.bottom < viewportHeight + 800);
+
+              // Reset stuck images that have been loading for too long (5 seconds)
+              if (lazyImage.classList.contains("lazy-loading")) {
+                const loadingStart = lazyImage.dataset.loadingStart ? parseInt(lazyImage.dataset.loadingStart) : 0;
+                if (loadingStart && (now - loadingStart > 5000)) {
+                  lazyImage.classList.remove("lazy-loading");
+                  lazyImage.classList.add("lazy-waiting");
+                  delete lazyImage.dataset.loadingStart;
+                }
+              }
+
+              // Fix broken state: if marked as lazy-loaded but still has placeholder src
+              if (lazyImage.classList.contains("lazy-loaded") &&
+                  lazyImage.src === "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7") {
+                lazyImage.classList.remove("lazy-loaded");
+                lazyImage.classList.add("lazy-waiting");
+              }
+
+              // Load images that are waiting and in/near viewport
+              if (!lazyImage.classList.contains("lazy-loading") &&
+                  !lazyImage.classList.contains("lazy-loaded")) {
+
+                if (isInViewport) {
+                  loadLazyImage(lazyImage, "high");
+                } else if (isNearViewport) {
+                  loadLazyImage(lazyImage, "medium");
+                }
+              }
+            });
+          };
+
+          // Store the function globally so it can be called after rapid scroll ends
+          window.checkLazyLoad = checkLazyLoad;
+
+          // Initial check to load images already in viewport on page load
+          setTimeout(checkLazyLoad, 100);
+
+          // Run interval-based check to catch any images that IntersectionObserver might miss
+          setInterval(checkLazyLoad, 300); // Check every 300ms
         } else {
           // Fallback for HTTP or when IntersectionObserver isn't available
           console.warn(
@@ -4097,8 +4334,8 @@
                 const rect = lazyImage.getBoundingClientRect();
                 const viewportHeight = window.innerHeight;
 
-                // Load if within 500px of viewport (more generous for HTTP mode)
-                if (rect.top < viewportHeight + 500 && rect.bottom > -500) {
+                // Load if within ~2-3 rows of viewport (more generous for HTTP mode)
+                if (rect.top < viewportHeight + 800 && rect.bottom > -800) {
                   loadLazyImage(lazyImage, "medium");
                 }
               }
@@ -4131,116 +4368,198 @@
         }
 
         function loadLazyImage(lazyImage, priority) {
-          lazyImage.onerror = function () {
-            lazyImage.src = md5ToImage(lazyImage.dataset.hash);
-            medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
-          };
-
-          lazyImage.onload = function () {
-            medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
-          };
-
-          medcrypt.getSrc(
-            lazyImage.dataset.src,
-            async (uri) => {
-              if (medcrypt.rapidScrolling) {
-                return;
-              }
-
-              const currentRect = lazyImage.getBoundingClientRect();
-              const currentViewportHeight = window.innerHeight;
-              const stillVisible =
-                currentRect.top < currentViewportHeight * 1.5 &&
-                currentRect.bottom > -(currentViewportHeight * 1.5);
-
-              if (stillVisible) {
-                // For HTTP, skip blob conversion and use direct URL
-                if (window.location.protocol === "http:") {
-                  lazyImage.src = uri;
-                } else {
-                  try {
-                    const blobUrl = await medcrypt.fetchImageAsBlob(
-                      uri,
-                      lazyImage.dataset.src,
-                      lazyImage,
-                    );
-                    const finalRect = lazyImage.getBoundingClientRect();
-                    const finalViewportHeight = window.innerHeight;
-                    const stillVisibleAfterFetch =
-                      finalRect.top < finalViewportHeight * 1.5 &&
-                      finalRect.bottom > -(finalViewportHeight * 1.5);
-
-                    if (stillVisibleAfterFetch && !medcrypt.rapidScrolling) {
-                      lazyImage.src = blobUrl;
-                    }
-                  } catch (error) {
-                    if (error.message !== "Fetch cancelled") {
-                      lazyImage.src = uri;
-                    }
-                  }
-                }
-              }
-            },
-            0,
-            priority,
-          );
+          // Skip if already loading or loaded
+          if (lazyImage.classList.contains("lazy-loading") ||
+              lazyImage.classList.contains("lazy-loaded")) {
+            return;
+          }
 
           lazyImage.classList.remove("lazy-waiting");
-          lazyImage.classList.add("lazy-loaded");
+          lazyImage.classList.add("lazy-loading");
+          lazyImage.dataset.loadingStart = Date.now().toString();
+
+          let retryCount = 0;
+          const maxRetries = 2;
+
+          const attemptLoad = () => {
+            lazyImage.onerror = function () {
+              medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+              lazyImage.classList.remove("lazy-loading");
+              lazyImage.classList.add("lazy-error");
+
+              // Retry with fallback
+              if (retryCount < maxRetries) {
+                retryCount++;
+                setTimeout(() => {
+                  lazyImage.classList.remove("lazy-error");
+                  lazyImage.classList.add("lazy-loading");
+                  attemptLoad();
+                }, 1000 * retryCount);
+              } else {
+                lazyImage.src = md5ToImage(lazyImage.dataset.hash);
+              }
+            };
+
+            lazyImage.onload = function () {
+              medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+              lazyImage.classList.remove("lazy-loading");
+              lazyImage.classList.add("lazy-loaded");
+              delete lazyImage.dataset.loadingStart;
+            };
+
+            medcrypt.getSrc(
+              lazyImage.dataset.src,
+              async (uri) => {
+                // Check if rapid scrolling - if so, reset and try again later
+                if (medcrypt.rapidScrolling) {
+                  lazyImage.classList.remove("lazy-loading");
+                  lazyImage.classList.add("lazy-waiting");
+                  delete lazyImage.dataset.loadingStart;
+                  return;
+                }
+
+                const currentRect = lazyImage.getBoundingClientRect();
+                const currentViewportHeight = window.innerHeight;
+                // More lenient check - allow images that are partially in viewport or nearby
+                const isInViewport = currentRect.top < currentViewportHeight && currentRect.bottom > 0;
+                const isNearViewport = currentRect.top < currentViewportHeight * 3 &&
+                                      currentRect.bottom > -(currentViewportHeight * 3);
+
+                if (isNearViewport) {
+                  // For HTTP, skip blob conversion and use direct URL
+                  if (window.location.protocol === "http:") {
+                    lazyImage.src = uri;
+                  } else {
+                    try {
+                      const blobUrl = await medcrypt.fetchImageAsBlob(
+                        uri,
+                        lazyImage.dataset.src,
+                        lazyImage,
+                      );
+
+                      // Final check before setting src
+                      if (!medcrypt.rapidScrolling) {
+                        lazyImage.src = blobUrl;
+                      } else {
+                        // Rapid scrolling started during fetch, reset state
+                        lazyImage.classList.remove("lazy-loading");
+                        lazyImage.classList.add("lazy-waiting");
+                        delete lazyImage.dataset.loadingStart;
+                      }
+                    } catch (error) {
+                      // Check if cancelled or outside viewport
+                      if (error.message && (error.message.includes("cancelled") ||
+                          error.message.includes("outside viewport"))) {
+                        // Cancelled, reset state to try again later
+                        lazyImage.classList.remove("lazy-loading");
+                        lazyImage.classList.add("lazy-waiting");
+                        delete lazyImage.dataset.loadingStart;
+                      } else {
+                        // Failed to fetch - use original resource as fallback
+                        console.warn(`Failed to create blob for ${lazyImage.dataset.src}, using fallback:`, error);
+                        lazyImage.src = lazyImage.dataset.src;
+                      }
+                    }
+                  }
+                } else {
+                  // Not visible anymore, reset state
+                  lazyImage.classList.remove("lazy-loading");
+                  lazyImage.classList.add("lazy-waiting");
+                  delete lazyImage.dataset.loadingStart;
+                }
+              },
+              0,
+              priority,
+            ).catch((error) => {
+              // getSrc itself failed (all retries exhausted)
+              console.error(`getSrc failed for ${lazyImage.dataset.src}:`, error);
+              lazyImage.classList.remove("lazy-loading");
+              lazyImage.classList.add("lazy-error");
+              delete lazyImage.dataset.loadingStart;
+              // Use original resource URL as final fallback
+              lazyImage.src = lazyImage.dataset.src;
+            });
+          };
+
+          attemptLoad();
         }
       }
 
       // Optimized scroll handler for performance
       let scrollTimeout;
+      let rapidScrollTimeout;
       let lastScrollTime = 0;
       let scrollVelocity = 0;
       let lastScrollTop = 0;
+      let scrollVelocityHistory = [];
 
       function handleScroll() {
         const now = Date.now();
         const currentScrollTop = window.scrollY;
+        const timeDelta = Math.max(now - lastScrollTime, 1);
 
-        // Calculate scroll velocity
-        scrollVelocity =
-          Math.abs(currentScrollTop - lastScrollTop) /
-          Math.max(now - lastScrollTime, 1);
+        // Calculate scroll velocity (pixels per millisecond)
+        const instantVelocity = Math.abs(currentScrollTop - lastScrollTop) / timeDelta;
+
+        // Keep rolling average of last 3 velocity samples for smoother detection
+        scrollVelocityHistory.push(instantVelocity);
+        if (scrollVelocityHistory.length > 3) {
+          scrollVelocityHistory.shift();
+        }
+        scrollVelocity = scrollVelocityHistory.reduce((a, b) => a + b, 0) / scrollVelocityHistory.length;
+
         lastScrollTop = currentScrollTop;
 
-        if (now - lastScrollTime < 16) return; // Throttle to ~60fps
+        if (timeDelta < 16) return; // Throttle to ~60fps
         lastScrollTime = now;
 
-        // Immediate cancellation during rapid scrolling
-        if (scrollVelocity > 1.5) {
-          // Lower threshold for rapid scrolling detection
+        // More reasonable threshold: 3 pixels per ms = 3000 pixels per second
+        // This is genuinely rapid scrolling, not normal scrolling
+        if (scrollVelocity > 3) {
           medcrypt.rapidScrolling = true;
           medcrypt.cancelNonViewport();
+
+          // Clear the rapid scrolling flag after scrolling stops
+          clearTimeout(rapidScrollTimeout);
+          rapidScrollTimeout = setTimeout(() => {
+            medcrypt.rapidScrolling = false;
+            scrollVelocityHistory = [];
+            // Immediately check for images to load after rapid scrolling ends
+            if (typeof window.checkLazyLoad === 'function') {
+              window.checkLazyLoad();
+            }
+          }, 150);
         } else {
           medcrypt.rapidScrolling = false;
+          // Cancel non-viewport images even during normal scrolling
+          medcrypt.cancelImageFetchesOutsideViewport();
+          medcrypt.cancelImageLoadsOutsideViewport();
         }
 
         // Safari-specific: Emergency cancellation if too many requests or image loads are active
         const maxRequests =
           /Safari/.test(navigator.userAgent) &&
           !/Chrome/.test(navigator.userAgent)
-            ? 15
-            : 30;
+            ? 20
+            : 40;
         const totalActiveLoads =
           medcrypt.activeRequests.size +
           medcrypt.activeImageLoads.size +
           medcrypt.imageFetches.size;
         if (totalActiveLoads > maxRequests) {
           console.warn(
-            `Too many active loads (${totalActiveLoads}: ${medcrypt.activeRequests.size} requests + ${medcrypt.activeImageLoads.size} images + ${medcrypt.imageFetches.size} fetches), cancelling all`,
+            `Too many active loads (${totalActiveLoads}: ${medcrypt.activeRequests.size} requests + ${medcrypt.activeImageLoads.size} images + ${medcrypt.imageFetches.size} fetches), cancelling non-viewport`,
           );
-          medcrypt.cancelAllRequests();
+          medcrypt.cancelNonViewport();
         }
 
         clearTimeout(scrollTimeout);
 
-        // Shorter timeout for rapid scrolling
-        const timeout = scrollVelocity > 2 ? 50 : 100;
+        // Adaptive timeout based on velocity
+        const timeout = scrollVelocity > 5 ? 50 : scrollVelocity > 2 ? 100 : 200;
         scrollTimeout = setTimeout(() => {
-          medcrypt.rapidScrolling = false; // Clear rapid scrolling flag
+          medcrypt.rapidScrolling = false;
+          scrollVelocityHistory = [];
           medcrypt.cancelNonViewport();
           processLazyLoad(); // Re-evaluate visible images
         }, timeout);
