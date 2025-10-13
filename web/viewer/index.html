@@ -945,20 +945,26 @@
                 let actualResource = resource;
                 if (medcrypt.preferredPrefix !== null && currentTries === 0) {
                   // Only apply on first try, not on retries
-                  const hasPrefix = resource.startsWith("pr/") || resource.startsWith("fa/") ||
-                                   resource.startsWith("crypt/");
 
-                  if (!hasPrefix) {
-                    if (medcrypt.preferredPrefix === "none") {
-                      // Use resource as-is (no prefix)
-                      actualResource = resource;
-                    } else if (medcrypt.preferredPrefix === "crypt") {
-                      // Use crypt/ prefix
-                      actualResource = "crypt/" + resource;
-                    }
-                  } else {
-                    // Resource already has a prefix, use it as-is
-                    actualResource = resource;
+                  // Strip any existing prefix to get base resource
+                  let baseResource = resource;
+                  if (resource.startsWith("pr/")) {
+                    baseResource = resource.substring(3);
+                  } else if (resource.startsWith("fa/")) {
+                    baseResource = resource.substring(3);
+                  } else if (resource.startsWith("crypt/")) {
+                    baseResource = resource.substring(6);
+                  }
+
+                  // Apply preferred prefix
+                  if (medcrypt.preferredPrefix === "none") {
+                    // Use no prefix
+                    actualResource = baseResource;
+                    console.log(`Applying preferred prefix (none): ${resource} -> ${actualResource}`);
+                  } else if (medcrypt.preferredPrefix === "crypt") {
+                    // Use crypt/ prefix
+                    actualResource = "crypt/" + baseResource;
+                    console.log(`Applying preferred prefix (crypt): ${resource} -> ${actualResource}`);
                   }
                 }
 
