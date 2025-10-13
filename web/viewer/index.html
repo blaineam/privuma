@@ -1164,7 +1164,8 @@
                     if (!resource.startsWith("pr/") && !resource.startsWith("fa/") && !resource.startsWith("crypt/")) {
                       // No prefix worked - but check if it's a special directory path
                       const isSpecialDir = resource.startsWith("flash/") ||
-                                          resource.startsWith("un/");
+                                          resource.startsWith("un/") ||
+                                          resource.startsWith("vr/");
 
                       if (!isSpecialDir && medcrypt.preferredPrefix === null) {
                         // No prefix worked and not a special directory - set global preference
