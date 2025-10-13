@@ -1128,6 +1128,14 @@
                     // Return with base path when not using RapiServe
                     const finalUrl = usingRapiServe.length ? resource : getBasePath() + resource;
                     medcrypt.loadedCache[resource] = finalUrl;
+
+                    // If resource loaded without pr/, fa/, or crypt/ prefix, skip checking other options
+                    if (!resource.startsWith("pr/") && !resource.startsWith("fa/") && !resource.startsWith("crypt/")) {
+                      // Mark all prefix variations as pointing to this no-prefix version
+                      medcrypt.loadedCache["pr/" + resource] = finalUrl;
+                      medcrypt.loadedCache["fa/" + resource] = finalUrl;
+                    }
+
                     return finalUrl;
                   }
 
@@ -1173,20 +1181,38 @@
                     return finalUrl;
                   }
 
-                  // Fallback paths
-                  if (resource.includes("fa/")) {
-                    return medcrypt.getSrcRaw(
-                      resource.replace("fa/", ""),
-                      action,
-                      0,
-                    );
+                  // Implement fallback chain: pr/ -> fa/ -> no prefix -> crypt/
+                  // Extract the base resource without any prefix
+                  let baseResource = resource;
+                  let hadPrefix = false;
+
+                  if (resource.startsWith("pr/")) {
+                    baseResource = resource.substring(3);
+                    hadPrefix = true;
+                  } else if (resource.startsWith("fa/")) {
+                    baseResource = resource.substring(3);
+                    hadPrefix = true;
+                  } else if (resource.startsWith("crypt/")) {
+                    baseResource = resource.substring(6);
+                    hadPrefix = true;
                   }
-                  if (resource.includes("pr/")) {
-                    return medcrypt.getSrcRaw(
-                      resource.replace("pr/", "fa/"),
-                      action,
-                      0,
-                    );
+
+                  // Determine what to try next
+                  if (resource.startsWith("pr/")) {
+                    // pr/ failed, try fa/
+                    console.log(`pr/ failed for ${resource}, trying fa/`);
+                    return medcrypt.getSrcRaw("fa/" + baseResource, action, 0);
+                  } else if (resource.startsWith("fa/")) {
+                    // fa/ failed, try without prefix
+                    console.log(`fa/ failed for ${resource}, trying no prefix`);
+                    return medcrypt.getSrcRaw(baseResource, action, 0);
+                  } else if (hadPrefix && resource.startsWith("crypt/")) {
+                    // crypt/ failed, no more options
+                    throw error;
+                  } else if (!hadPrefix) {
+                    // no prefix failed, try crypt/ (this will use decryption)
+                    console.log(`No prefix failed for ${resource}, trying crypt/`);
+                    return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
                   }
 
                   throw error;
