@@ -921,6 +921,8 @@
                 `[getSrc] getSrcRaw failed for ${resource}:`,
                 error,
               );
+              // Call action with the original resource as fallback
+              action(resource);
               throw error;
             }
           });
