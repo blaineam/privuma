@@ -997,7 +997,8 @@
                 // Check if this URL has previously failed with CORS
                 const urlBase = resource.split("?")[0]; // Remove query params for CORS check
                 if (medcrypt.corsFailedUrls.has(urlBase)) {
-                  return resolve(resource); // Return direct URL without making request
+                  const finalUrl = usingRapiServe.length ? resource : getBasePath() + resource;
+                  return resolve(finalUrl); // Return direct URL without making request
                 }
 
                 // Check if we already know the decryption status for this resource path
@@ -1011,18 +1012,19 @@
 
                 // If we know this path doesn't need decryption, skip straight to direct URL
                 if (decryptionStatus === false) {
-                  // For RapiServe, ensure we use the proper URL format
+                  // Ensure we use the proper URL format with base path
+                  let targetSrc;
                   if (usingRapiServe.length) {
-                    let targetSrc = usingRapiServe + "/" + resource;
+                    targetSrc = usingRapiServe + "/" + resource;
                     if (resource.startsWith(usingRapiServe + "/")) {
                       targetSrc = resource;
                     }
-                    medcrypt.loadedCache[resource] = targetSrc;
-                    return resolve(targetSrc);
                   } else {
-                    medcrypt.loadedCache[resource] = resource;
-                    return resolve(resource);
+                    // Use relative path from index.html location
+                    targetSrc = getBasePath() + resource;
                   }
+                  medcrypt.loadedCache[resource] = targetSrc;
+                  return resolve(targetSrc);
                 }
 
                 // If we know this path needs decryption, skip straight to decryption
@@ -1123,7 +1125,10 @@
                   if (headResponse.ok) {
                     medcrypt.decryptionStatus.set(decryptionKey, false);
                     cleanup();
-                    return resource;
+                    // Return with base path when not using RapiServe
+                    const finalUrl = usingRapiServe.length ? resource : getBasePath() + resource;
+                    medcrypt.loadedCache[resource] = finalUrl;
+                    return finalUrl;
                   }
 
                   medcrypt.decryptionStatus.set(decryptionKey, true);
@@ -1164,7 +1169,8 @@
                   ) {
                     console.warn(`CORS error for ${resource}, falling back`);
                     medcrypt.corsFailedUrls.add(urlBase);
-                    return resource;
+                    const finalUrl = usingRapiServe.length ? resource : getBasePath() + resource;
+                    return finalUrl;
                   }
 
                   // Fallback paths
@@ -2055,6 +2061,17 @@
           : window.location?.hash?.includes("rapiserve")
             ? "index.php"
             : "";
+
+      // Get base path relative to index.html location (not domain root)
+      var getBasePath = function() {
+        if (usingRapiServe.length) {
+          return usingRapiServe + "/";
+        }
+        // Get the directory path of the current page
+        var path = window.location.pathname;
+        var lastSlash = path.lastIndexOf('/');
+        return lastSlash > 0 ? path.substring(0, lastSlash + 1) : '/';
+      };
 
       function groupBy(array, property) {
         return array.reduce((acc, obj) => {
