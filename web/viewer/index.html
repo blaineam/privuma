@@ -1162,8 +1162,12 @@
 
                     // Set preferred prefix based on what worked
                     if (!resource.startsWith("pr/") && !resource.startsWith("fa/") && !resource.startsWith("crypt/")) {
-                      // No prefix worked - set global preference
-                      if (medcrypt.preferredPrefix === null) {
+                      // No prefix worked - but check if it's a special directory path
+                      const isSpecialDir = resource.startsWith("flash/") ||
+                                          resource.startsWith("un/");
+
+                      if (!isSpecialDir && medcrypt.preferredPrefix === null) {
+                        // No prefix worked and not a special directory - set global preference
                         medcrypt.preferredPrefix = "none";
                         console.log("Setting preferred prefix to: none (no prefix)");
                       }
