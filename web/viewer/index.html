@@ -468,6 +468,7 @@
         blobCache: new Map(), // Cache blob URLs to avoid re-downloading
         blobCacheMaxSize: 50, // Maximum number of blobs to cache
         blobCacheMaxAge: 15 * 60 * 1000, // 15 minutes
+        preferredPrefix: null, // null, "none", or "crypt" - set when we discover what works
         getBlobUrlForResource: function (resourceKey) {
           // Check if we have a cached blob for this resource
           if (this.blobCache.has(resourceKey)) {
@@ -940,9 +941,33 @@
           return new Promise((resolve, reject) => {
             (async () => {
               try {
-                if (medcrypt.loadedCache[resource]) {
-                  return resolve(medcrypt.loadedCache[resource]);
+                // Apply preferred prefix if we've discovered what works
+                let actualResource = resource;
+                if (medcrypt.preferredPrefix !== null && currentTries === 0) {
+                  // Only apply on first try, not on retries
+                  const hasPrefix = resource.startsWith("pr/") || resource.startsWith("fa/") ||
+                                   resource.startsWith("crypt/");
+
+                  if (!hasPrefix) {
+                    if (medcrypt.preferredPrefix === "none") {
+                      // Use resource as-is (no prefix)
+                      actualResource = resource;
+                    } else if (medcrypt.preferredPrefix === "crypt") {
+                      // Use crypt/ prefix
+                      actualResource = "crypt/" + resource;
+                    }
+                  } else {
+                    // Resource already has a prefix, use it as-is
+                    actualResource = resource;
+                  }
                 }
+
+                if (medcrypt.loadedCache[actualResource]) {
+                  return resolve(medcrypt.loadedCache[actualResource]);
+                }
+
+                // Update resource to actualResource for the rest of the function
+                resource = actualResource;
 
                 if (resource.includes("blob:")) {
                   return resolve(resource);
@@ -1129,11 +1154,19 @@
                     const finalUrl = usingRapiServe.length ? resource : getBasePath() + resource;
                     medcrypt.loadedCache[resource] = finalUrl;
 
-                    // If resource loaded without pr/, fa/, or crypt/ prefix, skip checking other options
+                    // Set preferred prefix based on what worked
                     if (!resource.startsWith("pr/") && !resource.startsWith("fa/") && !resource.startsWith("crypt/")) {
-                      // Mark all prefix variations as pointing to this no-prefix version
-                      medcrypt.loadedCache["pr/" + resource] = finalUrl;
-                      medcrypt.loadedCache["fa/" + resource] = finalUrl;
+                      // No prefix worked - set global preference
+                      if (medcrypt.preferredPrefix === null) {
+                        medcrypt.preferredPrefix = "none";
+                        console.log("Setting preferred prefix to: none (no prefix)");
+                      }
+                    } else if (resource.startsWith("crypt/")) {
+                      // crypt/ prefix worked - set global preference
+                      if (medcrypt.preferredPrefix === null) {
+                        medcrypt.preferredPrefix = "crypt";
+                        console.log("Setting preferred prefix to: crypt/");
+                      }
                     }
 
                     return finalUrl;
@@ -1159,6 +1192,13 @@
 
                   cleanup();
                   medcrypt.loadedCache[resource] = decrypted;
+
+                  // Decryption succeeded - set preferred prefix to crypt
+                  if (medcrypt.preferredPrefix === null) {
+                    medcrypt.preferredPrefix = "crypt";
+                    console.log("Setting preferred prefix to: crypt/ (decryption succeeded)");
+                  }
+
                   return decrypted;
                 } catch (error) {
                   cleanup();
