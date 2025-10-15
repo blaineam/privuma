@@ -469,6 +469,7 @@
         blobCacheMaxSize: 50, // Maximum number of blobs to cache
         blobCacheMaxAge: 15 * 60 * 1000, // 15 minutes
         preferredPrefix: null, // null, "none", or "crypt" - set when we discover what works
+        skipCryptFallback: false, // Set to true when unencrypted files load successfully
         getBlobUrlForResource: function (resourceKey) {
           // Check if we have a cached blob for this resource
           if (this.blobCache.has(resourceKey)) {
@@ -1161,16 +1162,24 @@
                     medcrypt.loadedCache[resource] = finalUrl;
 
                     // Set preferred prefix based on what worked
-                    if (!resource.startsWith("pr/") && !resource.startsWith("fa/") && !resource.startsWith("crypt/")) {
-                      // No prefix worked - but check if it's a special directory path
-                      const isSpecialDir = resource.startsWith("flash/") ||
-                                          resource.startsWith("un/") ||
-                                          resource.startsWith("vr/");
+                    if (!resource.startsWith("crypt/")) {
+                      // Unencrypted file loaded successfully - skip crypt/ fallback from now on
+                      if (!medcrypt.skipCryptFallback) {
+                        medcrypt.skipCryptFallback = true;
+                        console.log("Unencrypted file loaded successfully - disabling crypt/ fallback");
+                      }
 
-                      if (!isSpecialDir && medcrypt.preferredPrefix === null) {
-                        // No prefix worked and not a special directory - set global preference
-                        medcrypt.preferredPrefix = "none";
-                        console.log("Setting preferred prefix to: none (no prefix)");
+                      if (!resource.startsWith("pr/") && !resource.startsWith("fa/")) {
+                        // No prefix worked - but check if it's a special directory path
+                        const isSpecialDir = resource.startsWith("flash/") ||
+                                            resource.startsWith("un/") ||
+                                            resource.startsWith("vr/");
+
+                        if (!isSpecialDir && medcrypt.preferredPrefix === null) {
+                          // No prefix worked and not a special directory - set global preference
+                          medcrypt.preferredPrefix = "none";
+                          console.log("Setting preferred prefix to: none (no prefix)");
+                        }
                       }
                     } else if (resource.startsWith("crypt/")) {
                       // crypt/ prefix worked - set global preference
@@ -1261,9 +1270,13 @@
                     // crypt/ failed, no more options
                     throw error;
                   } else if (!hadPrefix) {
-                    // no prefix failed, try crypt/ (this will use decryption)
-                    console.log(`No prefix failed for ${resource}, trying crypt/`);
-                    return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
+                    // no prefix failed, try crypt/ (this will use decryption) - but only if not skipped
+                    if (!medcrypt.skipCryptFallback) {
+                      console.log(`No prefix failed for ${resource}, trying crypt/`);
+                      return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
+                    } else {
+                      console.log(`No prefix failed for ${resource}, skipping crypt/ (unencrypted files detected)`);
+                    }
                   }
 
                   throw error;
