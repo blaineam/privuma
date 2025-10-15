@@ -470,6 +470,7 @@
         blobCacheMaxAge: 15 * 60 * 1000, // 15 minutes
         preferredPrefix: null, // null, "none", or "crypt" - set when we discover what works
         skipCryptFallback: false, // Set to true when unencrypted files load successfully
+        skipPrefixFallbacks: false, // Set to true when files load without pr/, fa/, etc. prefixes
         getBlobUrlForResource: function (resourceKey) {
           // Check if we have a cached blob for this resource
           if (this.blobCache.has(resourceKey)) {
@@ -1175,10 +1176,18 @@
                                             resource.startsWith("un/") ||
                                             resource.startsWith("vr/");
 
-                        if (!isSpecialDir && medcrypt.preferredPrefix === null) {
-                          // No prefix worked and not a special directory - set global preference
-                          medcrypt.preferredPrefix = "none";
-                          console.log("Setting preferred prefix to: none (no prefix)");
+                        if (!isSpecialDir) {
+                          // File loaded without pr/, fa/, flash/, un/, or vr/ prefix
+                          if (!medcrypt.skipPrefixFallbacks) {
+                            medcrypt.skipPrefixFallbacks = true;
+                            console.log("File loaded without directory prefixes - disabling pr/, fa/ fallbacks");
+                          }
+
+                          if (medcrypt.preferredPrefix === null) {
+                            // No prefix worked and not a special directory - set global preference
+                            medcrypt.preferredPrefix = "none";
+                            console.log("Setting preferred prefix to: none (no prefix)");
+                          }
                         }
                       }
                     } else if (resource.startsWith("crypt/")) {
@@ -1259,9 +1268,15 @@
 
                   // Determine what to try next
                   if (resource.startsWith("pr/")) {
-                    // pr/ failed, try fa/
-                    console.log(`pr/ failed for ${resource}, trying fa/`);
-                    return medcrypt.getSrcRaw("fa/" + baseResource, action, 0);
+                    // pr/ failed, try fa/ (unless skipping prefix fallbacks)
+                    if (!medcrypt.skipPrefixFallbacks) {
+                      console.log(`pr/ failed for ${resource}, trying fa/`);
+                      return medcrypt.getSrcRaw("fa/" + baseResource, action, 0);
+                    } else {
+                      console.log(`pr/ failed for ${resource}, skipping fa/ (no-prefix files detected)`);
+                      // Skip straight to no prefix
+                      return medcrypt.getSrcRaw(baseResource, action, 0);
+                    }
                   } else if (resource.startsWith("fa/")) {
                     // fa/ failed, try without prefix
                     console.log(`fa/ failed for ${resource}, trying no prefix`);
