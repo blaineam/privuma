@@ -962,11 +962,15 @@
                   if (medcrypt.preferredPrefix === "none") {
                     // Use no prefix
                     actualResource = baseResource;
-                    console.log(`Applying preferred prefix (none): ${resource} -> ${actualResource}`);
+                    console.log(
+                      `Applying preferred prefix (none): ${resource} -> ${actualResource}`,
+                    );
                   } else if (medcrypt.preferredPrefix === "crypt") {
                     // Use crypt/ prefix
                     actualResource = "crypt/" + baseResource;
-                    console.log(`Applying preferred prefix (crypt): ${resource} -> ${actualResource}`);
+                    console.log(
+                      `Applying preferred prefix (crypt): ${resource} -> ${actualResource}`,
+                    );
                   }
                 }
 
@@ -1030,7 +1034,9 @@
                 // Check if this URL has previously failed with CORS
                 const urlBase = resource.split("?")[0]; // Remove query params for CORS check
                 if (medcrypt.corsFailedUrls.has(urlBase)) {
-                  const finalUrl = usingRapiServe.length ? resource : getBasePath() + resource;
+                  const finalUrl = usingRapiServe.length
+                    ? resource
+                    : getBasePath() + resource;
                   return resolve(finalUrl); // Return direct URL without making request
                 }
 
@@ -1159,7 +1165,9 @@
                     medcrypt.decryptionStatus.set(decryptionKey, false);
                     cleanup();
                     // Return with base path when not using RapiServe
-                    const finalUrl = usingRapiServe.length ? resource : getBasePath() + resource;
+                    const finalUrl = usingRapiServe.length
+                      ? resource
+                      : getBasePath() + resource;
                     medcrypt.loadedCache[resource] = finalUrl;
 
                     // Set preferred prefix based on what worked
@@ -1167,26 +1175,36 @@
                       // Unencrypted file loaded successfully - skip crypt/ fallback from now on
                       if (!medcrypt.skipCryptFallback) {
                         medcrypt.skipCryptFallback = true;
-                        console.log("Unencrypted file loaded successfully - disabling crypt/ fallback");
+                        console.log(
+                          "Unencrypted file loaded successfully - disabling crypt/ fallback",
+                        );
                       }
 
-                      if (!resource.startsWith("pr/") && !resource.startsWith("fa/")) {
+                      if (
+                        !resource.startsWith("pr/") &&
+                        !resource.startsWith("fa/")
+                      ) {
                         // No prefix worked - but check if it's a special directory path
-                        const isSpecialDir = resource.startsWith("flash/") ||
-                                            resource.startsWith("un/") ||
-                                            resource.startsWith("vr/");
+                        const isSpecialDir =
+                          resource.startsWith("flash/") ||
+                          resource.startsWith("un/") ||
+                          resource.startsWith("vr/");
 
                         if (!isSpecialDir) {
                           // File loaded without pr/, fa/, flash/, un/, or vr/ prefix
                           if (!medcrypt.skipPrefixFallbacks) {
                             medcrypt.skipPrefixFallbacks = true;
-                            console.log("File loaded without directory prefixes - disabling pr/, fa/ fallbacks");
+                            console.log(
+                              "File loaded without directory prefixes - disabling pr/, fa/ fallbacks",
+                            );
                           }
 
                           if (medcrypt.preferredPrefix === null) {
                             // No prefix worked and not a special directory - set global preference
                             medcrypt.preferredPrefix = "none";
-                            console.log("Setting preferred prefix to: none (no prefix)");
+                            console.log(
+                              "Setting preferred prefix to: none (no prefix)",
+                            );
                           }
                         }
                       }
@@ -1225,7 +1243,9 @@
                   // Decryption succeeded - set preferred prefix to crypt
                   if (medcrypt.preferredPrefix === null) {
                     medcrypt.preferredPrefix = "crypt";
-                    console.log("Setting preferred prefix to: crypt/ (decryption succeeded)");
+                    console.log(
+                      "Setting preferred prefix to: crypt/ (decryption succeeded)",
+                    );
                   }
 
                   return decrypted;
@@ -1246,7 +1266,9 @@
                   ) {
                     console.warn(`CORS error for ${resource}, falling back`);
                     medcrypt.corsFailedUrls.add(urlBase);
-                    const finalUrl = usingRapiServe.length ? resource : getBasePath() + resource;
+                    const finalUrl = usingRapiServe.length
+                      ? resource
+                      : getBasePath() + resource;
                     return finalUrl;
                   }
 
@@ -1271,9 +1293,15 @@
                     // pr/ failed, try fa/ (unless skipping prefix fallbacks)
                     if (!medcrypt.skipPrefixFallbacks) {
                       console.log(`pr/ failed for ${resource}, trying fa/`);
-                      return medcrypt.getSrcRaw("fa/" + baseResource, action, 0);
+                      return medcrypt.getSrcRaw(
+                        "fa/" + baseResource,
+                        action,
+                        0,
+                      );
                     } else {
-                      console.log(`pr/ failed for ${resource}, skipping fa/ (no-prefix files detected)`);
+                      console.log(
+                        `pr/ failed for ${resource}, skipping fa/ (no-prefix files detected)`,
+                      );
                       // Skip straight to no prefix
                       return medcrypt.getSrcRaw(baseResource, action, 0);
                     }
@@ -1287,10 +1315,14 @@
                   } else if (!hadPrefix) {
                     // no prefix failed, try crypt/ (this will use decryption) - but only if not skipped
                     if (!medcrypt.skipCryptFallback) {
-                      console.log(`No prefix failed for ${resource}, trying crypt/`);
+                      console.log(
+                        `No prefix failed for ${resource}, trying crypt/`,
+                      );
                       return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
                     } else {
-                      console.log(`No prefix failed for ${resource}, skipping crypt/ (unencrypted files detected)`);
+                      console.log(
+                        `No prefix failed for ${resource}, skipping crypt/ (unencrypted files detected)`,
+                      );
                     }
                   }
 
@@ -2168,14 +2200,14 @@
             : "";
 
       // Get base path relative to index.html location (not domain root)
-      var getBasePath = function() {
+      var getBasePath = function () {
         if (usingRapiServe.length) {
           return usingRapiServe + "/";
         }
         // Get the directory path of the current page
         var path = window.location.pathname;
-        var lastSlash = path.lastIndexOf('/');
-        return lastSlash > 0 ? path.substring(0, lastSlash + 1) : '/';
+        var lastSlash = path.lastIndexOf("/");
+        return lastSlash > 0 ? path.substring(0, lastSlash + 1) : "/";
       };
 
       function groupBy(array, property) {
