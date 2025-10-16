@@ -466,8 +466,16 @@
         rapidScrolling: false, // Track if we're in rapid scroll mode
         imageFetches: new Map(), // Track active image fetch requests
         blobCache: new Map(), // Cache blob URLs to avoid re-downloading
-        blobCacheMaxSize: 50, // Maximum number of blobs to cache
-        blobCacheMaxAge: 15 * 60 * 1000, // 15 minutes
+        blobCacheMaxSize: (() => {
+          // Detect iOS for aggressive memory management
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+          return isIOS ? 15 : 50; // Much smaller cache on iOS
+        })(),
+        blobCacheMaxAge: (() => {
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+          return isIOS ? 3 * 60 * 1000 : 15 * 60 * 1000; // 3 min on iOS, 15 min otherwise
+        })(),
+        isIOSDevice: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
         preferredPrefix: null, // null, "none", or "crypt" - set when we discover what works
         skipCryptFallback: false, // Set to true when unencrypted files load successfully
         skipPrefixFallbacks: false, // Set to true when files load without pr/, fa/, etc. prefixes
@@ -537,15 +545,18 @@
             if (allOutOfViewport && elements.length > 0) {
               if (!blobInfo.outOfViewportSince) {
                 blobInfo.outOfViewportSince = now;
-              } else if (now - blobInfo.outOfViewportSince > 10000) {
-                // Out of viewport for more than 10 seconds - revoke it
-                console.log(`Revoking blob URL (out of viewport for 10s): ${key}`);
-                try {
-                  URL.revokeObjectURL(blobInfo.url);
-                  blobInfo.revoked = true;
-                  this.blobCache.delete(key);
-                } catch (e) {
-                  console.warn("Error revoking blob URL:", e);
+              } else {
+                // iOS: 3 seconds, others: 10 seconds
+                const timeout = this.isIOSDevice ? 3000 : 10000;
+                if (now - blobInfo.outOfViewportSince > timeout) {
+                  console.log(`Revoking blob URL (out of viewport): ${key}`);
+                  try {
+                    URL.revokeObjectURL(blobInfo.url);
+                    blobInfo.revoked = true;
+                    this.blobCache.delete(key);
+                  } catch (e) {
+                    console.warn("Error revoking blob URL:", e);
+                  }
                 }
               }
             } else {
@@ -568,7 +579,8 @@
         },
         dirCache: {},
         startQueue: async () => {
-          const maxConcurrency = 8;
+          // Reduce concurrency on iOS to prevent memory issues
+          const maxConcurrency = medcrypt.isIOSDevice ? 3 : 8;
           const itemTimeout = 30000; // 30s timeout per item
 
           while (
@@ -655,6 +667,12 @@
         fetchImageAsBlob: async function (imageUrl, resourceKey, imageElement) {
           // For HTTP, skip blob conversion and return direct URL
           if (window.location.protocol === "http:") {
+            return imageUrl;
+          }
+
+          // On iOS, skip blob conversion to reduce memory pressure
+          // This trades mixed content warnings for stability
+          if (this.isIOSDevice) {
             return imageUrl;
           }
 
@@ -4596,11 +4614,13 @@
           setInterval(checkLazyLoad, 300); // Check every 300ms
 
           // Run blob URL cleanup for iOS Safari memory management
+          // More aggressive on iOS: 2s vs 5s
+          const cleanupInterval = medcrypt.isIOSDevice ? 2000 : 5000;
           setInterval(() => {
             if (medcrypt && medcrypt.cleanupOutOfViewportBlobs) {
               medcrypt.cleanupOutOfViewportBlobs();
             }
-          }, 5000); // Check every 5 seconds
+          }, cleanupInterval);
 
           // Hook into fancybox to revoke video/gif blobs when not in use
           $(document).on("beforeShow.fb", function (e, instance, slide) {
