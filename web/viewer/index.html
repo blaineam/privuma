@@ -468,14 +468,17 @@
         blobCache: new Map(), // Cache blob URLs to avoid re-downloading
         blobCacheMaxSize: (() => {
           // Detect iOS for aggressive memory management
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+          const isIOS =
+            /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
           return isIOS ? 15 : 50; // Much smaller cache on iOS
         })(),
         blobCacheMaxAge: (() => {
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+          const isIOS =
+            /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
           return isIOS ? 3 * 60 * 1000 : 15 * 60 * 1000; // 3 min on iOS, 15 min otherwise
         })(),
-        isIOSDevice: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
+        isIOSDevice:
+          /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
         preferredPrefix: null, // null, "none", or "crypt" - set when we discover what works
         skipCryptFallback: false, // Set to true when unencrypted files load successfully
         skipPrefixFallbacks: false, // Set to true when files load without pr/, fa/, etc. prefixes
@@ -522,15 +525,18 @@
             if (blobInfo.revoked) return;
 
             // Find elements using this blob URL
-            const elements = document.querySelectorAll(`img[src="${blobInfo.url}"], video[src="${blobInfo.url}"], source[src="${blobInfo.url}"]`);
+            const elements = document.querySelectorAll(
+              `img[src="${blobInfo.url}"], video[src="${blobInfo.url}"], source[src="${blobInfo.url}"]`,
+            );
 
             let allOutOfViewport = true;
-            let hasVideoOrGif = key.toLowerCase().endsWith('.gif') ||
-                               key.toLowerCase().endsWith('.mp4') ||
-                               key.toLowerCase().endsWith('.webm') ||
-                               key.toLowerCase().endsWith('.mov');
+            let hasVideoOrGif =
+              key.toLowerCase().endsWith(".gif") ||
+              key.toLowerCase().endsWith(".mp4") ||
+              key.toLowerCase().endsWith(".webm") ||
+              key.toLowerCase().endsWith(".mov");
 
-            elements.forEach(el => {
+            elements.forEach((el) => {
               const rect = el.getBoundingClientRect();
               const elementTop = rect.top + viewportTop;
               const elementBottom = rect.bottom + viewportTop;
