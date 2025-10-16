@@ -504,6 +504,68 @@
             }
           });
         },
+        cleanupOutOfViewportBlobs: function () {
+          const now = Date.now();
+          const viewportTop = window.scrollY;
+          const viewportHeight = window.innerHeight;
+          const viewportBottom = viewportTop + viewportHeight;
+
+          this.blobCache.forEach((blobInfo, key) => {
+            if (blobInfo.revoked) return;
+
+            // Find elements using this blob URL
+            const elements = document.querySelectorAll(`img[src="${blobInfo.url}"], video[src="${blobInfo.url}"], source[src="${blobInfo.url}"]`);
+
+            let allOutOfViewport = true;
+            let hasVideoOrGif = key.toLowerCase().endsWith('.gif') ||
+                               key.toLowerCase().endsWith('.mp4') ||
+                               key.toLowerCase().endsWith('.webm') ||
+                               key.toLowerCase().endsWith('.mov');
+
+            elements.forEach(el => {
+              const rect = el.getBoundingClientRect();
+              const elementTop = rect.top + viewportTop;
+              const elementBottom = rect.bottom + viewportTop;
+
+              // Check if element is in viewport
+              if (elementBottom > viewportTop && elementTop < viewportBottom) {
+                allOutOfViewport = false;
+              }
+            });
+
+            // Track when blobs go out of viewport
+            if (allOutOfViewport && elements.length > 0) {
+              if (!blobInfo.outOfViewportSince) {
+                blobInfo.outOfViewportSince = now;
+              } else if (now - blobInfo.outOfViewportSince > 10000) {
+                // Out of viewport for more than 10 seconds - revoke it
+                console.log(`Revoking blob URL (out of viewport for 10s): ${key}`);
+                try {
+                  URL.revokeObjectURL(blobInfo.url);
+                  blobInfo.revoked = true;
+                  this.blobCache.delete(key);
+                } catch (e) {
+                  console.warn("Error revoking blob URL:", e);
+                }
+              }
+            } else {
+              // Back in viewport or no elements using it - reset timer
+              delete blobInfo.outOfViewportSince;
+            }
+
+            // For video/gif, revoke immediately if not in use
+            if (hasVideoOrGif && elements.length === 0 && !blobInfo.revoked) {
+              console.log(`Revoking unused video/gif blob URL: ${key}`);
+              try {
+                URL.revokeObjectURL(blobInfo.url);
+                blobInfo.revoked = true;
+                this.blobCache.delete(key);
+              } catch (e) {
+                console.warn("Error revoking blob URL:", e);
+              }
+            }
+          });
+        },
         dirCache: {},
         startQueue: async () => {
           const maxConcurrency = 8;
@@ -3343,6 +3405,20 @@
             medcrypt.cancelAllRequests();
             console.log("Queue flushed for new album: " + album);
 
+            // Clear all blob URLs and cache for memory optimization
+            medcrypt.blobCache.forEach((blobInfo, key) => {
+              if (!blobInfo.revoked) {
+                try {
+                  URL.revokeObjectURL(blobInfo.url);
+                  blobInfo.revoked = true;
+                } catch (e) {
+                  console.warn("Error revoking blob URL:", e);
+                }
+              }
+            });
+            medcrypt.blobCache.clear();
+            console.log("Blob cache cleared for album navigation");
+
             window.currentAlbum = album;
             delete window.currentAlbumPosition;
             syncPlayBackPositionsReal(false, () => {
@@ -4518,6 +4594,83 @@
 
           // Run interval-based check to catch any images that IntersectionObserver might miss
           setInterval(checkLazyLoad, 300); // Check every 300ms
+
+          // Run blob URL cleanup for iOS Safari memory management
+          setInterval(() => {
+            if (medcrypt && medcrypt.cleanupOutOfViewportBlobs) {
+              medcrypt.cleanupOutOfViewportBlobs();
+            }
+          }, 5000); // Check every 5 seconds
+
+          // Hook into fancybox to revoke video/gif blobs when not in use
+          $(document).on("beforeShow.fb", function (e, instance, slide) {
+            // Track previous resource to revoke when switching
+            if (window.fancyboxPreviousResource) {
+              const prevResource = window.fancyboxPreviousResource;
+              const isVideoOrGif =
+                prevResource.toLowerCase().endsWith(".gif") ||
+                prevResource.toLowerCase().endsWith(".mp4") ||
+                prevResource.toLowerCase().endsWith(".webm") ||
+                prevResource.toLowerCase().endsWith(".mov");
+
+              if (isVideoOrGif && medcrypt && medcrypt.blobCache) {
+                medcrypt.blobCache.forEach((blobInfo, key) => {
+                  if (key === prevResource && !blobInfo.revoked) {
+                    console.log(
+                      `Revoking video/gif blob on fancybox resource change: ${key}`,
+                    );
+                    try {
+                      URL.revokeObjectURL(blobInfo.url);
+                      blobInfo.revoked = true;
+                      medcrypt.blobCache.delete(key);
+                    } catch (e) {
+                      console.warn("Error revoking blob URL:", e);
+                    }
+                  }
+                });
+              }
+            }
+
+            // Store current resource for next beforeShow
+            if (slide && slide.src) {
+              window.fancyboxPreviousResource = slide.src;
+            }
+          });
+
+          $(document).on("afterClose.fb", function (e, instance) {
+            // Revoke any video/gif blobs when fancybox closes
+            if (
+              window.fancyboxPreviousResource &&
+              medcrypt &&
+              medcrypt.blobCache
+            ) {
+              const prevResource = window.fancyboxPreviousResource;
+              const isVideoOrGif =
+                prevResource.toLowerCase().endsWith(".gif") ||
+                prevResource.toLowerCase().endsWith(".mp4") ||
+                prevResource.toLowerCase().endsWith(".webm") ||
+                prevResource.toLowerCase().endsWith(".mov");
+
+              if (isVideoOrGif) {
+                medcrypt.blobCache.forEach((blobInfo, key) => {
+                  if (key === prevResource && !blobInfo.revoked) {
+                    console.log(
+                      `Revoking video/gif blob on fancybox close: ${key}`,
+                    );
+                    try {
+                      URL.revokeObjectURL(blobInfo.url);
+                      blobInfo.revoked = true;
+                      medcrypt.blobCache.delete(key);
+                    } catch (e) {
+                      console.warn("Error revoking blob URL:", e);
+                    }
+                  }
+                });
+              }
+
+              window.fancyboxPreviousResource = null;
+            }
+          });
         } else {
           // Fallback for HTTP or when IntersectionObserver isn't available
           console.warn(
