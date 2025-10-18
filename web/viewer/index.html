@@ -943,7 +943,7 @@
           });
         },
         processingQueue: false,
-        maxTries: 3,
+        maxTries: 2,
         getSrc: function (
           resource,
           action = () => {},
@@ -1031,9 +1031,7 @@
               try {
                 // Apply preferred prefix if we've discovered what works
                 let actualResource = resource;
-                if (medcrypt.preferredPrefix !== null && currentTries === 0) {
-                  // Only apply on first try, not on retries
-
+                if (currentTries === 0) {
                   // Strip any existing prefix to get base resource
                   let baseResource = resource;
                   if (resource.startsWith("pr/")) {
@@ -1044,19 +1042,32 @@
                     baseResource = resource.substring(6);
                   }
 
-                  // Apply preferred prefix
-                  if (medcrypt.preferredPrefix === "none") {
-                    // Use no prefix
+                  // If skipPrefixFallbacks is set, strip pr/ and fa/ prefixes
+                  if (
+                    medcrypt.skipPrefixFallbacks &&
+                    (resource.startsWith("pr/") || resource.startsWith("fa/"))
+                  ) {
                     actualResource = baseResource;
                     console.log(
-                      `Applying preferred prefix (none): ${resource} -> ${actualResource}`,
+                      `Stripping pr/fa/ prefix (no-prefix files detected): ${resource} -> ${actualResource}`,
                     );
-                  } else if (medcrypt.preferredPrefix === "crypt") {
-                    // Use crypt/ prefix
-                    actualResource = "crypt/" + baseResource;
-                    console.log(
-                      `Applying preferred prefix (crypt): ${resource} -> ${actualResource}`,
-                    );
+                  }
+                  // Apply preferred prefix if we've discovered what works
+                  else if (medcrypt.preferredPrefix !== null) {
+                    // Apply preferred prefix
+                    if (medcrypt.preferredPrefix === "none") {
+                      // Use no prefix
+                      actualResource = baseResource;
+                      console.log(
+                        `Applying preferred prefix (none): ${resource} -> ${actualResource}`,
+                      );
+                    } else if (medcrypt.preferredPrefix === "crypt") {
+                      // Use crypt/ prefix
+                      actualResource = "crypt/" + baseResource;
+                      console.log(
+                        `Applying preferred prefix (crypt): ${resource} -> ${actualResource}`,
+                      );
+                    }
                   }
                 }
 
@@ -1392,22 +1403,31 @@
                       return medcrypt.getSrcRaw(baseResource, action, 0);
                     }
                   } else if (resource.startsWith("fa/")) {
-                    // fa/ failed, try without prefix
+                    // fa/ failed, try without prefix (then crypt if that fails)
                     console.log(`fa/ failed for ${resource}, trying no prefix`);
                     return medcrypt.getSrcRaw(baseResource, action, 0);
                   } else if (hadPrefix && resource.startsWith("crypt/")) {
                     // crypt/ failed, no more options
                     throw error;
                   } else if (!hadPrefix) {
+                    // Check if this resource should skip crypt/ fallback
+                    const shouldSkipCrypt =
+                      medcrypt.skipCryptFallback ||
+                      resource.startsWith("flash/") ||
+                      resource.startsWith("un/") ||
+                      resource.startsWith("vr/") ||
+                      resource.startsWith("pr/") ||
+                      resource.startsWith("fa/");
+
                     // no prefix failed, try crypt/ (this will use decryption) - but only if not skipped
-                    if (!medcrypt.skipCryptFallback) {
+                    if (!shouldSkipCrypt) {
                       console.log(
                         `No prefix failed for ${resource}, trying crypt/`,
                       );
                       return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
                     } else {
                       console.log(
-                        `No prefix failed for ${resource}, skipping crypt/ (unencrypted files detected)`,
+                        `No prefix failed for ${resource}, skipping crypt/ (unencrypted files detected or special directory)`,
                       );
                     }
                   }
