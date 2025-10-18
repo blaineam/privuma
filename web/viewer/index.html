@@ -482,6 +482,7 @@
         preferredPrefix: null, // null, "none", or "crypt" - set when we discover what works
         skipCryptFallback: false, // Set to true when unencrypted files load successfully
         skipPrefixFallbacks: false, // Set to true when files load without pr/, fa/, etc. prefixes
+        failedResources: new Set(), // Track resources that have permanently failed
         getBlobUrlForResource: function (resourceKey) {
           // Check if we have a cached blob for this resource
           if (this.blobCache.has(resourceKey)) {
@@ -1029,6 +1030,14 @@
           return new Promise((resolve, reject) => {
             (async () => {
               try {
+                // Check if this resource has already permanently failed
+                if (medcrypt.failedResources.has(resource)) {
+                  console.log(
+                    `Skipping ${resource} - already marked as failed`,
+                  );
+                  throw new Error("Resource previously failed");
+                }
+
                 // Apply preferred prefix if we've discovered what works
                 let actualResource = resource;
                 if (currentTries === 0) {
@@ -1452,7 +1461,8 @@
                   return medcrypt.getSrcRaw(resource, action, currentTries + 1);
                 }
 
-                // Final fallback - return original resource but signal it failed
+                // Final fallback - mark as permanently failed
+                medcrypt.failedResources.add(resource);
                 console.error(
                   `getSrc failed after ${medcrypt.maxTries} tries for ${resource}`,
                 );
@@ -3461,7 +3471,10 @@
               }
             });
             medcrypt.blobCache.clear();
-            console.log("Blob cache cleared for album navigation");
+            medcrypt.failedResources.clear(); // Clear failed resources for new album
+            console.log(
+              "Blob cache and failed resources cleared for album navigation",
+            );
 
             window.currentAlbum = album;
             delete window.currentAlbumPosition;
@@ -4824,17 +4837,13 @@
               lazyImage.classList.remove("lazy-loading");
               lazyImage.classList.add("lazy-error");
 
-              // Retry with fallback
-              if (retryCount < maxRetries) {
-                retryCount++;
-                setTimeout(() => {
-                  lazyImage.classList.remove("lazy-error");
-                  lazyImage.classList.add("lazy-loading");
-                  attemptLoad();
-                }, 1000 * retryCount);
-              } else {
-                lazyImage.src = md5ToImage(lazyImage.dataset.hash);
-              }
+              // Mark as permanently failed and don't retry
+              // (getSrcRaw already handles retries internally)
+              lazyImage.dataset.loadFailed = "true";
+              delete lazyImage.dataset.loadingStart;
+              console.warn(
+                `Image onerror fired for ${lazyImage.dataset.src}, marked as failed`,
+              );
             };
 
             lazyImage.onload = function () {
