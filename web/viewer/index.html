@@ -957,6 +957,12 @@
             return Promise.resolve(resource);
           }
 
+          // Check if this resource has already permanently failed
+          if (medcrypt.failedResources.has(resource)) {
+            action(resource); // Use original resource as fallback
+            return Promise.reject(new Error("Resource previously failed"));
+          }
+
           // Check if we already have a blob URL cached for this resource
           const cachedBlobUrl = medcrypt.getBlobUrlForResource(resource);
           if (cachedBlobUrl) {
