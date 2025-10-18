@@ -4587,6 +4587,8 @@
 
             lazyImages.forEach((lazyImage) => {
               if (!lazyImage.dataset.src) return;
+              // Skip images that have permanently failed
+              if (lazyImage.dataset.loadFailed === "true") return;
 
               const rect = lazyImage.getBoundingClientRect();
               const isInViewport = rect.top < viewportHeight && rect.bottom > 0;
@@ -4800,10 +4802,11 @@
         }
 
         function loadLazyImage(lazyImage, priority) {
-          // Skip if already loading or loaded
+          // Skip if already loading, loaded, or permanently failed
           if (
             lazyImage.classList.contains("lazy-loading") ||
-            lazyImage.classList.contains("lazy-loaded")
+            lazyImage.classList.contains("lazy-loaded") ||
+            lazyImage.dataset.loadFailed === "true"
           ) {
             return;
           }
@@ -4923,6 +4926,7 @@
                 );
                 lazyImage.classList.remove("lazy-loading");
                 lazyImage.classList.add("lazy-error");
+                lazyImage.dataset.loadFailed = "true"; // Mark as permanently failed
                 delete lazyImage.dataset.loadingStart;
                 // Use original resource URL as final fallback
                 lazyImage.src = lazyImage.dataset.src;
