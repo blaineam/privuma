@@ -1173,7 +1173,8 @@
                 }
 
                 // If we know this path needs decryption, skip straight to decryption
-                if (decryptionStatus === true) {
+                // BUT skip if we've detected unencrypted files work
+                if (decryptionStatus === true && !medcrypt.skipCryptFallback) {
                   try {
                     const decrypted = window.rcloneCrypt.render(
                       await window.rcloneCrypt.decrypt(
@@ -1443,8 +1444,12 @@
               } catch (error) {
                 medcrypt.finishProgress();
 
-                // Check if cancelled due to viewport - don't retry these
-                if (error.message && error.message.includes("cancelled")) {
+                // Check if cancelled, previously failed, or other non-retryable errors
+                if (
+                  error.message &&
+                  (error.message.includes("cancelled") ||
+                    error.message.includes("previously failed"))
+                ) {
                   throw error;
                 }
 
