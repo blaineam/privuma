@@ -480,8 +480,9 @@
         isIOSDevice:
           /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
         preferredPrefix: null, // null, "none", or "crypt" - set when we discover what works
+        usesPrefixes: false, // Set to true when we detect pr/ or fa/ resources work (they can coexist)
         skipCryptFallback: true, // Default to true - assume unencrypted unless we discover otherwise
-        skipPrefixFallbacks: true, // Default to true - assume no prefixes unless we discover otherwise
+        skipPrefixFallbacks: false, // Default to false - try pr/ and fa/ prefixes first
         failedResources: new Set(), // Track resources that have permanently failed
         queuedResources: new Set(), // Track resources currently in queue to prevent duplicates
         getBlobUrlForResource: function (resourceKey) {
@@ -557,7 +558,6 @@
                 // iOS: 3 seconds, others: 10 seconds
                 const timeout = this.isIOSDevice ? 3000 : 10000;
                 if (now - blobInfo.outOfViewportSince > timeout) {
-                  console.log(`Revoking blob URL (out of viewport): ${key}`);
                   try {
                     URL.revokeObjectURL(blobInfo.url);
                     blobInfo.revoked = true;
@@ -574,7 +574,6 @@
 
             // For video/gif, revoke immediately if not in use
             if (hasVideoOrGif && elements.length === 0 && !blobInfo.revoked) {
-              console.log(`Revoking unused video/gif blob URL: ${key}`);
               try {
                 URL.revokeObjectURL(blobInfo.url);
                 blobInfo.revoked = true;
@@ -670,7 +669,6 @@
 
           // Clear all queues
           medcrypt.flushQueue();
-          console.log("All requests cancelled and queues cleared");
         },
         fetchImageAsBlob: async function (imageUrl, resourceKey, imageElement) {
           // For HTTP, skip blob conversion and return direct URL
@@ -854,6 +852,7 @@
                 "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
               imageElement.classList.remove("lazy-loaded");
               imageElement.classList.add("lazy-waiting");
+              medcrypt.queuedResources.delete(resource);
               medcrypt.activeImageLoads.delete(resource);
               return;
             }
@@ -871,6 +870,7 @@
                 "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
               imageElement.classList.remove("lazy-loaded");
               imageElement.classList.add("lazy-waiting");
+              medcrypt.queuedResources.delete(resource);
               medcrypt.activeImageLoads.delete(resource);
             }
           });
@@ -1048,12 +1048,12 @@
         ) {
           return new Promise((resolve, reject) => {
             (async () => {
+              // Store original resource name for failedResources tracking (outside try for catch access)
+              const originalResource = resource;
+
               try {
                 // Check if this resource has already permanently failed
                 if (medcrypt.failedResources.has(resource)) {
-                  console.log(
-                    `Skipping ${resource} - already marked as failed`,
-                  );
                   throw new Error("Resource previously failed");
                 }
 
@@ -1076,9 +1076,6 @@
                     (resource.startsWith("pr/") || resource.startsWith("fa/"))
                   ) {
                     actualResource = baseResource;
-                    console.log(
-                      `Stripping pr/fa/ prefix (no-prefix files detected): ${resource} -> ${actualResource}`,
-                    );
                   }
                   // Apply preferred prefix if we've discovered what works
                   else if (medcrypt.preferredPrefix !== null) {
@@ -1086,15 +1083,12 @@
                     if (medcrypt.preferredPrefix === "none") {
                       // Use no prefix
                       actualResource = baseResource;
-                      console.log(
-                        `Applying preferred prefix (none): ${resource} -> ${actualResource}`,
-                      );
-                    } else if (medcrypt.preferredPrefix === "crypt") {
-                      // Use crypt/ prefix
+                    } else if (
+                      medcrypt.preferredPrefix === "crypt" &&
+                      !medcrypt.skipCryptFallback
+                    ) {
+                      // Use crypt/ prefix ONLY if we haven't detected unencrypted files
                       actualResource = "crypt/" + baseResource;
-                      console.log(
-                        `Applying preferred prefix (crypt): ${resource} -> ${actualResource}`,
-                      );
                     }
                   }
                 }
@@ -1282,6 +1276,12 @@
                     signal: AbortSignal.timeout(10000),
                   });
 
+                  // Check for 404 and other HTTP errors immediately
+                  if (!headResponse.ok) {
+                    cleanup();
+                    throw new Error(`HTTP ${headResponse.status}`);
+                  }
+
                   const mimeType = headResponse.headers
                     .get("Content-Type")
                     ?.split(";")[0]
@@ -1297,13 +1297,27 @@
                     medcrypt.loadedCache[resource] = finalUrl;
 
                     // Set preferred prefix based on what worked
-                    if (!resource.startsWith("crypt/")) {
-                      // Unencrypted file loaded successfully - skip crypt/ fallback from now on
+                    if (resource.startsWith("pr/") || resource.startsWith("fa/")) {
+                      // pr/ or fa/ prefix worked - resources use prefixes (both pr/ and fa/ can coexist)
+                      // Skip crypt/ and no-prefix fallbacks, but still try both pr/ and fa/
+                      if (!medcrypt.usesPrefixes) {
+                        medcrypt.usesPrefixes = true;
+                        medcrypt.skipCryptFallback = true;
+                        medcrypt.skipPrefixFallbacks = false; // We DO use prefixes (pr/ and/or fa/)
+                      }
+                    } else if (resource.startsWith("crypt/")) {
+                      // crypt/ prefix worked - set global preference
+                      if (medcrypt.preferredPrefix === null) {
+                        medcrypt.preferredPrefix = "crypt";
+                      }
+                    } else {
+                      // No prefix - unencrypted file loaded successfully
                       if (!medcrypt.skipCryptFallback) {
                         medcrypt.skipCryptFallback = true;
-                        console.log(
-                          "Unencrypted file loaded successfully - disabling crypt/ fallback",
-                        );
+                      }
+                      // Clear preferredPrefix if it was set to "crypt" since we now know files are unencrypted
+                      if (medcrypt.preferredPrefix === "crypt") {
+                        medcrypt.preferredPrefix = null;
                       }
 
                       // Check if it's a special directory that uses prefixes
@@ -1316,29 +1330,12 @@
                         // Not a special dir - set skipPrefixFallbacks for ALL unencrypted files
                         if (!medcrypt.skipPrefixFallbacks) {
                           medcrypt.skipPrefixFallbacks = true;
-                          console.log(
-                            "Unencrypted file loaded - disabling pr/, fa/ fallbacks for all future requests",
-                          );
                         }
 
                         // If this was a no-prefix file, set preferred prefix
-                        if (
-                          !resource.startsWith("pr/") &&
-                          !resource.startsWith("fa/")
-                        ) {
-                          if (medcrypt.preferredPrefix === null) {
-                            medcrypt.preferredPrefix = "none";
-                            console.log(
-                              "Setting preferred prefix to: none (no prefix)",
-                            );
-                          }
+                        if (medcrypt.preferredPrefix === null) {
+                          medcrypt.preferredPrefix = "none";
                         }
-                      }
-                    } else if (resource.startsWith("crypt/")) {
-                      // crypt/ prefix worked - set global preference
-                      if (medcrypt.preferredPrefix === null) {
-                        medcrypt.preferredPrefix = "crypt";
-                        console.log("Setting preferred prefix to: crypt/");
                       }
                     }
 
@@ -1369,9 +1366,6 @@
                   // Decryption succeeded - set preferred prefix to crypt
                   if (medcrypt.preferredPrefix === null) {
                     medcrypt.preferredPrefix = "crypt";
-                    console.log(
-                      "Setting preferred prefix to: crypt/ (decryption succeeded)",
-                    );
                   }
 
                   return decrypted;
@@ -1418,22 +1412,21 @@
                   if (resource.startsWith("pr/")) {
                     // pr/ failed, try fa/ (unless skipping prefix fallbacks)
                     if (!medcrypt.skipPrefixFallbacks) {
-                      console.log(`pr/ failed for ${resource}, trying fa/`);
                       return medcrypt.getSrcRaw(
                         "fa/" + baseResource,
                         action,
                         0,
                       );
                     } else {
-                      console.log(
-                        `pr/ failed for ${resource}, skipping fa/ (no-prefix files detected)`,
-                      );
                       // Skip straight to no prefix
                       return medcrypt.getSrcRaw(baseResource, action, 0);
                     }
                   } else if (resource.startsWith("fa/")) {
-                    // fa/ failed, try without prefix (then crypt if that fails)
-                    console.log(`fa/ failed for ${resource}, trying no prefix`);
+                    // fa/ failed - if we know we use prefixes, don't try no-prefix or crypt/
+                    if (medcrypt.usesPrefixes) {
+                      throw error;
+                    }
+                    // Otherwise try without prefix (then crypt if that fails)
                     return medcrypt.getSrcRaw(baseResource, action, 0);
                   } else if (hadPrefix && resource.startsWith("crypt/")) {
                     // crypt/ failed, no more options
@@ -1447,14 +1440,7 @@
 
                     // no prefix failed, try crypt/ (this will use decryption) - but only if not skipped
                     if (!medcrypt.skipCryptFallback && !isSpecialDir) {
-                      console.log(
-                        `No prefix failed for ${resource}, trying crypt/`,
-                      );
                       return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
-                    } else {
-                      console.log(
-                        `No prefix failed for ${resource}, skipping crypt/ (skipCryptFallback=${medcrypt.skipCryptFallback}, isSpecialDir=${isSpecialDir})`,
-                      );
                     }
                   }
 
@@ -1464,29 +1450,39 @@
                 medcrypt.finishProgress();
 
                 // Check if cancelled, previously failed, or other non-retryable errors
-                if (
-                  error.message &&
-                  (error.message.includes("cancelled") ||
-                    error.message.includes("previously failed"))
-                ) {
+                if (error.message && error.message.includes("cancelled")) {
+                  // Cancelled requests (viewport/scrolling) - allow retry later
+                  // Remove from queued set so it can be re-queued
+                  medcrypt.queuedResources.delete(originalResource);
+                  medcrypt.queuedResources.delete(resource);
                   throw error;
                 }
 
-                // Retry on timeouts and other errors
-                if (currentTries < medcrypt.maxTries) {
-                  const delay = Math.pow(2, currentTries) * 1000; // Exponential backoff
-                  console.log(
-                    `Retrying ${resource} (attempt ${currentTries + 1}/${medcrypt.maxTries}) after ${delay}ms`,
-                  );
-                  await sleep(delay);
-                  return medcrypt.getSrcRaw(resource, action, currentTries + 1);
+                if (
+                  error.message &&
+                  (error.message.includes("previously failed") ||
+                    error.message.includes("HTTP 404") ||
+                    error.message.includes("404"))
+                ) {
+                  // Don't retry 404 errors - file doesn't exist (permanent failure)
+                  if (error.message.includes("404")) {
+                    medcrypt.failedResources.add(originalResource);
+                    medcrypt.failedResources.add(resource); // Also add transformed resource
+                  }
+                  throw error;
                 }
 
-                // Final fallback - mark as permanently failed
-                medcrypt.failedResources.add(resource);
-                console.error(
-                  `getSrc failed after ${medcrypt.maxTries} tries for ${resource}`,
-                );
+                // Retry on timeouts and other errors, but with much shorter delays
+                if (currentTries < medcrypt.maxTries) {
+                  const delay = Math.min(100 * (currentTries + 1), 300); // Much faster: 100ms, 200ms max
+                  await sleep(delay);
+                  return medcrypt.getSrcRaw(originalResource, action, currentTries + 1);
+                }
+
+                // Final fallback - don't mark as permanently failed (allow retry if user scrolls back)
+                // Only 404s are permanently failed - timeouts/network errors are temporary
+                medcrypt.queuedResources.delete(originalResource);
+                medcrypt.queuedResources.delete(resource);
                 throw new Error(
                   `Failed to load resource after ${medcrypt.maxTries} attempts`,
                 );
@@ -3478,7 +3474,6 @@
           function showAlbum(album, kind) {
             // Cancel all pending requests for quick album switch
             medcrypt.cancelAllRequests();
-            console.log("Queue flushed for new album: " + album);
 
             // Clear all blob URLs and cache for memory optimization
             medcrypt.blobCache.forEach((blobInfo, key) => {
@@ -3493,9 +3488,6 @@
             });
             medcrypt.blobCache.clear();
             medcrypt.failedResources.clear(); // Clear failed resources for new album
-            console.log(
-              "Blob cache and failed resources cleared for album navigation",
-            );
 
             window.currentAlbum = album;
             delete window.currentAlbumPosition;
@@ -3968,7 +3960,6 @@
               .finally(() => {
                 processLazyLoad();
                 jQuery("#content").append(`<div style="height: 63px"></div>`);
-                console.log("rendered");
               });
           }
 
@@ -4621,8 +4612,26 @@
 
             lazyImages.forEach((lazyImage) => {
               if (!lazyImage.dataset.src) return;
-              // Skip images that have permanently failed
-              if (lazyImage.dataset.loadFailed === "true") return;
+
+              // Only skip if the resource is permanently failed (404)
+              // Temporary failures (network errors, cancellations) should be retryable
+              if (
+                lazyImage.dataset.loadFailed === "true" &&
+                medcrypt.failedResources.has(lazyImage.dataset.src)
+              ) {
+                return;
+              }
+
+              // Clear loadFailed flag if resource is not permanently failed
+              // This allows retry of temporarily failed images
+              if (
+                lazyImage.dataset.loadFailed === "true" &&
+                !medcrypt.failedResources.has(lazyImage.dataset.src)
+              ) {
+                delete lazyImage.dataset.loadFailed;
+                lazyImage.classList.remove("lazy-error");
+                lazyImage.classList.add("lazy-waiting");
+              }
 
               const rect = lazyImage.getBoundingClientRect();
               const isInViewport = rect.top < viewportHeight && rect.bottom > 0;
@@ -4636,6 +4645,9 @@
                   ? parseInt(lazyImage.dataset.loadingStart)
                   : 0;
                 if (loadingStart && now - loadingStart > 5000) {
+                  // Clear from queued resources so it can be re-queued
+                  medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                   lazyImage.classList.remove("lazy-loading");
                   lazyImage.classList.add("lazy-waiting");
                   delete lazyImage.dataset.loadingStart;
@@ -4650,6 +4662,37 @@
               ) {
                 lazyImage.classList.remove("lazy-loaded");
                 lazyImage.classList.add("lazy-waiting");
+              }
+
+              // Detect orphaned images: images that aren't queued or permanently failed
+              // but are in error state or stuck loading without actually being queued
+              if (
+                (isInViewport || isNearViewport) &&
+                !medcrypt.failedResources.has(lazyImage.dataset.src)
+              ) {
+                // Reset orphaned error images
+                if (
+                  lazyImage.classList.contains("lazy-error") &&
+                  !medcrypt.queuedResources.has(lazyImage.dataset.src)
+                ) {
+                  delete lazyImage.dataset.loadFailed;
+                  medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+                  lazyImage.classList.remove("lazy-error");
+                  lazyImage.classList.add("lazy-waiting");
+                }
+
+                // Reset stuck loading images that aren't actually queued
+                if (
+                  lazyImage.classList.contains("lazy-loading") &&
+                  !medcrypt.queuedResources.has(lazyImage.dataset.src)
+                ) {
+                  medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+                  lazyImage.classList.remove("lazy-loading");
+                  lazyImage.classList.add("lazy-waiting");
+                  delete lazyImage.dataset.loadingStart;
+                }
               }
 
               // Load images that are waiting and in/near viewport
@@ -4698,9 +4741,6 @@
               if (isVideoOrGif && medcrypt && medcrypt.blobCache) {
                 medcrypt.blobCache.forEach((blobInfo, key) => {
                   if (key === prevResource && !blobInfo.revoked) {
-                    console.log(
-                      `Revoking video/gif blob on fancybox resource change: ${key}`,
-                    );
                     try {
                       URL.revokeObjectURL(blobInfo.url);
                       blobInfo.revoked = true;
@@ -4736,9 +4776,6 @@
               if (isVideoOrGif) {
                 medcrypt.blobCache.forEach((blobInfo, key) => {
                   if (key === prevResource && !blobInfo.revoked) {
-                    console.log(
-                      `Revoking video/gif blob on fancybox close: ${key}`,
-                    );
                     try {
                       URL.revokeObjectURL(blobInfo.url);
                       blobInfo.revoked = true;
@@ -4784,6 +4821,9 @@
                   ? parseInt(lazyImage.dataset.loadingStart)
                   : 0;
                 if (loadingStart && now - loadingStart > 5000) {
+                  // Clear from queued resources so it can be re-queued
+                  medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                   lazyImage.classList.remove("lazy-loading");
                   lazyImage.classList.add("lazy-waiting");
                   delete lazyImage.dataset.loadingStart;
@@ -4798,6 +4838,37 @@
               ) {
                 lazyImage.classList.remove("lazy-loaded");
                 lazyImage.classList.add("lazy-waiting");
+              }
+
+              // Detect orphaned images: images that aren't queued or permanently failed
+              // but are in error state or stuck loading without actually being queued
+              if (
+                (isInViewport || isNearViewport) &&
+                !medcrypt.failedResources.has(lazyImage.dataset.src)
+              ) {
+                // Reset orphaned error images
+                if (
+                  lazyImage.classList.contains("lazy-error") &&
+                  !medcrypt.queuedResources.has(lazyImage.dataset.src)
+                ) {
+                  delete lazyImage.dataset.loadFailed;
+                  medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+                  lazyImage.classList.remove("lazy-error");
+                  lazyImage.classList.add("lazy-waiting");
+                }
+
+                // Reset stuck loading images that aren't actually queued
+                if (
+                  lazyImage.classList.contains("lazy-loading") &&
+                  !medcrypt.queuedResources.has(lazyImage.dataset.src)
+                ) {
+                  medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+                  lazyImage.classList.remove("lazy-loading");
+                  lazyImage.classList.add("lazy-waiting");
+                  delete lazyImage.dataset.loadingStart;
+                }
               }
 
               // Load images that are waiting and in/near viewport
@@ -4836,18 +4907,32 @@
         }
 
         function loadLazyImage(lazyImage, priority) {
-          // Skip if already loading, loaded, or permanently failed
+          // Skip if permanently failed (404)
+          if (medcrypt.failedResources.has(lazyImage.dataset.src)) {
+            return;
+          }
+
+          // Skip if already loading or loaded
           if (
             lazyImage.classList.contains("lazy-loading") ||
-            lazyImage.classList.contains("lazy-loaded") ||
-            lazyImage.dataset.loadFailed === "true"
+            lazyImage.classList.contains("lazy-loaded")
           ) {
             return;
+          }
+
+          // Clear temporary failure flag if present (allow retry)
+          const wasRetry = lazyImage.dataset.loadFailed === "true";
+          if (wasRetry) {
+            delete lazyImage.dataset.loadFailed;
+            lazyImage.classList.remove("lazy-error");
           }
 
           lazyImage.classList.remove("lazy-waiting");
           lazyImage.classList.add("lazy-loading");
           lazyImage.dataset.loadingStart = Date.now().toString();
+
+          // Track this image so it can be cancelled if needed
+          medcrypt.activeImageLoads.set(lazyImage.dataset.src, lazyImage);
 
           let retryCount = 0;
           const maxRetries = 2;
@@ -4880,6 +4965,8 @@
                 async (uri) => {
                   // Check if rapid scrolling - if so, reset and try again later
                   if (medcrypt.rapidScrolling) {
+                    medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                    medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                     lazyImage.classList.remove("lazy-loading");
                     lazyImage.classList.add("lazy-waiting");
                     delete lazyImage.dataset.loadingStart;
@@ -4913,6 +5000,8 @@
                           lazyImage.src = blobUrl;
                         } else {
                           // Rapid scrolling started during fetch, reset state
+                          medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                          medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                           lazyImage.classList.remove("lazy-loading");
                           lazyImage.classList.add("lazy-waiting");
                           delete lazyImage.dataset.loadingStart;
@@ -4925,6 +5014,8 @@
                             error.message.includes("outside viewport"))
                         ) {
                           // Cancelled, reset state to try again later
+                          medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                          medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                           lazyImage.classList.remove("lazy-loading");
                           lazyImage.classList.add("lazy-waiting");
                           delete lazyImage.dataset.loadingStart;
@@ -4940,6 +5031,8 @@
                     }
                   } else {
                     // Not visible anymore, reset state
+                    medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                    medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                     lazyImage.classList.remove("lazy-loading");
                     lazyImage.classList.add("lazy-waiting");
                     delete lazyImage.dataset.loadingStart;
@@ -4949,17 +5042,30 @@
                 priority,
               )
               .catch((error) => {
-                // getSrc itself failed (all retries exhausted)
-                console.error(
-                  `getSrc failed for ${lazyImage.dataset.src}:`,
-                  error,
-                );
-                lazyImage.classList.remove("lazy-loading");
-                lazyImage.classList.add("lazy-error");
-                lazyImage.dataset.loadFailed = "true"; // Mark as permanently failed
-                delete lazyImage.dataset.loadingStart;
-                // Use original resource URL as final fallback
-                lazyImage.src = lazyImage.dataset.src;
+                // Check if this was a temporary failure (cancelled, viewport) or permanent (404, exhausted retries)
+                const isCancelled =
+                  error.message &&
+                  (error.message.includes("cancelled") ||
+                    error.message.includes("outside viewport") ||
+                    error.message.includes("rapid scrolling"));
+
+                if (isCancelled) {
+                  // Temporary failure - reset to waiting so it can be retried later
+                  medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+                  lazyImage.classList.remove("lazy-loading");
+                  lazyImage.classList.add("lazy-waiting");
+                  delete lazyImage.dataset.loadingStart;
+                } else {
+                  // Permanent failure (404 or exhausted retries)
+                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+                  lazyImage.classList.remove("lazy-loading");
+                  lazyImage.classList.add("lazy-error");
+                  lazyImage.dataset.loadFailed = "true";
+                  delete lazyImage.dataset.loadingStart;
+                  // Use original resource URL as final fallback
+                  lazyImage.src = lazyImage.dataset.src;
+                }
               });
           };
 
