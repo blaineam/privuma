@@ -1297,7 +1297,10 @@
                     medcrypt.loadedCache[resource] = finalUrl;
 
                     // Set preferred prefix based on what worked
-                    if (resource.startsWith("pr/") || resource.startsWith("fa/")) {
+                    if (
+                      resource.startsWith("pr/") ||
+                      resource.startsWith("fa/")
+                    ) {
                       // pr/ or fa/ prefix worked - resources use prefixes (both pr/ and fa/ can coexist)
                       // Skip crypt/ and no-prefix fallbacks, but still try both pr/ and fa/
                       if (!medcrypt.usesPrefixes) {
@@ -1476,7 +1479,11 @@
                 if (currentTries < medcrypt.maxTries) {
                   const delay = Math.min(100 * (currentTries + 1), 300); // Much faster: 100ms, 200ms max
                   await sleep(delay);
-                  return medcrypt.getSrcRaw(originalResource, action, currentTries + 1);
+                  return medcrypt.getSrcRaw(
+                    originalResource,
+                    action,
+                    currentTries + 1,
+                  );
                 }
 
                 // Final fallback - don't mark as permanently failed (allow retry if user scrolls back)
@@ -5000,8 +5007,12 @@
                           lazyImage.src = blobUrl;
                         } else {
                           // Rapid scrolling started during fetch, reset state
-                          medcrypt.queuedResources.delete(lazyImage.dataset.src);
-                          medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+                          medcrypt.queuedResources.delete(
+                            lazyImage.dataset.src,
+                          );
+                          medcrypt.activeImageLoads.delete(
+                            lazyImage.dataset.src,
+                          );
                           lazyImage.classList.remove("lazy-loading");
                           lazyImage.classList.add("lazy-waiting");
                           delete lazyImage.dataset.loadingStart;
@@ -5014,8 +5025,12 @@
                             error.message.includes("outside viewport"))
                         ) {
                           // Cancelled, reset state to try again later
-                          medcrypt.queuedResources.delete(lazyImage.dataset.src);
-                          medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+                          medcrypt.queuedResources.delete(
+                            lazyImage.dataset.src,
+                          );
+                          medcrypt.activeImageLoads.delete(
+                            lazyImage.dataset.src,
+                          );
                           lazyImage.classList.remove("lazy-loading");
                           lazyImage.classList.add("lazy-waiting");
                           delete lazyImage.dataset.loadingStart;
