@@ -1420,23 +1420,20 @@
                     throw error;
                   } else if (!hadPrefix) {
                     // Check if this resource should skip crypt/ fallback
-                    const shouldSkipCrypt =
-                      medcrypt.skipCryptFallback ||
+                    const isSpecialDir =
                       resource.startsWith("flash/") ||
                       resource.startsWith("un/") ||
-                      resource.startsWith("vr/") ||
-                      resource.startsWith("pr/") ||
-                      resource.startsWith("fa/");
+                      resource.startsWith("vr/");
 
                     // no prefix failed, try crypt/ (this will use decryption) - but only if not skipped
-                    if (!shouldSkipCrypt) {
+                    if (!medcrypt.skipCryptFallback && !isSpecialDir) {
                       console.log(
                         `No prefix failed for ${resource}, trying crypt/`,
                       );
                       return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
                     } else {
                       console.log(
-                        `No prefix failed for ${resource}, skipping crypt/ (unencrypted files detected or special directory)`,
+                        `No prefix failed for ${resource}, skipping crypt/ (skipCryptFallback=${medcrypt.skipCryptFallback}, isSpecialDir=${isSpecialDir})`,
                       );
                     }
                   }
