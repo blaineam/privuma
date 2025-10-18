@@ -483,6 +483,7 @@
         skipCryptFallback: true, // Default to true - assume unencrypted unless we discover otherwise
         skipPrefixFallbacks: true, // Default to true - assume no prefixes unless we discover otherwise
         failedResources: new Set(), // Track resources that have permanently failed
+        queuedResources: new Set(), // Track resources currently in queue to prevent duplicates
         getBlobUrlForResource: function (resourceKey) {
           // Check if we have a cached blob for this resource
           if (this.blobCache.has(resourceKey)) {
@@ -970,6 +971,12 @@
             return Promise.resolve(cachedBlobUrl);
           }
 
+          // Check if this resource is already queued - if so, don't queue again
+          if (medcrypt.queuedResources.has(resource)) {
+            // Wait for the existing queued request
+            return medcrypt.processingQueue || Promise.resolve(resource);
+          }
+
           // Check viewport before queueing (except for high priority)
           if (priority !== "high") {
             const element = document.querySelector(
@@ -1003,6 +1010,9 @@
             medcrypt.requestQueue[priority].splice(0, itemsToRemove);
           }
 
+          // Mark as queued
+          medcrypt.queuedResources.add(resource);
+
           medcrypt.requestQueue[priority].push(async () => {
             try {
               const result = await medcrypt.getSrcRaw(
@@ -1020,6 +1030,9 @@
               // Call action with the original resource as fallback
               action(resource);
               throw error;
+            } finally {
+              // Remove from queued set when done (success or failure)
+              medcrypt.queuedResources.delete(resource);
             }
           });
 
