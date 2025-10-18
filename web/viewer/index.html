@@ -480,8 +480,8 @@
         isIOSDevice:
           /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
         preferredPrefix: null, // null, "none", or "crypt" - set when we discover what works
-        skipCryptFallback: false, // Set to true when unencrypted files load successfully
-        skipPrefixFallbacks: false, // Set to true when files load without pr/, fa/, etc. prefixes
+        skipCryptFallback: true, // Default to true - assume unencrypted unless we discover otherwise
+        skipPrefixFallbacks: true, // Default to true - assume no prefixes unless we discover otherwise
         failedResources: new Set(), // Track resources that have permanently failed
         getBlobUrlForResource: function (resourceKey) {
           // Check if we have a cached blob for this resource
