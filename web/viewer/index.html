@@ -1583,11 +1583,12 @@
       function imgError(img) {
         if (jQuery(img).parent().data("type") !== "video") {
           // Instead of removing, show hash-based placeholder
-          const hash = jQuery(img).data('filehash') ||
-                       jQuery(img).closest('img[data-filehash]').data('filehash');
-          if (hash && typeof md5ToImage === 'function') {
-            jQuery(img).attr('src', md5ToImage(hash));
-            jQuery(img).addClass('lazy-error');
+          const hash =
+            jQuery(img).data("filehash") ||
+            jQuery(img).closest("img[data-filehash]").data("filehash");
+          if (hash && typeof md5ToImage === "function") {
+            jQuery(img).attr("src", md5ToImage(hash));
+            jQuery(img).addClass("lazy-error");
           } else {
             // If no hash available, remove as before
             jQuery(img).parent().remove();
@@ -3741,7 +3742,7 @@
                   .filter((result) => typeof result.value !== "undefined")
                   .map((result) => result.value)
                   .reduce((acc, d) => {
-                    const found = acc.find(a => a[7] === d[7]);
+                    const found = acc.find((a) => a[7] === d[7]);
                     if (!found) {
                       acc.push(d);
                     }
@@ -3925,7 +3926,12 @@
                 if (item.flash === 1) {
                   resource = md5ToImage(item.hash); //item.filename.replace(".swf", ".png");
                 }
-                return Promise.resolve([resource, displayName, album, item.hash]);
+                return Promise.resolve([
+                  resource,
+                  displayName,
+                  album,
+                  item.hash,
+                ]);
               }),
             )
               .then((results) => {
@@ -4973,9 +4979,10 @@
               delete lazyImage.dataset.loadingStart;
 
               // Generate hash-based placeholder image
-              const hash = lazyImage.dataset.filehash ||
-                           lazyImage.closest('img[data-filehash]')?.dataset?.filehash;
-              if (hash && typeof md5ToImage === 'function') {
+              const hash =
+                lazyImage.dataset.filehash ||
+                lazyImage.closest("img[data-filehash]")?.dataset?.filehash;
+              if (hash && typeof md5ToImage === "function") {
                 lazyImage.src = md5ToImage(hash);
               }
 
