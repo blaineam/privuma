@@ -396,12 +396,11 @@ class mediaFile
             return;
         }
 
-        
-        $mfile = self::load('','',$this->filename, $this->album);
+        $mfile = self::load('', '', $this->filename, $this->album);
         if (!is_null($mfile) && empty($mfile->url)) {
             $this->cloudFS->unlink($this->path());
         }
-        
+
         $fileParts = explode('---', $this->filename);
         $stmt = $this->pdo->prepare('DELETE FROM media WHERE album = ? AND filename LIKE "' . trim($fileParts[0], '-') . '%"');
         $stmt->execute([$this->album]);
