@@ -1,7 +1,6 @@
 <?php
 ini_set('memory_limit', '4G');
 use privuma\privuma;
-use privuma\helpers\mediaFile;
 use privuma\helpers\tokenizer;
 use privuma\helpers\cloudFS;
 
@@ -21,9 +20,8 @@ $privuma = privuma::getInstance();
 $tokenizer = new tokenizer();
 $downloadLocation = $privuma->getEnv('DOWNLOAD_LOCATION');
 if (!$downloadLocation) {
-	exit();
+    exit();
 }
-
 
 $conn = $privuma->getPDO();
 $ops = new cloudFS($downloadLocation . 'pr' . DIRECTORY_SEPARATOR, true, '/usr/bin/rclone', null, true);
@@ -41,80 +39,78 @@ group by hash
 	time DESC");
 $stmt->execute();
 $keepers = [];
-foreach($stmt->fetchAll() as $row) {
-	$hash = $row["hash"];
-	$ext = pathinfo($row['filename'], PATHINFO_EXTENSION);
-	$keepers[] = $hash . "." . $ext;
-	if (in_array(strtolower($ext), ["mp4", "webm", "gif"])) {
-		$keepers[] = $hash . ".jpg";
-	}
+foreach ($stmt->fetchAll() as $row) {
+    $hash = $row['hash'];
+    $ext = pathinfo($row['filename'], PATHINFO_EXTENSION);
+    $keepers[] = $hash . '.' . $ext;
+    if (in_array(strtolower($ext), ['mp4', 'webm', 'gif'])) {
+        $keepers[] = $hash . '.jpg';
+    }
 }
-echo PHP_EOL. "Found " . count($keepers) . " Keepers!";
-echo PHP_EOL."Checking Primary Ops for deletions";
+echo PHP_EOL . 'Found ' . count($keepers) . ' Keepers!';
+echo PHP_EOL . 'Checking Primary Ops for deletions';
 $checkersOps = array_map(
-		fn ($item) => trim($item, "\/"),
-		array_column(
-			$ops->scandir('', true, true, null, false, true, true, true),
-			'Name'
-		)
-	);
+    fn ($item) => trim($item, "\/"),
+    array_column(
+        $ops->scandir('', true, true, null, false, true, true, true),
+        'Name'
+    )
+);
 
-$deletionQueueOps = array_filter($checkersOps, function($item) use ($keepers) {
-	return !empty($item) && !in_array($item, [".", "..", "/"]) && !in_array($item, $keepers) && !in_array(pathinfo(strtolower($item), PATHINFO_EXTENSION), ["js", "json"]);
+$deletionQueueOps = array_filter($checkersOps, function ($item) use ($keepers) {
+    return !empty($item) && !in_array($item, ['.', '..', '/']) && !in_array($item, $keepers) && !in_array(pathinfo(strtolower($item), PATHINFO_EXTENSION), ['js', 'json']);
 });
 unset($checkersOps);
 
-echo PHP_EOL. "Found " . count($deletionQueueOps) . " Primary Deletions";
+echo PHP_EOL . 'Found ' . count($deletionQueueOps) . ' Primary Deletions';
 
-foreach($deletionQueueOps as $deletion) {
-	echo PHP_EOL . "Deleting: " . $deletion;
-	$ops->unlink($deletion);
+foreach ($deletionQueueOps as $deletion) {
+    echo PHP_EOL . 'Deleting: ' . $deletion;
+    $ops->unlink($deletion);
 }
 
-echo PHP_EOL."Checking Favorite Ops for deletions";
+echo PHP_EOL . 'Checking Favorite Ops for deletions';
 $checkersOpsFavorites = array_map(
-	fn ($item) => trim($item, "\/"),
-	array_column(
-		$opsFavorites->scandir('', true, true, null, false, true, true, true),
-		'Name'
-	)
+    fn ($item) => trim($item, "\/"),
+    array_column(
+        $opsFavorites->scandir('', true, true, null, false, true, true, true),
+        'Name'
+    )
 );
 
-$deletionQueueOpsFavorites = array_filter($checkersOpsFavorites, function($item) use ($keepers) {
-	return !empty($item) && !in_array($item, [".", "..", "/"]) && !in_array($item, $keepers) && !in_array(pathinfo(strtolower($item), PATHINFO_EXTENSION), ["js", "json"]);
+$deletionQueueOpsFavorites = array_filter($checkersOpsFavorites, function ($item) use ($keepers) {
+    return !empty($item) && !in_array($item, ['.', '..', '/']) && !in_array($item, $keepers) && !in_array(pathinfo(strtolower($item), PATHINFO_EXTENSION), ['js', 'json']);
 });
 unset($checkersOpsFavorites);
 
-echo PHP_EOL. "Found " . count($deletionQueueOpsFavorites) . " Favorite Deletions";
+echo PHP_EOL . 'Found ' . count($deletionQueueOpsFavorites) . ' Favorite Deletions';
 
-foreach($deletionQueueOpsFavorites as $deletion) {
-	echo PHP_EOL . "Deleting: " . $deletion;
-	$opsFavorites->unlink($deletion);
+foreach ($deletionQueueOpsFavorites as $deletion) {
+    echo PHP_EOL . 'Deleting: ' . $deletion;
+    $opsFavorites->unlink($deletion);
 }
 
-
-echo PHP_EOL."Checking Unfiltered Ops for deletions";
+echo PHP_EOL . 'Checking Unfiltered Ops for deletions';
 $checkersUnfiltered = array_map(
-	fn ($item) => trim($item, "\/"),
-	array_column(
-		$opsUnfiltered->scandir('', true, true, null, false, true, true, true),
-		'Name'
-	)
+    fn ($item) => trim($item, "\/"),
+    array_column(
+        $opsUnfiltered->scandir('', true, true, null, false, true, true, true),
+        'Name'
+    )
 );
 
-
-$deletionQueueOpsUnfiltered = array_filter($checkersUnfiltered, function($item) use ($keepers) {
-	return !empty($item) && !in_array($item, [".", "..", "/"]) && !in_array($item, $keepers) && !in_array(pathinfo(strtolower($item), PATHINFO_EXTENSION), ["js", "json"]);
+$deletionQueueOpsUnfiltered = array_filter($checkersUnfiltered, function ($item) use ($keepers) {
+    return !empty($item) && !in_array($item, ['.', '..', '/']) && !in_array($item, $keepers) && !in_array(pathinfo(strtolower($item), PATHINFO_EXTENSION), ['js', 'json']);
 });
 unset($checkersOps);
 
-echo PHP_EOL. "Found " . count($deletionQueueOpsUnfiltered) . " Unfiltered Deletions";
+echo PHP_EOL . 'Found ' . count($deletionQueueOpsUnfiltered) . ' Unfiltered Deletions';
 
-foreach($deletionQueueOpsUnfiltered as $deletion) {
-	echo PHP_EOL . "Deleting: " . $deletion;
-	$opsUnfiltered->unlink($deletion);
+foreach ($deletionQueueOpsUnfiltered as $deletion) {
+    echo PHP_EOL . 'Deleting: ' . $deletion;
+    $opsUnfiltered->unlink($deletion);
 }
 
 unset($checkersUnfiltered);
 
-echo PHP_EOL."DONE!";
+echo PHP_EOL . 'DONE!';
