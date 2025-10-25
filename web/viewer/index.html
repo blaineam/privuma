@@ -1582,7 +1582,16 @@
 
       function imgError(img) {
         if (jQuery(img).parent().data("type") !== "video") {
-          jQuery(img).parent().remove();
+          // Instead of removing, show hash-based placeholder
+          const hash = jQuery(img).data('filehash') ||
+                       jQuery(img).closest('img[data-filehash]').data('filehash');
+          if (hash && typeof md5ToImage === 'function') {
+            jQuery(img).attr('src', md5ToImage(hash));
+            jQuery(img).addClass('lazy-error');
+          } else {
+            // If no hash available, remove as before
+            jQuery(img).parent().remove();
+          }
         }
       }
 
@@ -3731,6 +3740,13 @@
                 results
                   .filter((result) => typeof result.value !== "undefined")
                   .map((result) => result.value)
+                  .reduce((acc, d) => {
+                    const found = acc.find(a => a[7] === d[7]);
+                    if (!found) {
+                      acc.push(d);
+                    }
+                    return acc;
+                  }, [])
                   .forEach(
                     ([
                       uri,
@@ -3781,7 +3797,7 @@
                                   `  ` +
                                   (sound ? `data-sound="true"` : "") +
                                   ` >
-          <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-resource="${uri}" loading="lazy" alt=""></div>` +
+          <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-resource="${uri}" data-filehash="${hash}"  loading="lazy" alt=""></div>` +
                                   (duration
                                     ? `<span class="thumb-duration">${formatSeconds(duration)}</span>`
                                     : "") +
@@ -3800,7 +3816,7 @@
                               )
                             : jQuery("#content").append(
                                 `<a class="gallerypicture" data-width="1920" href="${uri}" title="${filename}"  data-filehash="${hash}"  data-fancybox="gallery">
-          <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-resource="${uri}" loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)"></div><script type="text/json">${meta}<\/script></a>`,
+          <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-resource="${uri}" data-filehash="${hash}"  loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)"></div><script type="text/json">${meta}<\/script></a>`,
                               ),
                   );
               })
@@ -3909,17 +3925,17 @@
                 if (item.flash === 1) {
                   resource = md5ToImage(item.hash); //item.filename.replace(".swf", ".png");
                 }
-                return Promise.resolve([resource, displayName, album]);
+                return Promise.resolve([resource, displayName, album, item.hash]);
               }),
             )
               .then((results) => {
                 results
                   .filter((result) => typeof result.value !== "undefined")
                   .map((result) => result.value)
-                  .forEach(([photo, displayName, album]) =>
+                  .forEach(([photo, displayName, album, hash]) =>
                     jQuery("#content").append(`<div class="gallerypicture">
               <div class="img-wrapper">
-              <img data-src="${photo}" class="openalbum lazy" alt="" data-hash="${
+              <img data-src="${photo}" class="openalbum lazy" alt="" data-filehash="${hash}" data-hash="${
                 btoa(album) + delim + "all"
               }">
               </div>
@@ -4946,16 +4962,25 @@
 
           const attemptLoad = () => {
             lazyImage.onerror = function () {
+              // Mark as permanently failed in the global set
+              medcrypt.failedResources.add(lazyImage.dataset.src);
+              medcrypt.queuedResources.delete(lazyImage.dataset.src);
               medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+
               lazyImage.classList.remove("lazy-loading");
               lazyImage.classList.add("lazy-error");
-
-              // Mark as permanently failed and don't retry
-              // (getSrcRaw already handles retries internally)
               lazyImage.dataset.loadFailed = "true";
               delete lazyImage.dataset.loadingStart;
+
+              // Generate hash-based placeholder image
+              const hash = lazyImage.dataset.filehash ||
+                           lazyImage.closest('img[data-filehash]')?.dataset?.filehash;
+              if (hash && typeof md5ToImage === 'function') {
+                lazyImage.src = md5ToImage(hash);
+              }
+
               console.warn(
-                `Image onerror fired for ${lazyImage.dataset.src}, marked as failed`,
+                `Image onerror fired for ${lazyImage.dataset.src}, marked as permanently failed`,
               );
             };
 

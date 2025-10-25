@@ -36,8 +36,9 @@ foreach ($items as $item) {
     $parts = explode(',', $item);
     $path = remove_utf8_bom($parts[0]);
     $paths = explode(DIRECTORY_SEPARATOR, $path);
-    $album = $paths[0];
-    $filename = $paths[1];
+    $albumPaths = array_slice($paths, 0, -1);
+    $album = implode(DIRECTORY_SEPARATOR, $albumPaths);
+    $filename = array_pop($paths);
     echo PHP_EOL . 'Deleting media at path: ' . $parts[0];
     (new mediaFile($filename, $album))->delete();
 }
