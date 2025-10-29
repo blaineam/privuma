@@ -23,6 +23,13 @@ if (!$downloadLocation) {
     exit();
 }
 
+$deletionQueuePath = __DIR__."/deletion_queue.txt";
+if (file_exists($deletionQueuePath)) {
+  passthru("rclone --disable ListR -v --fast-list --checkers 32 --transfers 32 -P --retries 5 --multi-thread-streams 1 --include-from '$deletionQueuePath' delete $downloadLocation");
+  unlink($deletionQueuePath);
+  die("DONE!!!!");
+}
+
 $conn = $privuma->getPDO();
 $ops = new cloudFS($downloadLocation . 'pr' . DIRECTORY_SEPARATOR, true, '/usr/bin/rclone', null, true);
 $opsFavorites = new cloudFS($downloadLocation . 'fa' . DIRECTORY_SEPARATOR, true, '/usr/bin/rclone', null, true);
@@ -58,15 +65,17 @@ $checkersOps = array_map(
 );
 
 $deletionQueueOps = array_filter($checkersOps, function ($item) use ($keepers) {
-    return !empty($item) && !in_array($item, ['.', '..', '/']) && !in_array($item, $keepers) && !in_array(pathinfo(strtolower($item), PATHINFO_EXTENSION), ['js', 'json']);
+    return !empty($item) && !in_array($item, ['.', '..', '/']) && !in_array($item, $keepers) && !in_array(pathinfo(strtolower($item), PATHINFO_EXTENSION), ['js', 'json', 'html']);
 });
 unset($checkersOps);
 
 echo PHP_EOL . 'Found ' . count($deletionQueueOps) . ' Primary Deletions';
 
+$deletions = [];
 foreach ($deletionQueueOps as $deletion) {
     echo PHP_EOL . 'Deleting: ' . $deletion;
-    $ops->unlink($deletion);
+    $deletions[] = "pr/".ltrim($ops->encode($deletion, true), "./");
+    //$ops->unlink($deletion);
 }
 
 echo PHP_EOL . 'Checking Favorite Ops for deletions';
@@ -79,7 +88,7 @@ $checkersOpsFavorites = array_map(
 );
 
 $deletionQueueOpsFavorites = array_filter($checkersOpsFavorites, function ($item) use ($keepers) {
-    return !empty($item) && !in_array($item, ['.', '..', '/']) && !in_array($item, $keepers) && !in_array(pathinfo(strtolower($item), PATHINFO_EXTENSION), ['js', 'json']);
+    return !empty($item) && !in_array($item, ['.', '..', '/']) && !in_array($item, $keepers) && !in_array(pathinfo(strtolower($item), PATHINFO_EXTENSION), ['js', 'json', 'html']);
 });
 unset($checkersOpsFavorites);
 
@@ -87,7 +96,8 @@ echo PHP_EOL . 'Found ' . count($deletionQueueOpsFavorites) . ' Favorite Deletio
 
 foreach ($deletionQueueOpsFavorites as $deletion) {
     echo PHP_EOL . 'Deleting: ' . $deletion;
-    $opsFavorites->unlink($deletion);
+    $deletions[] = "fa/".ltrim($ops->encode($deletion, true), "./");
+    //$opsFavorites->unlink($deletion);
 }
 
 echo PHP_EOL . 'Checking Unfiltered Ops for deletions';
@@ -100,7 +110,7 @@ $checkersUnfiltered = array_map(
 );
 
 $deletionQueueOpsUnfiltered = array_filter($checkersUnfiltered, function ($item) use ($keepers) {
-    return !empty($item) && !in_array($item, ['.', '..', '/']) && !in_array($item, $keepers) && !in_array(pathinfo(strtolower($item), PATHINFO_EXTENSION), ['js', 'json']);
+    return !empty($item) && !in_array($item, ['.', '..', '/']) && !in_array($item, $keepers) && !in_array(pathinfo(strtolower($item), PATHINFO_EXTENSION), ['js', 'json', 'html']);
 });
 unset($checkersOps);
 
@@ -108,9 +118,14 @@ echo PHP_EOL . 'Found ' . count($deletionQueueOpsUnfiltered) . ' Unfiltered Dele
 
 foreach ($deletionQueueOpsUnfiltered as $deletion) {
     echo PHP_EOL . 'Deleting: ' . $deletion;
-    $opsUnfiltered->unlink($deletion);
+    $deletions[] = "un/".ltrim($ops->encode($deletion, true), "./");
+    //$opsUnfiltered->unlink($deletion);
 }
 
 unset($checkersUnfiltered);
+
+file_put_contents($deletionQueuePath, implode(PHP_EOL, $deletions));
+
+passthru("rclone --stats-one-line -P --retries 5 --multi-thread-streams 1 --include-from '$deletionQueuePath' --dry-run delete $downloadLocation");
 
 echo PHP_EOL . 'DONE!';
