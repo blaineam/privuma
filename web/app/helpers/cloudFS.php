@@ -54,14 +54,14 @@ class cloudFS
     {
         // // Create cache key for this specific scandir request
         // $cacheKey = 'cloudfs:' . md5($this->rCloneDestination) . ':scandir:' . md5($directory . (int) $objects . (int) $recursive . serialize($filters) . (int) $dirsOnly . (int) $filesOnly . (int) $noModTime . (int) $noMimeType);
-// 
+        //
         // // Try Redis cache first (persistent across requests)
         // $cached = redisCache::get($cacheKey);
         // if ($cached !== null) {
         //     self::$cacheHits++;
         //     return $cached;
         // }
-// 
+        //
         // // Check local cache second
         // $localCacheKey = md5($directory . (int) $objects . (int) $recursive . serialize($filters) . (int) $dirsOnly . (int) $filesOnly . (int) $noModTime . (int) $noMimeType);
         // if (isset(self::$scandirCache[$localCacheKey])) {
@@ -145,7 +145,7 @@ class cloudFS
             //     $removeCount = intval(self::$maxCacheSize * 0.25);
             //     asort(self::$scandirCacheTime);
             //     $keysToRemove = array_slice(array_keys(self::$scandirCacheTime), 0, $removeCount);
-// 
+            //
             //     foreach ($keysToRemove as $key) {
             //         unset(self::$scandirCache[$key], self::$scandirCacheTime[$key]);
             //     }

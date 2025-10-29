@@ -23,11 +23,11 @@ if (!$downloadLocation) {
     exit();
 }
 
-$deletionQueuePath = __DIR__."/deletion_queue.txt";
+$deletionQueuePath = __DIR__ . '/deletion_queue.txt';
 if (file_exists($deletionQueuePath)) {
-  passthru("rclone --disable ListR -v --fast-list --checkers 32 --transfers 32 -P --retries 5 --multi-thread-streams 1 --include-from '$deletionQueuePath' delete $downloadLocation");
-  unlink($deletionQueuePath);
-  die("DONE!!!!");
+    passthru("rclone --disable ListR -v --fast-list --checkers 32 --transfers 32 -P --retries 5 --multi-thread-streams 1 --include-from '$deletionQueuePath' delete $downloadLocation");
+    unlink($deletionQueuePath);
+    die('DONE!!!!');
 }
 
 $conn = $privuma->getPDO();
@@ -74,7 +74,7 @@ echo PHP_EOL . 'Found ' . count($deletionQueueOps) . ' Primary Deletions';
 $deletions = [];
 foreach ($deletionQueueOps as $deletion) {
     echo PHP_EOL . 'Deleting: ' . $deletion;
-    $deletions[] = "pr/".ltrim($ops->encode($deletion, true), "./");
+    $deletions[] = 'pr/' . ltrim($ops->encode($deletion, true), './');
     //$ops->unlink($deletion);
 }
 
@@ -96,7 +96,7 @@ echo PHP_EOL . 'Found ' . count($deletionQueueOpsFavorites) . ' Favorite Deletio
 
 foreach ($deletionQueueOpsFavorites as $deletion) {
     echo PHP_EOL . 'Deleting: ' . $deletion;
-    $deletions[] = "fa/".ltrim($ops->encode($deletion, true), "./");
+    $deletions[] = 'fa/' . ltrim($ops->encode($deletion, true), './');
     //$opsFavorites->unlink($deletion);
 }
 
@@ -118,7 +118,7 @@ echo PHP_EOL . 'Found ' . count($deletionQueueOpsUnfiltered) . ' Unfiltered Dele
 
 foreach ($deletionQueueOpsUnfiltered as $deletion) {
     echo PHP_EOL . 'Deleting: ' . $deletion;
-    $deletions[] = "un/".ltrim($ops->encode($deletion, true), "./");
+    $deletions[] = 'un/' . ltrim($ops->encode($deletion, true), './');
     //$opsUnfiltered->unlink($deletion);
 }
 
