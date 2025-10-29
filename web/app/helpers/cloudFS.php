@@ -52,34 +52,34 @@ class cloudFS
 
     public function scandir(string $directory, bool $objects = false, bool $recursive = false, ?array $filters = null, $dirsOnly = false, $filesOnly = false, $noModTime = false, $noMimeType = false)
     {
-        // Create cache key for this specific scandir request
-        $cacheKey = 'cloudfs:scandir:' . md5($directory . (int) $objects . (int) $recursive . serialize($filters) . (int) $dirsOnly . (int) $filesOnly . (int) $noModTime . (int) $noMimeType);
-
-        // Try Redis cache first (persistent across requests)
-        $cached = redisCache::get($cacheKey);
-        if ($cached !== null) {
-            self::$cacheHits++;
-            return $cached;
-        }
-
-        // Check local cache second
-        $localCacheKey = md5($directory . (int) $objects . (int) $recursive . serialize($filters) . (int) $dirsOnly . (int) $filesOnly . (int) $noModTime . (int) $noMimeType);
-        if (isset(self::$scandirCache[$localCacheKey])) {
-            $cacheTime = self::$scandirCacheTime[$localCacheKey];
-            if (time() - $cacheTime < self::$cacheTTL) {
-                self::$cacheHits++;
-                return self::$scandirCache[$localCacheKey];
-            }
-            // Expired cache entry
-            unset(self::$scandirCache[$localCacheKey], self::$scandirCacheTime[$localCacheKey]);
-        }
+        // // Create cache key for this specific scandir request
+        // $cacheKey = 'cloudfs:' . md5($this->rCloneDestination) . ':scandir:' . md5($directory . (int) $objects . (int) $recursive . serialize($filters) . (int) $dirsOnly . (int) $filesOnly . (int) $noModTime . (int) $noMimeType);
+// 
+        // // Try Redis cache first (persistent across requests)
+        // $cached = redisCache::get($cacheKey);
+        // if ($cached !== null) {
+        //     self::$cacheHits++;
+        //     return $cached;
+        // }
+// 
+        // // Check local cache second
+        // $localCacheKey = md5($directory . (int) $objects . (int) $recursive . serialize($filters) . (int) $dirsOnly . (int) $filesOnly . (int) $noModTime . (int) $noMimeType);
+        // if (isset(self::$scandirCache[$localCacheKey])) {
+        //     $cacheTime = self::$scandirCacheTime[$localCacheKey];
+        //     if (time() - $cacheTime < self::$cacheTTL) {
+        //         self::$cacheHits++;
+        //         return self::$scandirCache[$localCacheKey];
+        //     }
+        //     // Expired cache entry
+        //     unset(self::$scandirCache[$localCacheKey], self::$scandirCacheTime[$localCacheKey]);
+        // }
 
         if (!$this->is_dir($directory) && $directory !== DIRECTORY_SEPARATOR) {
             error_log('not a dir');
             return false;
         }
 
-        self::$cacheMisses++;
+        //self::$cacheMisses++;
 
         try {
             $filter = null;
@@ -140,23 +140,23 @@ class cloudFS
             $result = $objects ? $response : ['.', '..', ...array_column($response, 'Name')];
 
             // Cache the result with size management
-            if (count(self::$scandirCache) >= self::$maxCacheSize) {
-                // Remove oldest 25% of entries
-                $removeCount = intval(self::$maxCacheSize * 0.25);
-                asort(self::$scandirCacheTime);
-                $keysToRemove = array_slice(array_keys(self::$scandirCacheTime), 0, $removeCount);
+            // if (count(self::$scandirCache) >= self::$maxCacheSize) {
+            //     // Remove oldest 25% of entries
+            //     $removeCount = intval(self::$maxCacheSize * 0.25);
+            //     asort(self::$scandirCacheTime);
+            //     $keysToRemove = array_slice(array_keys(self::$scandirCacheTime), 0, $removeCount);
+// 
+            //     foreach ($keysToRemove as $key) {
+            //         unset(self::$scandirCache[$key], self::$scandirCacheTime[$key]);
+            //     }
+            // }
 
-                foreach ($keysToRemove as $key) {
-                    unset(self::$scandirCache[$key], self::$scandirCacheTime[$key]);
-                }
-            }
+            // // Cache in Redis with 5 minute TTL
+            // redisCache::set($cacheKey, $result, 300);
 
-            // Cache in Redis with 5 minute TTL
-            redisCache::set($cacheKey, $result, 300);
-
-            // Also cache locally
-            self::$scandirCache[$localCacheKey] = $result;
-            self::$scandirCacheTime[$localCacheKey] = time();
+            // // Also cache locally
+            // self::$scandirCache[$localCacheKey] = $result;
+            // self::$scandirCacheTime[$localCacheKey] = time();
 
             return $result;
         } catch (Exception $e) {
