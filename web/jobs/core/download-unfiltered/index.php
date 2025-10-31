@@ -244,7 +244,7 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
     ))));
 
     $favorites = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
-        array_values(array_filter(array_merge($array, $prarray), function ($item) {
+      array_values(array_filter(array_merge(array_values($array), array_values($prarray)), function ($item) {
             return in_array('Favorites', $item['albums']);
         })),
         JSON_THROW_ON_ERROR
