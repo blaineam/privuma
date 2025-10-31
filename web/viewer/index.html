@@ -480,8 +480,9 @@
         isIOSDevice:
           /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
         preferredPrefix: null, // null, "none", or "crypt" - set when we discover what works
+        preferredCryptPrefix: null, // null, "none", "pr", "fa", or "un" - which prefix to use inside crypt/ paths
         usesPrefixes: false, // Set to true when we detect pr/ or fa/ resources work (they can coexist)
-        skipCryptFallback: true, // Default to true - assume unencrypted unless we discover otherwise
+        skipCryptFallback: false, // Default to false - try crypt/ until we discover files are unencrypted
         skipPrefixFallbacks: false, // Default to false - try pr/ and fa/ prefixes first
         failedResources: new Set(), // Track resources that have permanently failed
         queuedResources: new Set(), // Track resources currently in queue to prevent duplicates
@@ -1150,6 +1151,32 @@
                   }
                 }
 
+                // Apply preferred prefix pattern optimization
+                // If we know crypt/ works and we know the preferred crypt prefix, use it immediately
+                if (medcrypt.preferredPrefix === "crypt" &&
+                    !resource.startsWith("crypt/") &&
+                    !resource.startsWith("pr/") &&
+                    !resource.startsWith("fa/") &&
+                    !resource.startsWith("un/") &&
+                    medcrypt.preferredCryptPrefix !== null) {
+                  // Build the resource with the preferred crypt prefix pattern
+                  let optimizedResource;
+                  if (medcrypt.preferredCryptPrefix === "pr") {
+                    optimizedResource = "crypt/pr/" + resource;
+                  } else if (medcrypt.preferredCryptPrefix === "fa") {
+                    optimizedResource = "crypt/fa/" + resource;
+                  } else if (medcrypt.preferredCryptPrefix === "un") {
+                    optimizedResource = "crypt/un/" + resource;
+                  } else if (medcrypt.preferredCryptPrefix === "none") {
+                    optimizedResource = "crypt/" + resource;
+                  }
+
+                  if (optimizedResource) {
+                    // Use the optimized resource for the rest of this request
+                    resource = optimizedResource;
+                  }
+                }
+
                 // Check if this URL has previously failed with CORS
                 const urlBase = resource.split("?")[0]; // Remove query params for CORS check
                 if (medcrypt.corsFailedUrls.has(urlBase)) {
@@ -1189,15 +1216,19 @@
                 // BUT skip if we've detected unencrypted files work
                 if (decryptionStatus === true && !medcrypt.skipCryptFallback) {
                   try {
+                    // Strip crypt/ prefix if present, keep everything else (pr/, fa/, etc.)
+                    const pathToEncrypt = resource.startsWith("crypt/")
+                      ? resource.substring(6)
+                      : resource;
+                    // Encrypt the FULL path including any pr/, fa/, un/ prefixes
+                    const encryptedPath = await window.rcloneCrypt.encryptPath(
+                      pathToEncrypt,
+                      passphrase,
+                    );
+                    const cryptPath = "crypt/" + encryptedPath;
+
                     const decrypted = window.rcloneCrypt.render(
-                      await window.rcloneCrypt.decrypt(
-                        "crypt/" +
-                          (await window.rcloneCrypt.encryptPath(
-                            resource,
-                            passphrase,
-                          )),
-                        passphrase,
-                      ),
+                      await window.rcloneCrypt.decrypt(cryptPath, passphrase),
                       "",
                       false,
                       false,
@@ -1265,95 +1296,101 @@
                     return targetSrc;
                   }
 
-                  // HEAD request for decryption check
-                  const headOptions = {
-                    method: "HEAD",
-                    signal: controller.signal,
-                  };
+                  // If resource starts with crypt/, skip HEAD request and go straight to decryption
+                  if (!resource.startsWith("crypt/")) {
+                    // HEAD request for decryption check (only for non-crypt resources)
+                    const headOptions = {
+                      method: "HEAD",
+                      signal: controller.signal,
+                    };
 
-                  const headResponse = await fetch(resource, {
-                    ...headOptions,
-                    signal: AbortSignal.timeout(10000),
-                  });
+                    const headResponse = await fetch(resource, {
+                      ...headOptions,
+                      signal: AbortSignal.timeout(10000),
+                    });
 
-                  // Check for 404 and other HTTP errors immediately
-                  if (!headResponse.ok) {
-                    cleanup();
-                    throw new Error(`HTTP ${headResponse.status}`);
-                  }
-
-                  const mimeType = headResponse.headers
-                    .get("Content-Type")
-                    ?.split(";")[0]
-                    ?.trim();
-
-                  if (headResponse.ok) {
-                    medcrypt.decryptionStatus.set(decryptionKey, false);
-                    cleanup();
-                    // Return with base path when not using RapiServe
-                    const finalUrl = usingRapiServe.length
-                      ? resource
-                      : getBasePath() + resource;
-                    medcrypt.loadedCache[resource] = finalUrl;
-
-                    // Set preferred prefix based on what worked
-                    if (
-                      resource.startsWith("pr/") ||
-                      resource.startsWith("fa/")
-                    ) {
-                      // pr/ or fa/ prefix worked - resources use prefixes (both pr/ and fa/ can coexist)
-                      // Skip crypt/ and no-prefix fallbacks, but still try both pr/ and fa/
-                      if (!medcrypt.usesPrefixes) {
-                        medcrypt.usesPrefixes = true;
-                        medcrypt.skipCryptFallback = true;
-                        medcrypt.skipPrefixFallbacks = false; // We DO use prefixes (pr/ and/or fa/)
-                      }
-                    } else if (resource.startsWith("crypt/")) {
-                      // crypt/ prefix worked - set global preference
-                      if (medcrypt.preferredPrefix === null) {
-                        medcrypt.preferredPrefix = "crypt";
-                      }
-                    } else {
-                      // No prefix - unencrypted file loaded successfully
-                      if (!medcrypt.skipCryptFallback) {
-                        medcrypt.skipCryptFallback = true;
-                      }
-                      // Clear preferredPrefix if it was set to "crypt" since we now know files are unencrypted
-                      if (medcrypt.preferredPrefix === "crypt") {
-                        medcrypt.preferredPrefix = null;
-                      }
-
-                      // Check if it's a special directory that uses prefixes
-                      const isSpecialDir =
-                        resource.startsWith("flash/") ||
-                        resource.startsWith("un/") ||
-                        resource.startsWith("vr/");
-
-                      if (!isSpecialDir) {
-                        // Not a special dir - set skipPrefixFallbacks for ALL unencrypted files
-                        if (!medcrypt.skipPrefixFallbacks) {
-                          medcrypt.skipPrefixFallbacks = true;
-                        }
-
-                        // If this was a no-prefix file, set preferred prefix
-                        if (medcrypt.preferredPrefix === null) {
-                          medcrypt.preferredPrefix = "none";
-                        }
-                      }
+                    // Check for 404 and other HTTP errors immediately
+                    if (!headResponse.ok) {
+                      cleanup();
+                      throw new Error(`HTTP ${headResponse.status}`);
                     }
 
-                    return finalUrl;
+                    const mimeType = headResponse.headers
+                      .get("Content-Type")
+                      ?.split(";")[0]
+                      ?.trim();
+
+                    if (headResponse.ok) {
+                      medcrypt.decryptionStatus.set(decryptionKey, false);
+                      cleanup();
+                      // Return with base path when not using RapiServe
+                      const finalUrl = usingRapiServe.length
+                        ? resource
+                        : getBasePath() + resource;
+                      medcrypt.loadedCache[resource] = finalUrl;
+
+                      // Set preferred prefix based on what worked
+                      if (
+                        resource.startsWith("pr/") ||
+                        resource.startsWith("fa/")
+                      ) {
+                        // pr/ or fa/ prefix worked - resources use prefixes (both pr/ and fa/ can coexist)
+                        // Skip crypt/ and no-prefix fallbacks, but still try both pr/ and fa/
+                        if (!medcrypt.usesPrefixes) {
+                          medcrypt.usesPrefixes = true;
+                          medcrypt.skipCryptFallback = true;
+                          medcrypt.skipPrefixFallbacks = false; // We DO use prefixes (pr/ and/or fa/)
+                        }
+                      } else {
+                        // No prefix - unencrypted file loaded successfully
+                        if (!medcrypt.skipCryptFallback) {
+                          medcrypt.skipCryptFallback = true;
+                        }
+                        // Clear preferredPrefix if it was set to "crypt" since we now know files are unencrypted
+                        if (medcrypt.preferredPrefix === "crypt") {
+                          medcrypt.preferredPrefix = null;
+                        }
+
+                        // Check if it's a special directory that uses prefixes
+                        const isSpecialDir =
+                          resource.startsWith("flash/") ||
+                          resource.startsWith("un/") ||
+                          resource.startsWith("vr/");
+
+                        if (!isSpecialDir) {
+                          // Not a special dir - set skipPrefixFallbacks for ALL unencrypted files
+                          if (!medcrypt.skipPrefixFallbacks) {
+                            medcrypt.skipPrefixFallbacks = true;
+                          }
+
+                          // If this was a no-prefix file, set preferred prefix
+                          if (medcrypt.preferredPrefix === null) {
+                            medcrypt.preferredPrefix = "none";
+                          }
+                        }
+                      }
+
+                      return finalUrl;
+                    }
                   }
 
+                  // If we reach here, either resource starts with "crypt/" OR HEAD request didn't return ok
+                  // In both cases, try decryption
                   medcrypt.decryptionStatus.set(decryptionKey, true);
 
-                  // Try decryption
+                  // Try decryption - strip crypt/ prefix if present, keep everything else
+                  const pathToEncrypt = resource.startsWith("crypt/")
+                    ? resource.substring(6)
+                    : resource;
+                  // Encrypt the FULL path including any pr/, fa/, un/ prefixes
                   const encryptedPath = await window.rcloneCrypt.encryptPath(
-                    resource,
+                    pathToEncrypt,
                     passphrase,
                   );
+                  const cryptPath = "crypt/" + encryptedPath;
+
                   const decryptedData = await window.rcloneCrypt.decrypt(
-                    "crypt/" + encryptedPath,
+                    cryptPath,
                     passphrase,
                   );
                   const decrypted = window.rcloneCrypt.render(
@@ -1369,6 +1406,20 @@
                   // Decryption succeeded - set preferred prefix to crypt
                   if (medcrypt.preferredPrefix === null) {
                     medcrypt.preferredPrefix = "crypt";
+                  }
+
+                  // Remember which crypt prefix structure worked
+                  if (medcrypt.preferredCryptPrefix === null && resource.startsWith("crypt/")) {
+                    const afterCrypt = resource.substring(6);
+                    if (afterCrypt.startsWith("pr/")) {
+                      medcrypt.preferredCryptPrefix = "pr";
+                    } else if (afterCrypt.startsWith("fa/")) {
+                      medcrypt.preferredCryptPrefix = "fa";
+                    } else if (afterCrypt.startsWith("un/")) {
+                      medcrypt.preferredCryptPrefix = "un";
+                    } else {
+                      medcrypt.preferredCryptPrefix = "none";
+                    }
                   }
 
                   return decrypted;
@@ -1432,8 +1483,27 @@
                     // Otherwise try without prefix (then crypt if that fails)
                     return medcrypt.getSrcRaw(baseResource, action, 0);
                   } else if (hadPrefix && resource.startsWith("crypt/")) {
-                    // crypt/ failed, no more options
-                    throw error;
+                    // crypt/ failed - try different prefix combinations
+                    // baseResource is what's after crypt/ (e.g., "photo.jpg" or "pr/photo.jpg")
+
+                    // If baseResource has no prefix (e.g., "photo.jpg"), try with prefixes
+                    if (!baseResource.startsWith("pr/") &&
+                        !baseResource.startsWith("fa/") &&
+                        !baseResource.startsWith("un/")) {
+                      // We tried crypt/photo.jpg, now try crypt/pr/photo.jpg
+                      return medcrypt.getSrcRaw("crypt/pr/" + baseResource, action, 0);
+                    } else if (baseResource.startsWith("pr/")) {
+                      // We tried crypt/pr/photo.jpg, now try crypt/fa/photo.jpg
+                      const withoutPrefix = baseResource.substring(3);
+                      return medcrypt.getSrcRaw("crypt/fa/" + withoutPrefix, action, 0);
+                    } else if (baseResource.startsWith("fa/")) {
+                      // We tried crypt/fa/photo.jpg, now try crypt/un/photo.jpg
+                      const withoutPrefix = baseResource.substring(3);
+                      return medcrypt.getSrcRaw("crypt/un/" + withoutPrefix, action, 0);
+                    } else if (baseResource.startsWith("un/")) {
+                      // We tried all prefixes, give up
+                      throw error;
+                    }
                   } else if (!hadPrefix) {
                     // Check if this resource should skip crypt/ fallback
                     const isSpecialDir =
@@ -1443,7 +1513,19 @@
 
                     // no prefix failed, try crypt/ (this will use decryption) - but only if not skipped
                     if (!medcrypt.skipCryptFallback && !isSpecialDir) {
-                      return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
+                      // Use the preferred crypt prefix if we know it
+                      if (medcrypt.preferredCryptPrefix === "pr") {
+                        return medcrypt.getSrcRaw("crypt/pr/" + resource, action, 0);
+                      } else if (medcrypt.preferredCryptPrefix === "fa") {
+                        return medcrypt.getSrcRaw("crypt/fa/" + resource, action, 0);
+                      } else if (medcrypt.preferredCryptPrefix === "un") {
+                        return medcrypt.getSrcRaw("crypt/un/" + resource, action, 0);
+                      } else if (medcrypt.preferredCryptPrefix === "none") {
+                        return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
+                      } else {
+                        // Don't know yet, try no prefix first
+                        return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
+                      }
                     }
                   }
 
