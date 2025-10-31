@@ -1153,12 +1153,14 @@
 
                 // Apply preferred prefix pattern optimization
                 // If we know crypt/ works and we know the preferred crypt prefix, use it immediately
-                if (medcrypt.preferredPrefix === "crypt" &&
-                    !resource.startsWith("crypt/") &&
-                    !resource.startsWith("pr/") &&
-                    !resource.startsWith("fa/") &&
-                    !resource.startsWith("un/") &&
-                    medcrypt.preferredCryptPrefix !== null) {
+                if (
+                  medcrypt.preferredPrefix === "crypt" &&
+                  !resource.startsWith("crypt/") &&
+                  !resource.startsWith("pr/") &&
+                  !resource.startsWith("fa/") &&
+                  !resource.startsWith("un/") &&
+                  medcrypt.preferredCryptPrefix !== null
+                ) {
                   // Build the resource with the preferred crypt prefix pattern
                   let optimizedResource;
                   if (medcrypt.preferredCryptPrefix === "pr") {
@@ -1409,7 +1411,10 @@
                   }
 
                   // Remember which crypt prefix structure worked
-                  if (medcrypt.preferredCryptPrefix === null && resource.startsWith("crypt/")) {
+                  if (
+                    medcrypt.preferredCryptPrefix === null &&
+                    resource.startsWith("crypt/")
+                  ) {
                     const afterCrypt = resource.substring(6);
                     if (afterCrypt.startsWith("pr/")) {
                       medcrypt.preferredCryptPrefix = "pr";
@@ -1487,19 +1492,33 @@
                     // baseResource is what's after crypt/ (e.g., "photo.jpg" or "pr/photo.jpg")
 
                     // If baseResource has no prefix (e.g., "photo.jpg"), try with prefixes
-                    if (!baseResource.startsWith("pr/") &&
-                        !baseResource.startsWith("fa/") &&
-                        !baseResource.startsWith("un/")) {
+                    if (
+                      !baseResource.startsWith("pr/") &&
+                      !baseResource.startsWith("fa/") &&
+                      !baseResource.startsWith("un/")
+                    ) {
                       // We tried crypt/photo.jpg, now try crypt/pr/photo.jpg
-                      return medcrypt.getSrcRaw("crypt/pr/" + baseResource, action, 0);
+                      return medcrypt.getSrcRaw(
+                        "crypt/pr/" + baseResource,
+                        action,
+                        0,
+                      );
                     } else if (baseResource.startsWith("pr/")) {
                       // We tried crypt/pr/photo.jpg, now try crypt/fa/photo.jpg
                       const withoutPrefix = baseResource.substring(3);
-                      return medcrypt.getSrcRaw("crypt/fa/" + withoutPrefix, action, 0);
+                      return medcrypt.getSrcRaw(
+                        "crypt/fa/" + withoutPrefix,
+                        action,
+                        0,
+                      );
                     } else if (baseResource.startsWith("fa/")) {
                       // We tried crypt/fa/photo.jpg, now try crypt/un/photo.jpg
                       const withoutPrefix = baseResource.substring(3);
-                      return medcrypt.getSrcRaw("crypt/un/" + withoutPrefix, action, 0);
+                      return medcrypt.getSrcRaw(
+                        "crypt/un/" + withoutPrefix,
+                        action,
+                        0,
+                      );
                     } else if (baseResource.startsWith("un/")) {
                       // We tried all prefixes, give up
                       throw error;
@@ -1515,16 +1534,36 @@
                     if (!medcrypt.skipCryptFallback && !isSpecialDir) {
                       // Use the preferred crypt prefix if we know it
                       if (medcrypt.preferredCryptPrefix === "pr") {
-                        return medcrypt.getSrcRaw("crypt/pr/" + resource, action, 0);
+                        return medcrypt.getSrcRaw(
+                          "crypt/pr/" + resource,
+                          action,
+                          0,
+                        );
                       } else if (medcrypt.preferredCryptPrefix === "fa") {
-                        return medcrypt.getSrcRaw("crypt/fa/" + resource, action, 0);
+                        return medcrypt.getSrcRaw(
+                          "crypt/fa/" + resource,
+                          action,
+                          0,
+                        );
                       } else if (medcrypt.preferredCryptPrefix === "un") {
-                        return medcrypt.getSrcRaw("crypt/un/" + resource, action, 0);
+                        return medcrypt.getSrcRaw(
+                          "crypt/un/" + resource,
+                          action,
+                          0,
+                        );
                       } else if (medcrypt.preferredCryptPrefix === "none") {
-                        return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
+                        return medcrypt.getSrcRaw(
+                          "crypt/" + resource,
+                          action,
+                          0,
+                        );
                       } else {
                         // Don't know yet, try no prefix first
-                        return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
+                        return medcrypt.getSrcRaw(
+                          "crypt/" + resource,
+                          action,
+                          0,
+                        );
                       }
                     }
                   }
