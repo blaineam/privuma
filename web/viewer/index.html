@@ -529,6 +529,11 @@
 
         // Main getSrc - returns Promise
         getSrc(resource, priority = 'low') {
+          // Skip data URIs and blob URLs - return immediately
+          if (resource.startsWith('data:') || resource.startsWith('blob:')) {
+            return Promise.resolve(resource);
+          }
+
           return new Promise((resolve, reject) => {
             const task = { resource, resolve, reject };
 
@@ -562,6 +567,11 @@
         },
 
         async fetchResource(resource) {
+          // Safety check: return data URIs and blob URLs as-is
+          if (resource.startsWith('data:') || resource.startsWith('blob:')) {
+            return resource;
+          }
+
           const isFlashOrVr = resource.startsWith('flash/') || resource.startsWith('vr/');
           const isMedia = this.isMediaFile(resource);
 
