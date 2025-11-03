@@ -534,9 +534,19 @@
             return Promise.resolve(resource);
           }
 
+          // Strip prefix to get base resource for cache lookup
+          let cacheKey = resource;
+          if (cacheKey.startsWith('pr/')) {
+            cacheKey = cacheKey.substring(3);
+          } else if (cacheKey.startsWith('fa/')) {
+            cacheKey = cacheKey.substring(3);
+          } else if (cacheKey.startsWith('crypt/')) {
+            cacheKey = cacheKey.substring(6);
+          }
+
           // Check blob cache first
-          if (this.blobCache.has(resource)) {
-            return Promise.resolve(this.blobCache.get(resource));
+          if (this.blobCache.has(cacheKey)) {
+            return Promise.resolve(this.blobCache.get(cacheKey));
           }
 
           return new Promise((resolve, reject) => {
@@ -577,45 +587,65 @@
             return resource;
           }
 
-          const isFlashOrVr = resource.startsWith('flash/') || resource.startsWith('vr/');
-          const isMedia = this.isMediaFile(resource);
+          // Strip any existing pr/, fa/, or crypt/ prefix to get base resource
+          let baseResource = resource;
+          if (baseResource.startsWith('pr/')) {
+            baseResource = baseResource.substring(3);
+          } else if (baseResource.startsWith('fa/')) {
+            baseResource = baseResource.substring(3);
+          } else if (baseResource.startsWith('crypt/')) {
+            baseResource = baseResource.substring(6);
+          }
 
-          // Build path variations
-          const paths = [];
+          const isFlashOrVr = baseResource.startsWith('flash/') || baseResource.startsWith('vr/');
+          const isMedia = this.isMediaFile(baseResource);
+
+          // Build path variations (logical paths, not encrypted yet)
+          const pathsToTry = [];
 
           if (isMedia && !isFlashOrVr) {
             // Regular media file path sequence
             if (!this.useCrypt) {
               // Try unencrypted first
               if (!this.skipPrFa) {
-                paths.push('pr/' + resource);
-                paths.push('fa/' + resource);
+                pathsToTry.push({ path: 'pr/' + baseResource, encrypted: false });
+                pathsToTry.push({ path: 'fa/' + baseResource, encrypted: false });
               }
               if (!this.usesPrFa) {
-                paths.push(resource);
+                pathsToTry.push({ path: baseResource, encrypted: false });
               }
             }
             // Try encrypted
-            paths.push('crypt/pr/' + resource);
-            paths.push('crypt/fa/' + resource);
-            paths.push('crypt/' + resource);
+            pathsToTry.push({ path: 'pr/' + baseResource, encrypted: true });
+            pathsToTry.push({ path: 'fa/' + baseResource, encrypted: true });
+            pathsToTry.push({ path: baseResource, encrypted: true });
           } else if (isFlashOrVr) {
             // Flash/VR specific
-            paths.push(resource);
-            paths.push('crypt/' + resource);
+            pathsToTry.push({ path: baseResource, encrypted: false });
+            pathsToTry.push({ path: baseResource, encrypted: true });
           } else {
             // Non-media files
-            paths.push(resource);
+            pathsToTry.push({ path: baseResource, encrypted: false });
           }
 
           // Try each path (max 3 attempts each)
-          for (const path of paths) {
+          for (const pathConfig of pathsToTry) {
             for (let attempt = 1; attempt <= 3; attempt++) {
               try {
+                let url;
 
-                const url = usingRapiServe.length
-                  ? `${usingRapiServe}/${path}`
-                  : getBasePath() + path;
+                if (pathConfig.encrypted && typeof window.rcloneCrypt !== 'undefined') {
+                  // Encrypt the path before making request
+                  const encryptedPath = await window.rcloneCrypt.encryptPath(pathConfig.path, passphrase);
+                  url = usingRapiServe.length
+                    ? `${usingRapiServe}/crypt/${encryptedPath}`
+                    : getBasePath() + 'crypt/' + encryptedPath;
+                } else {
+                  // Use unencrypted path
+                  url = usingRapiServe.length
+                    ? `${usingRapiServe}/${pathConfig.path}`
+                    : getBasePath() + pathConfig.path;
+                }
 
                 // HEAD request to check if file exists
                 const response = await fetch(url, {
@@ -625,22 +655,24 @@
 
                 if (response.ok) {
                   // Update optimization flags
-                  if (path.startsWith('crypt/')) {
+                  if (pathConfig.encrypted) {
                     this.useCrypt = true;
-                  } else if (path.startsWith('pr/') || path.startsWith('fa/')) {
+                  } else if (pathConfig.path.startsWith('pr/') || pathConfig.path.startsWith('fa/')) {
                     this.usesPrFa = true;
-                  } else if (path === resource && isMedia && !isFlashOrVr) {
+                  } else if (pathConfig.path === baseResource && isMedia && !isFlashOrVr) {
                     this.skipPrFa = true;
                   }
 
-                  // Handle encrypted files
-                  if (path.startsWith('crypt/') && typeof window.rcloneCrypt !== 'undefined') {
-                    return await this.decryptFile(path.substring(6), resource);
+                  // Handle encrypted files - decrypt and return data URL
+                  if (pathConfig.encrypted && typeof window.rcloneCrypt !== 'undefined') {
+                    const decryptedData = await window.rcloneCrypt.decrypt(url, passphrase);
+                    const decrypted = window.rcloneCrypt.render(decryptedData, "", false, false);
+                    return decrypted;
                   }
 
-                  // Get blob URL for HTTPS media
+                  // Get blob URL for HTTPS media (cache by baseResource)
                   if (isMedia && window.location.protocol === 'https:') {
-                    return await this.getBlobUrl(url, resource);
+                    return await this.getBlobUrl(url, baseResource);
                   }
 
                   return url;
@@ -650,11 +682,6 @@
                 if (response.status === 404) break;
 
               } catch (error) {
-                // Viewport check failed - abort completely
-                if (error.message === 'Outside viewport') {
-                  throw error;
-                }
-
                 // Retry on timeout/network error
                 if (attempt < 3) {
                   await new Promise(r => setTimeout(r, 100 * attempt));
