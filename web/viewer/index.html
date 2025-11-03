@@ -411,8 +411,11 @@
         // Compatibility properties for existing code
         rapidScrolling: false,
         activeImageLoads: new Map(),
+        activeRequests: new Map(),
+        pendingRequests: new Set(),
         failedResources: new Set(),
         queuedResources: new Set(),
+        imageFetches: new Map(),
         dirCache: {},
         transfers: { loaded: 0, size: 0 },
         isIOSDevice: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
@@ -453,6 +456,44 @@
 
         cancelNonViewport() {
           // Viewport cancellation is now handled in fetchResource
+        },
+
+        cancelImageFetchesOutsideViewport(forceAll = false) {
+          // Not needed in simplified version - viewport checks happen in fetchResource
+        },
+
+        cancelImageLoadsOutsideViewport(forceAll = false) {
+          // Clean up activeImageLoads that are outside viewport
+          if (forceAll) {
+            this.activeImageLoads.clear();
+            return;
+          }
+
+          const viewportTop = window.scrollY;
+          const viewportHeight = window.innerHeight;
+          const cancelRange = viewportHeight * 1.2;
+
+          this.activeImageLoads.forEach((imageElement, resource) => {
+            if (!imageElement || !imageElement.parentNode) {
+              this.activeImageLoads.delete(resource);
+              return;
+            }
+
+            const rect = imageElement.getBoundingClientRect();
+            const elementTop = rect.top + viewportTop;
+            const distance = Math.min(
+              Math.abs(elementTop - viewportTop),
+              Math.abs(elementTop - (viewportTop + viewportHeight))
+            );
+
+            if (distance > cancelRange) {
+              imageElement.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+              imageElement.classList.remove("lazy-loaded");
+              imageElement.classList.add("lazy-waiting");
+              this.queuedResources.delete(resource);
+              this.activeImageLoads.delete(resource);
+            }
+          });
         },
 
         // Helper methods (keep these for compatibility)
