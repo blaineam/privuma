@@ -421,37 +421,38 @@
         // Simple FIFO queue
         queue: [],
         processing: false,
-        maxQueueSize: 50,    // Limit queue to prevent memory issues (reduced from 100)
+        maxQueueSize: 50, // Limit queue to prevent memory issues (reduced from 100)
 
         // Path optimization flags
-        usesPrFa: false,      // Set when /pr/ or /fa/ succeeds
-        skipPrFa: false,      // Set when no-prefix succeeds
-        useCrypt: false,      // Set when /crypt/ succeeds
+        usesPrFa: false, // Set when /pr/ or /fa/ succeeds
+        skipPrFa: false, // Set when no-prefix succeeds
+        useCrypt: false, // Set when /crypt/ succeeds
 
         // Blob management (48 max)
         blobCache: new Map(),
         maxBlobs: 48,
 
         // Active fetch controllers for cancellation
-        activeFetches: new Map(),  // resource -> AbortController
+        activeFetches: new Map(), // resource -> AbortController
 
         // Compatibility properties for existing code
         rapidScrolling: false,
-        activeImageLoads: new Map(),  // Actively used - tracks loading images (auto-limited by queue)
-        queuedResources: new Set(),   // Actively used - tracks queued resources (auto-limited by queue)
+        activeImageLoads: new Map(), // Actively used - tracks loading images (auto-limited by queue)
+        queuedResources: new Set(), // Actively used - tracks queued resources (auto-limited by queue)
 
         // Compatibility stubs (some used for permanent failure tracking)
-        activeRequests: new Map(),    // Always empty - for compatibility
-        failedResources: new Set(),   // Tracks permanently failed resources (404, all paths exhausted)
-        imageFetches: new Map(),      // Always empty - for compatibility
-        maxFailedResources: 200,      // Limit failed resources tracking
+        activeRequests: new Map(), // Always empty - for compatibility
+        failedResources: new Set(), // Tracks permanently failed resources (404, all paths exhausted)
+        imageFetches: new Map(), // Always empty - for compatibility
+        maxFailedResources: 200, // Limit failed resources tracking
 
         dirCache: {},
         transfers: { loaded: 0, size: 0 },
-        isIOSDevice: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
+        isIOSDevice:
+          /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
 
         // Storage limits (defensive)
-        maxActiveLoads: 100,  // Should never exceed this (queue is 50)
+        maxActiveLoads: 100, // Should never exceed this (queue is 50)
 
         // Compatibility stub methods
         cleanupBlobCache() {
@@ -460,19 +461,29 @@
 
         displayProgress() {
           if ($("#progress").length === 0) {
-            $("body").append($("<div><b></b><i></i></div>").attr("id", "progress"));
+            $("body").append(
+              $("<div><b></b><i></i></div>").attr("id", "progress"),
+            );
           }
-          const progress = Math.round((this.transfers.loaded / this.transfers.size) * 100);
-          $("#progress").width(progress + "%").delay(800);
+          const progress = Math.round(
+            (this.transfers.loaded / this.transfers.size) * 100,
+          );
+          $("#progress")
+            .width(progress + "%")
+            .delay(800);
           if (progress >= 100) {
-            $("#progress").fadeOut(1000, function() { $(this).remove(); });
+            $("#progress").fadeOut(1000, function () {
+              $(this).remove();
+            });
           }
         },
 
         finishProgress() {
           this.transfers.loaded = 0;
           this.transfers.size = 0;
-          $("#progress").fadeOut(1000, function() { $(this).remove(); });
+          $("#progress").fadeOut(1000, function () {
+            $(this).remove();
+          });
         },
 
         cancelAllRequests() {
@@ -495,8 +506,10 @@
         purgeQueueOutsideViewport() {
           // Remove items from queue that are no longer near viewport
           const originalLength = this.queue.length;
-          this.queue = this.queue.filter(task => {
-            const element = document.querySelector(`[data-src="${task.resource}"]`);
+          this.queue = this.queue.filter((task) => {
+            const element = document.querySelector(
+              `[data-src="${task.resource}"]`,
+            );
             const isNear = !element || this.isNearViewport(element);
             if (!isNear) {
               // Abort any active fetch for this resource
@@ -506,13 +519,15 @@
                 this.activeFetches.delete(task.resource);
               }
               // Reject the task so the promise resolves
-              task.reject(new Error('Purged: outside viewport'));
+              task.reject(new Error("Purged: outside viewport"));
             }
             return isNear;
           });
 
           if (originalLength !== this.queue.length) {
-            console.log(`[Queue] Purged ${originalLength - this.queue.length} out-of-viewport items, aborted ${originalLength - this.queue.length} fetches`);
+            console.log(
+              `[Queue] Purged ${originalLength - this.queue.length} out-of-viewport items, aborted ${originalLength - this.queue.length} fetches`,
+            );
           }
         },
 
@@ -541,11 +556,12 @@
             const elementTop = rect.top + viewportTop;
             const distance = Math.min(
               Math.abs(elementTop - viewportTop),
-              Math.abs(elementTop - (viewportTop + viewportHeight))
+              Math.abs(elementTop - (viewportTop + viewportHeight)),
             );
 
             if (distance > cancelRange) {
-              imageElement.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+              imageElement.src =
+                "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
               imageElement.classList.remove("lazy-loaded");
               imageElement.classList.add("lazy-waiting");
               this.queuedResources.delete(resource);
@@ -557,11 +573,16 @@
         // Helper methods (keep these for compatibility)
         getMime(resource) {
           const mimes = {
-            jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif",
-            png: "image/png", mp4: "video/mp4", webm: "video/webm",
-            js: "application/javascript", txt: "text/plain"
+            jpg: "image/jpeg",
+            jpeg: "image/jpeg",
+            gif: "image/gif",
+            png: "image/png",
+            mp4: "video/mp4",
+            webm: "video/webm",
+            js: "application/javascript",
+            txt: "text/plain",
           };
-          const ext = resource.split('.').pop()?.toLowerCase();
+          const ext = resource.split(".").pop()?.toLowerCase();
           return mimes[ext] || "application/octet-stream";
         },
 
@@ -586,19 +607,19 @@
         },
 
         // Main getSrc - returns Promise
-        getSrc(resource, priority = 'low') {
+        getSrc(resource, priority = "low") {
           // Skip data URIs and blob URLs - return immediately
-          if (resource.startsWith('data:') || resource.startsWith('blob:')) {
+          if (resource.startsWith("data:") || resource.startsWith("blob:")) {
             return Promise.resolve(resource);
           }
 
           // Strip prefix to get base resource for cache lookup
           let cacheKey = resource;
-          if (cacheKey.startsWith('pr/')) {
+          if (cacheKey.startsWith("pr/")) {
             cacheKey = cacheKey.substring(3);
-          } else if (cacheKey.startsWith('fa/')) {
+          } else if (cacheKey.startsWith("fa/")) {
             cacheKey = cacheKey.substring(3);
-          } else if (cacheKey.startsWith('crypt/')) {
+          } else if (cacheKey.startsWith("crypt/")) {
             cacheKey = cacheKey.substring(6);
           }
 
@@ -611,7 +632,7 @@
             const task = { resource, resolve, reject };
 
             // High priority (fancybox) goes to front
-            if (priority === 'high') {
+            if (priority === "high") {
               this.queue.unshift(task);
             } else {
               // Low priority - check queue size limit
@@ -619,7 +640,9 @@
                 // Queue full - purge old low priority items from end
                 const purgeCount = Math.floor(this.maxQueueSize * 0.3);
                 this.queue.splice(-purgeCount, purgeCount);
-                console.log(`[Queue] Purged ${purgeCount} old items, queue size: ${this.queue.length}`);
+                console.log(
+                  `[Queue] Purged ${purgeCount} old items, queue size: ${this.queue.length}`,
+                );
               }
               this.queue.push(task);
             }
@@ -635,7 +658,9 @@
           while (this.queue.length > 0) {
             // Break out if rapid scrolling is happening
             if (this.rapidScrolling) {
-              console.log(`[Queue] Pausing processing during rapid scroll (${this.queue.length} items queued)`);
+              console.log(
+                `[Queue] Pausing processing during rapid scroll (${this.queue.length} items queued)`,
+              );
               this.processing = false;
               return;
             }
@@ -643,10 +668,12 @@
             const task = this.queue.shift();
 
             // Check if element is still near viewport before processing
-            const element = document.querySelector(`[data-src="${task.resource}"]`);
+            const element = document.querySelector(
+              `[data-src="${task.resource}"]`,
+            );
             if (element && !this.isNearViewport(element)) {
               // Element scrolled out of viewport - skip and reject
-              task.reject(new Error('Skipped: outside viewport'));
+              task.reject(new Error("Skipped: outside viewport"));
               continue;
             }
 
@@ -659,7 +686,7 @@
 
             // Yield to event loop every 5 items to prevent blocking
             if (this.queue.length > 0 && this.queue.length % 5 === 0) {
-              await new Promise(resolve => setTimeout(resolve, 0));
+              await new Promise((resolve) => setTimeout(resolve, 0));
             }
           }
 
@@ -668,7 +695,7 @@
 
         async fetchResource(resource) {
           // Safety check: return data URIs and blob URLs as-is
-          if (resource.startsWith('data:') || resource.startsWith('blob:')) {
+          if (resource.startsWith("data:") || resource.startsWith("blob:")) {
             return resource;
           }
 
@@ -679,142 +706,182 @@
           try {
             // Strip any existing pr/, fa/, or crypt/ prefix to get base resource
             let baseResource = resource;
-            if (baseResource.startsWith('pr/')) {
+            if (baseResource.startsWith("pr/")) {
               baseResource = baseResource.substring(3);
-            } else if (baseResource.startsWith('fa/')) {
+            } else if (baseResource.startsWith("fa/")) {
               baseResource = baseResource.substring(3);
-            } else if (baseResource.startsWith('crypt/')) {
+            } else if (baseResource.startsWith("crypt/")) {
               baseResource = baseResource.substring(6);
             }
 
-            const isFlashOrVr = baseResource.startsWith('flash/') || baseResource.startsWith('vr/');
+            const isFlashOrVr =
+              baseResource.startsWith("flash/") ||
+              baseResource.startsWith("vr/");
             const isMedia = this.isMediaFile(baseResource);
 
-          // Build path variations (logical paths, not encrypted yet)
-          const pathsToTry = [];
+            // Build path variations (logical paths, not encrypted yet)
+            const pathsToTry = [];
 
-          if (isMedia && !isFlashOrVr) {
-            // Regular media file path sequence
-            if (!this.useCrypt) {
-              // Try unencrypted first
-              if (!this.skipPrFa) {
-                pathsToTry.push({ path: 'pr/' + baseResource, encrypted: false });
-                pathsToTry.push({ path: 'fa/' + baseResource, encrypted: false });
+            if (isMedia && !isFlashOrVr) {
+              // Regular media file path sequence
+              if (!this.useCrypt) {
+                // Try unencrypted first
+                if (!this.skipPrFa) {
+                  pathsToTry.push({
+                    path: "pr/" + baseResource,
+                    encrypted: false,
+                  });
+                  pathsToTry.push({
+                    path: "fa/" + baseResource,
+                    encrypted: false,
+                  });
+                }
+                if (!this.usesPrFa) {
+                  pathsToTry.push({ path: baseResource, encrypted: false });
+                }
               }
-              if (!this.usesPrFa) {
-                pathsToTry.push({ path: baseResource, encrypted: false });
+              // Try encrypted
+              pathsToTry.push({ path: "pr/" + baseResource, encrypted: true });
+              pathsToTry.push({ path: "fa/" + baseResource, encrypted: true });
+              pathsToTry.push({ path: baseResource, encrypted: true });
+            } else if (isFlashOrVr) {
+              // Flash/VR specific
+              pathsToTry.push({ path: baseResource, encrypted: false });
+              pathsToTry.push({ path: baseResource, encrypted: true });
+            } else {
+              // Non-media files (JS, JSON, etc) - ALWAYS try all variations
+              // Don't use optimization flags for non-media files
+              pathsToTry.push({ path: "pr/" + baseResource, encrypted: false });
+              pathsToTry.push({ path: "fa/" + baseResource, encrypted: false });
+              pathsToTry.push({ path: baseResource, encrypted: false });
+              // Try encrypted
+              pathsToTry.push({ path: "pr/" + baseResource, encrypted: true });
+              pathsToTry.push({ path: "fa/" + baseResource, encrypted: true });
+              pathsToTry.push({ path: baseResource, encrypted: true });
+            }
+
+            // Try each path (max 3 attempts each)
+            for (const pathConfig of pathsToTry) {
+              for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                  // Check viewport before each network request (media only)
+                  if (isMedia) {
+                    const element = document.querySelector(
+                      `[data-src="${resource}"], [data-src="${baseResource}"]`,
+                    );
+                    if (element && !this.isNearViewport(element)) {
+                      throw new Error("Outside viewport");
+                    }
+                  }
+
+                  let url;
+
+                  if (
+                    pathConfig.encrypted &&
+                    typeof window.rcloneCrypt !== "undefined"
+                  ) {
+                    // Encrypt the path before making request
+                    const encryptedPath = await window.rcloneCrypt.encryptPath(
+                      pathConfig.path,
+                      passphrase,
+                    );
+                    url = usingRapiServe.length
+                      ? `${usingRapiServe}/crypt/${encryptedPath}`
+                      : getBasePath() + "crypt/" + encryptedPath;
+                  } else {
+                    // Use unencrypted path
+                    url = usingRapiServe.length
+                      ? `${usingRapiServe}/${pathConfig.path}`
+                      : getBasePath() + pathConfig.path;
+                  }
+
+                  // HEAD request to check if file exists
+                  // Use both abortController (for manual cancellation) and timeout
+                  // Track progress for UI
+                  this.transfers.size++;
+                  this.displayProgress();
+
+                  const response = await fetch(url, {
+                    method: "HEAD",
+                    signal: AbortSignal.any
+                      ? AbortSignal.any([
+                          abortController.signal,
+                          AbortSignal.timeout(10000),
+                        ])
+                      : abortController.signal,
+                  });
+
+                  // Update progress on response
+                  this.transfers.loaded++;
+                  this.displayProgress();
+
+                  if (response.ok) {
+                    // Update optimization flags
+                    if (pathConfig.encrypted) {
+                      this.useCrypt = true;
+                    } else if (
+                      pathConfig.path.startsWith("pr/") ||
+                      pathConfig.path.startsWith("fa/")
+                    ) {
+                      this.usesPrFa = true;
+                    } else if (
+                      pathConfig.path === baseResource &&
+                      isMedia &&
+                      !isFlashOrVr
+                    ) {
+                      this.skipPrFa = true;
+                    }
+
+                    // Handle encrypted files - decrypt and return data URL
+                    if (
+                      pathConfig.encrypted &&
+                      typeof window.rcloneCrypt !== "undefined"
+                    ) {
+                      const decryptedData = await window.rcloneCrypt.decrypt(
+                        url,
+                        passphrase,
+                      );
+                      const decrypted = window.rcloneCrypt.render(
+                        decryptedData,
+                        "",
+                        false,
+                        false,
+                      );
+                      return decrypted;
+                    }
+
+                    // Get blob URL for HTTPS media (cache by baseResource)
+                    if (isMedia && window.location.protocol === "https:") {
+                      return await this.getBlobUrl(
+                        url,
+                        baseResource,
+                        abortController.signal,
+                      );
+                    }
+
+                    return url;
+                  }
+
+                  // 404 - try next path immediately
+                  if (response.status === 404) break;
+                } catch (error) {
+                  // Check if aborted
+                  if (error.name === "AbortError") {
+                    throw new Error("Fetch cancelled");
+                  }
+
+                  // Viewport check failed - abort completely
+                  if (error.message === "Outside viewport") {
+                    throw error;
+                  }
+
+                  // Retry on timeout/network error
+                  if (attempt < 3) {
+                    await new Promise((r) => setTimeout(r, 100 * attempt));
+                  }
+                }
               }
             }
-            // Try encrypted
-            pathsToTry.push({ path: 'pr/' + baseResource, encrypted: true });
-            pathsToTry.push({ path: 'fa/' + baseResource, encrypted: true });
-            pathsToTry.push({ path: baseResource, encrypted: true });
-          } else if (isFlashOrVr) {
-            // Flash/VR specific
-            pathsToTry.push({ path: baseResource, encrypted: false });
-            pathsToTry.push({ path: baseResource, encrypted: true });
-          } else {
-            // Non-media files (JS, JSON, etc) - ALWAYS try all variations
-            // Don't use optimization flags for non-media files
-            pathsToTry.push({ path: 'pr/' + baseResource, encrypted: false });
-            pathsToTry.push({ path: 'fa/' + baseResource, encrypted: false });
-            pathsToTry.push({ path: baseResource, encrypted: false });
-            // Try encrypted
-            pathsToTry.push({ path: 'pr/' + baseResource, encrypted: true });
-            pathsToTry.push({ path: 'fa/' + baseResource, encrypted: true });
-            pathsToTry.push({ path: baseResource, encrypted: true });
-          }
-
-          // Try each path (max 3 attempts each)
-          for (const pathConfig of pathsToTry) {
-            for (let attempt = 1; attempt <= 3; attempt++) {
-              try {
-                // Check viewport before each network request (media only)
-                if (isMedia) {
-                  const element = document.querySelector(`[data-src="${resource}"], [data-src="${baseResource}"]`);
-                  if (element && !this.isNearViewport(element)) {
-                    throw new Error('Outside viewport');
-                  }
-                }
-
-                let url;
-
-                if (pathConfig.encrypted && typeof window.rcloneCrypt !== 'undefined') {
-                  // Encrypt the path before making request
-                  const encryptedPath = await window.rcloneCrypt.encryptPath(pathConfig.path, passphrase);
-                  url = usingRapiServe.length
-                    ? `${usingRapiServe}/crypt/${encryptedPath}`
-                    : getBasePath() + 'crypt/' + encryptedPath;
-                } else {
-                  // Use unencrypted path
-                  url = usingRapiServe.length
-                    ? `${usingRapiServe}/${pathConfig.path}`
-                    : getBasePath() + pathConfig.path;
-                }
-
-                // HEAD request to check if file exists
-                // Use both abortController (for manual cancellation) and timeout
-                // Track progress for UI
-                this.transfers.size++;
-                this.displayProgress();
-
-                const response = await fetch(url, {
-                  method: 'HEAD',
-                  signal: AbortSignal.any ?
-                    AbortSignal.any([abortController.signal, AbortSignal.timeout(10000)]) :
-                    abortController.signal
-                });
-
-                // Update progress on response
-                this.transfers.loaded++;
-                this.displayProgress();
-
-                if (response.ok) {
-                  // Update optimization flags
-                  if (pathConfig.encrypted) {
-                    this.useCrypt = true;
-                  } else if (pathConfig.path.startsWith('pr/') || pathConfig.path.startsWith('fa/')) {
-                    this.usesPrFa = true;
-                  } else if (pathConfig.path === baseResource && isMedia && !isFlashOrVr) {
-                    this.skipPrFa = true;
-                  }
-
-                  // Handle encrypted files - decrypt and return data URL
-                  if (pathConfig.encrypted && typeof window.rcloneCrypt !== 'undefined') {
-                    const decryptedData = await window.rcloneCrypt.decrypt(url, passphrase);
-                    const decrypted = window.rcloneCrypt.render(decryptedData, "", false, false);
-                    return decrypted;
-                  }
-
-                  // Get blob URL for HTTPS media (cache by baseResource)
-                  if (isMedia && window.location.protocol === 'https:') {
-                    return await this.getBlobUrl(url, baseResource, abortController.signal);
-                  }
-
-                  return url;
-                }
-
-                // 404 - try next path immediately
-                if (response.status === 404) break;
-
-              } catch (error) {
-                // Check if aborted
-                if (error.name === 'AbortError') {
-                  throw new Error('Fetch cancelled');
-                }
-
-                // Viewport check failed - abort completely
-                if (error.message === 'Outside viewport') {
-                  throw error;
-                }
-
-                // Retry on timeout/network error
-                if (attempt < 3) {
-                  await new Promise(r => setTimeout(r, 100 * attempt));
-                }
-              }
-            }
-          }
 
             // All paths exhausted
             throw new Error(`All fallbacks exhausted for: ${resource}`);
@@ -825,11 +892,25 @@
         },
 
         async decryptFile(pathToEncrypt, originalResource) {
-          const encryptedPath = await window.rcloneCrypt.encryptPath(pathToEncrypt, passphrase);
-          const cryptUrl = (usingRapiServe.length ? usingRapiServe + '/' : getBasePath()) + 'crypt/' + encryptedPath;
+          const encryptedPath = await window.rcloneCrypt.encryptPath(
+            pathToEncrypt,
+            passphrase,
+          );
+          const cryptUrl =
+            (usingRapiServe.length ? usingRapiServe + "/" : getBasePath()) +
+            "crypt/" +
+            encryptedPath;
 
-          const decryptedData = await window.rcloneCrypt.decrypt(cryptUrl, passphrase);
-          const decrypted = window.rcloneCrypt.render(decryptedData, "", false, false);
+          const decryptedData = await window.rcloneCrypt.decrypt(
+            cryptUrl,
+            passphrase,
+          );
+          const decrypted = window.rcloneCrypt.render(
+            decryptedData,
+            "",
+            false,
+            false,
+          );
 
           return decrypted;
         },
@@ -850,9 +931,13 @@
             const oldBlob = this.blobCache.get(oldestKey);
             try {
               URL.revokeObjectURL(oldBlob);
-              console.log(`[Blob Cache] Revoked oldest blob URL: ${oldestKey} (${this.blobCache.size}/${this.maxBlobs})`);
+              console.log(
+                `[Blob Cache] Revoked oldest blob URL: ${oldestKey} (${this.blobCache.size}/${this.maxBlobs})`,
+              );
             } catch (e) {
-              console.warn(`[Blob Cache] Failed to revoke blob URL: ${e.message}`);
+              console.warn(
+                `[Blob Cache] Failed to revoke blob URL: ${e.message}`,
+              );
             }
             this.blobCache.delete(oldestKey);
           }
@@ -863,7 +948,7 @@
           this.displayProgress();
 
           const response = await fetch(url, {
-            signal: abortSignal || AbortSignal.timeout(10000)
+            signal: abortSignal || AbortSignal.timeout(10000),
           });
           const blob = await response.blob();
 
@@ -874,14 +959,18 @@
           const blobUrl = URL.createObjectURL(blob);
 
           this.blobCache.set(resource, blobUrl);
-          console.log(`[Blob Cache] Created new blob URL: ${resource} (${this.blobCache.size}/${this.maxBlobs})`);
+          console.log(
+            `[Blob Cache] Created new blob URL: ${resource} (${this.blobCache.size}/${this.maxBlobs})`,
+          );
           return blobUrl;
         },
 
         cleanupOutOfViewportBlobs() {
-          const viewportImages = Array.from(document.querySelectorAll('img[data-src]'))
-            .filter(img => this.isNearViewport(img))
-            .map(img => img.dataset.src);
+          const viewportImages = Array.from(
+            document.querySelectorAll("img[data-src]"),
+          )
+            .filter((img) => this.isNearViewport(img))
+            .map((img) => img.dataset.src);
 
           const inViewport = new Set(viewportImages);
 
@@ -902,7 +991,9 @@
           // Trim activeImageLoads if too large
           if (this.activeImageLoads.size > this.maxActiveLoads) {
             const toRemove = this.activeImageLoads.size - this.maxActiveLoads;
-            console.warn(`[Memory] Trimming activeImageLoads: removing ${toRemove} oldest entries`);
+            console.warn(
+              `[Memory] Trimming activeImageLoads: removing ${toRemove} oldest entries`,
+            );
             const iterator = this.activeImageLoads.keys();
             for (let i = 0; i < toRemove; i++) {
               const key = iterator.next().value;
@@ -913,7 +1004,9 @@
           // Trim queuedResources if too large
           if (this.queuedResources.size > this.maxActiveLoads) {
             const toRemove = this.queuedResources.size - this.maxActiveLoads;
-            console.warn(`[Memory] Trimming queuedResources: removing ${toRemove} oldest entries`);
+            console.warn(
+              `[Memory] Trimming queuedResources: removing ${toRemove} oldest entries`,
+            );
             const iterator = this.queuedResources.values();
             for (let i = 0; i < toRemove; i++) {
               const key = iterator.next().value;
@@ -923,8 +1016,11 @@
 
           // Trim failedResources if too large
           if (this.failedResources.size > this.maxFailedResources) {
-            const toRemove = this.failedResources.size - this.maxFailedResources;
-            console.warn(`[Memory] Trimming failedResources: removing ${toRemove} oldest entries`);
+            const toRemove =
+              this.failedResources.size - this.maxFailedResources;
+            console.warn(
+              `[Memory] Trimming failedResources: removing ${toRemove} oldest entries`,
+            );
             const iterator = this.failedResources.values();
             for (let i = 0; i < toRemove; i++) {
               const key = iterator.next().value;
@@ -937,7 +1033,7 @@
         setWithExpiry(key, value, ttl) {
           const item = {
             value: value,
-            expiry: new Date().getTime() + ttl
+            expiry: new Date().getTime() + ttl,
           };
           localStorage.setItem(key, btoa(JSON.stringify(item)));
         },
@@ -952,7 +1048,7 @@
             return null;
           }
           return item.value;
-        }
+        },
       };
 
       // Cleanup blobs every 5 seconds
@@ -1478,21 +1574,48 @@
     </div>
     <ul id="media-types">
       <li id="media-type-sortbyscore">
-        <svg width="30px" height="30px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
-            <g transform="matrix(0.0117188,0,0,0.0117188,0.160534,6.04957)">
-                <g transform="matrix(1.11619,0,0,1.11619,-337.756,-1248.26)">
-                    <path d="M1666.12,1145.19C1762.42,1145.19 1821.51,1398.16 1821.51,1398.16C1821.51,1398.16 2087.36,1397.72 2110.12,1467.78C2139.88,1559.36 1917.55,1693.74 1917.55,1693.74C1917.55,1693.74 2000.12,1946.43 1940.53,1989.73C1862.62,2046.33 1666.12,1876.41 1666.12,1876.41C1666.12,1876.41 1451.3,2033.03 1391.71,1989.73C1313.81,1933.13 1414.69,1693.74 1414.69,1693.74C1414.69,1693.74 1199.36,1537.83 1222.12,1467.78C1251.88,1376.19 1510.73,1398.16 1510.73,1398.16C1510.73,1398.16 1592.46,1145.19 1666.12,1145.19Z" style="fill:white;"/>
-                </g>
-                <g transform="matrix(0.575566,0,0,0.938068,-53.4881,711.775)">
-                    <path d="M1982.51,190.388C1982.51,246.384 1908.41,291.845 1817.15,291.845L258.288,291.845C167.025,291.845 92.931,246.384 92.931,190.388C92.931,134.393 167.025,88.931 258.288,88.931L1817.15,88.931C1908.41,88.931 1982.51,134.393 1982.51,190.388Z" style="fill:white;"/>
-                </g>
-                <g transform="matrix(0.513422,0,0,0.938068,-47.713,329.173)">
-                    <path d="M1982.51,190.388C1982.51,246.384 1899.45,291.845 1797.14,291.845L278.302,291.845C175.993,291.845 92.931,246.384 92.931,190.388C92.931,134.393 175.993,88.931 278.302,88.931L1797.14,88.931C1899.45,88.931 1982.51,134.393 1982.51,190.388Z" style="fill:white;"/>
-                </g>
-                <g transform="matrix(0.436467,0,0,0.938068,-40.5615,-53.4296)">
-                    <path d="M1982.51,190.388C1982.51,246.384 1884.8,291.845 1764.45,291.845L310.985,291.845C190.638,291.845 92.931,246.384 92.931,190.388C92.931,134.393 190.638,88.931 310.985,88.931L1764.45,88.931C1884.8,88.931 1982.51,134.393 1982.51,190.388Z" style="fill:white;"/>
-                </g>
+        <svg
+          width="30px"
+          height="30px"
+          viewBox="0 0 24 24"
+          version="1.1"
+          xmlns="http://www.w3.org/2000/svg"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          xml:space="preserve"
+          xmlns:serif="http://www.serif.com/"
+          style="
+            fill-rule: evenodd;
+            clip-rule: evenodd;
+            stroke-linejoin: round;
+            stroke-miterlimit: 2;
+          "
+        >
+          <g transform="matrix(0.0117188,0,0,0.0117188,0.160534,6.04957)">
+            <g transform="matrix(1.11619,0,0,1.11619,-337.756,-1248.26)">
+              <path
+                d="M1666.12,1145.19C1762.42,1145.19 1821.51,1398.16 1821.51,1398.16C1821.51,1398.16 2087.36,1397.72 2110.12,1467.78C2139.88,1559.36 1917.55,1693.74 1917.55,1693.74C1917.55,1693.74 2000.12,1946.43 1940.53,1989.73C1862.62,2046.33 1666.12,1876.41 1666.12,1876.41C1666.12,1876.41 1451.3,2033.03 1391.71,1989.73C1313.81,1933.13 1414.69,1693.74 1414.69,1693.74C1414.69,1693.74 1199.36,1537.83 1222.12,1467.78C1251.88,1376.19 1510.73,1398.16 1510.73,1398.16C1510.73,1398.16 1592.46,1145.19 1666.12,1145.19Z"
+                style="fill: white"
+              />
             </g>
+            <g transform="matrix(0.575566,0,0,0.938068,-53.4881,711.775)">
+              <path
+                d="M1982.51,190.388C1982.51,246.384 1908.41,291.845 1817.15,291.845L258.288,291.845C167.025,291.845 92.931,246.384 92.931,190.388C92.931,134.393 167.025,88.931 258.288,88.931L1817.15,88.931C1908.41,88.931 1982.51,134.393 1982.51,190.388Z"
+                style="fill: white"
+              />
+            </g>
+            <g transform="matrix(0.513422,0,0,0.938068,-47.713,329.173)">
+              <path
+                d="M1982.51,190.388C1982.51,246.384 1899.45,291.845 1797.14,291.845L278.302,291.845C175.993,291.845 92.931,246.384 92.931,190.388C92.931,134.393 175.993,88.931 278.302,88.931L1797.14,88.931C1899.45,88.931 1982.51,134.393 1982.51,190.388Z"
+                style="fill: white"
+              />
+            </g>
+            <g transform="matrix(0.436467,0,0,0.938068,-40.5615,-53.4296)">
+              <path
+                d="M1982.51,190.388C1982.51,246.384 1884.8,291.845 1764.45,291.845L310.985,291.845C190.638,291.845 92.931,246.384 92.931,190.388C92.931,134.393 190.638,88.931 310.985,88.931L1764.45,88.931C1884.8,88.931 1982.51,134.393 1982.51,190.388Z"
+                style="fill: white"
+              />
+            </g>
+          </g>
         </svg>
       </li>
       <li id="media-type-sortbyduration">
@@ -2073,18 +2196,21 @@
         if (urlParams.has("nocache")) {
           tail += "&nocache=1";
         }
-        medcrypt.getSrc(
-          (window.mobileCheck()
-            ? "pr/ZW/ZW5jcnlwdGVkX21vYmlsZV9kYXRh.js"
-            : "pr/ZW/ZW5jcnlwdGVkX2RhdGE=.js") + tail,
-          'high'
-        ).then((encrypted_data_file) => {
-          loadScript(encrypted_data_file, loadPacks);
-        }).catch((error) => {
-          console.error("Failed to load encrypted data:", error);
-          // Still call loadPacks even if main data file fails
-          loadPacks();
-        });
+        medcrypt
+          .getSrc(
+            (window.mobileCheck()
+              ? "pr/ZW/ZW5jcnlwdGVkX21vYmlsZV9kYXRh.js"
+              : "pr/ZW/ZW5jcnlwdGVkX2RhdGE=.js") + tail,
+            "high",
+          )
+          .then((encrypted_data_file) => {
+            loadScript(encrypted_data_file, loadPacks);
+          })
+          .catch((error) => {
+            console.error("Failed to load encrypted data:", error);
+            // Still call loadPacks even if main data file fails
+            loadPacks();
+          });
       }
 
       var unlock = function (setPassword = true) {
@@ -2294,18 +2420,21 @@
 
       function getMetaDataForHash(hash, target) {
         let targetSrc = "pr/meta/" + btoa(hash).substring(0, 2) + ".json";
-        medcrypt.getSrc(targetSrc, 'low').then((uri) => {
-          fetch(uri)
-            .then((response) => response.json())
-            .then((data) => {
-              target.html(data[hash] ?? "");
-            })
-            .catch((error) => {
-              console.error("Error fetching MetaData Store: ", error);
-            });
-        }).catch((error) => {
-          console.error("Failed to load metadata:", error);
-        });
+        medcrypt
+          .getSrc(targetSrc, "low")
+          .then((uri) => {
+            fetch(uri)
+              .then((response) => response.json())
+              .then((data) => {
+                target.html(data[hash] ?? "");
+              })
+              .catch((error) => {
+                console.error("Error fetching MetaData Store: ", error);
+              });
+          })
+          .catch((error) => {
+            console.error("Failed to load metadata:", error);
+          });
       }
 
       function rollingTokens(seed) {
@@ -2603,7 +2732,7 @@
 
               // Load ruffle script independently
               medcrypt
-                .getSrc("flash/ruffle/ruffle.js", 'high')
+                .getSrc("flash/ruffle/ruffle.js", "high")
                 .then((scriptUrl) => {
                   try {
                     loadScript(scriptUrl);
@@ -2668,7 +2797,7 @@
                       time: item.times[index],
                       duration: item.duration,
                       sound: item.sound,
-                      score: item.score ?? 0
+                      score: item.score ?? 0,
                     });
                   });
                 } else {
@@ -2698,7 +2827,7 @@
             return Promise.resolve().then(pack.processor);
           }
           return medcrypt
-            .getSrc(pack.url, 'high')
+            .getSrc(pack.url, "high")
             .then((uri) => fetch(uri))
             .then((response) => {
               if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -2739,7 +2868,7 @@
                 time: item.times[index],
                 duration: item.duration,
                 sound: item.sound,
-                score: item.score ?? 0
+                score: item.score ?? 0,
               });
             });
           } else {
@@ -3048,11 +3177,11 @@
               ) {
                 return 1;
               }
-              
+
               if (mediaFilters["sortbyduration"]) {
                 return b["duration"] - a["duration"];
               }
-              
+
               if (mediaFilters["sortbyscore"]) {
                 return b["score"] - a["score"];
               }
@@ -3182,7 +3311,7 @@
                     flash,
                     item.duration > 0 ? item.duration : 0,
                     item.sound > -70 ? 1 : 0,
-                    item.score ?? 0
+                    item.score ?? 0,
                   ]);
                 }
                 if (("photo" == kind || "all" == kind) && !isVideo) {
@@ -3230,7 +3359,7 @@
                       flash,
                       duration,
                       sound,
-                      score
+                      score,
                     ]) =>
                       flash
                         ? jQuery("#content").append(
@@ -3543,18 +3672,21 @@
             $("#fb-bg-overlay").css("height", height);
             if (slide.opts.$orig.hasClass("vr-link")) {
               const playerUrl = slide.opts.$orig.data("url");
-              medcrypt.getSrc(playerUrl, 'high').then((uri) => {
-                let hash = get3dHash(
-                  basename(
-                    decodePath(playerUrl),
-                    "." + getFileExtension(playerUrl),
-                  ),
-                );
-                window.localStorage.setItem("vr-type", hash);
-                reloadPlayer(uri);
-              }).catch((error) => {
-                console.error("Failed to load VR content:", error);
-              });
+              medcrypt
+                .getSrc(playerUrl, "high")
+                .then((uri) => {
+                  let hash = get3dHash(
+                    basename(
+                      decodePath(playerUrl),
+                      "." + getFileExtension(playerUrl),
+                    ),
+                  );
+                  window.localStorage.setItem("vr-type", hash);
+                  reloadPlayer(uri);
+                })
+                .catch((error) => {
+                  console.error("Failed to load VR content:", error);
+                });
             } else if (slide.opts.$orig.hasClass("flash-link")) {
               const player = ruffle.createPlayer();
               $("#inline-player").empty().html(player);
@@ -3654,36 +3786,39 @@
                 window.currentAlbum,
               );
 
-              medcrypt.getSrc(targetsrc, 'high').then((uri) => {
-                $(".fancybox-container a[data-fancybox-download]").attr(
-                  "href",
-                  uri,
-                );
-                element.attr("href", uri);
-                slide.src = uri;
-                slide.original = targetsrc;
-                let elementa = $('.gallerypicture[href="' + slide.src + '"]');
-                let attempts =
-                  parseInt(elementa.attr("data-attempts") ?? "0", 10) ?? 0;
-                if (slide.hasError && attempts < 3) {
-                  elementa.attr("data-attempts", attempts + 1);
-                  $(".fancybox-content.fancybox-error").remove();
-                  const fancyInstance = $.fancybox.getInstance();
-                  if (
-                    fancyInstance &&
-                    fancyInstance.current &&
-                    fancyInstance.current.$slide
-                  ) {
-                    fancyInstance.current.$slide.trigger("onReset");
+              medcrypt
+                .getSrc(targetsrc, "high")
+                .then((uri) => {
+                  $(".fancybox-container a[data-fancybox-download]").attr(
+                    "href",
+                    uri,
+                  );
+                  element.attr("href", uri);
+                  slide.src = uri;
+                  slide.original = targetsrc;
+                  let elementa = $('.gallerypicture[href="' + slide.src + '"]');
+                  let attempts =
+                    parseInt(elementa.attr("data-attempts") ?? "0", 10) ?? 0;
+                  if (slide.hasError && attempts < 3) {
+                    elementa.attr("data-attempts", attempts + 1);
+                    $(".fancybox-content.fancybox-error").remove();
+                    const fancyInstance = $.fancybox.getInstance();
+                    if (
+                      fancyInstance &&
+                      fancyInstance.current &&
+                      fancyInstance.current.$slide
+                    ) {
+                      fancyInstance.current.$slide.trigger("onReset");
+                    }
+                    slide.hasError = false;
+                    slide.isLoading = false;
+                    slide.isLoaded = false;
+                    instance.loadSlide(slide);
                   }
-                  slide.hasError = false;
-                  slide.isLoading = false;
-                  slide.isLoaded = false;
-                  instance.loadSlide(slide);
-                }
-              }).catch((error) => {
-                console.error("Failed to load fancybox content:", error);
-              });
+                })
+                .catch((error) => {
+                  console.error("Failed to load fancybox content:", error);
+                });
               if ($.fancybox.getInstance().SlideShow.isActive) {
                 $.fancybox.getInstance().SlideShow.stop();
                 window.slideshowStarted = true;
@@ -3799,67 +3934,70 @@
               console.error(e);
             }
 
-            medcrypt.getSrc(slide.src, 'high').then((uri) => {
-              element.attr("href", uri);
-              slide.src = uri;
-              slide.original = targetsrc;
-              if (slide.hasError) {
-                $(".fancybox-content.fancybox-error").remove();
-                $.fancybox.getInstance().current.$slide.trigger("onReset");
-                slide.hasError = false;
-                slide.isLoading = false;
-                slide.isLoaded = false;
-                instance.loadSlide(slide);
-              }
-
-              var retry = 0;
-              $("video").on("error", function () {
-                if (retry < 4) {
-                  retry++;
-                  setTimeout(function () {
-                    $("video")
-                      .find("source")
-                      .attr("src", uri)
-                      .parent()
-                      .trigger("load");
-
-                    $("video").prop(
-                      "currentTime",
-                      window.currentAlbumPosition?.currentTime ?? 0,
-                    );
-                    $("video").trigger("play");
-                  }, 1000);
+            medcrypt
+              .getSrc(slide.src, "high")
+              .then((uri) => {
+                element.attr("href", uri);
+                slide.src = uri;
+                slide.original = targetsrc;
+                if (slide.hasError) {
+                  $(".fancybox-content.fancybox-error").remove();
+                  $.fancybox.getInstance().current.$slide.trigger("onReset");
+                  slide.hasError = false;
+                  slide.isLoading = false;
+                  slide.isLoaded = false;
+                  instance.loadSlide(slide);
                 }
-              });
-              $("video")
-                .find("source")
-                .attr("src", uri)
-                .parent()
-                .trigger("load");
 
-              $("video").prop(
-                "currentTime",
-                window.currentAlbumPosition?.currentTime ?? 0,
-              );
-              $("video").trigger("play");
-              $("video").on("loadedmetadata", function () {
-                $(this).prop(
+                var retry = 0;
+                $("video").on("error", function () {
+                  if (retry < 4) {
+                    retry++;
+                    setTimeout(function () {
+                      $("video")
+                        .find("source")
+                        .attr("src", uri)
+                        .parent()
+                        .trigger("load");
+
+                      $("video").prop(
+                        "currentTime",
+                        window.currentAlbumPosition?.currentTime ?? 0,
+                      );
+                      $("video").trigger("play");
+                    }, 1000);
+                  }
+                });
+                $("video")
+                  .find("source")
+                  .attr("src", uri)
+                  .parent()
+                  .trigger("load");
+
+                $("video").prop(
                   "currentTime",
                   window.currentAlbumPosition?.currentTime ?? 0,
                 );
                 $("video").trigger("play");
-              });
+                $("video").on("loadedmetadata", function () {
+                  $(this).prop(
+                    "currentTime",
+                    window.currentAlbumPosition?.currentTime ?? 0,
+                  );
+                  $("video").trigger("play");
+                });
 
-              $("video").on("timeupdate", function () {
-                updatePlaybackTimestamp(
-                  originalLink.data("filehash"),
-                  window.currentAlbum,
-                  $("video").get(0),
-                );
+                $("video").on("timeupdate", function () {
+                  updatePlaybackTimestamp(
+                    originalLink.data("filehash"),
+                    window.currentAlbum,
+                    $("video").get(0),
+                  );
+                });
+              })
+              .catch((error) => {
+                console.error("Failed to load video content:", error);
               });
-            }).catch((error) => {
-              console.error("Failed to load video content:", error);
-            });
             $("video").removeAttr("controls");
             $("video").click(function toggleControls() {
               if (this.hasAttribute("controls")) {
@@ -4136,7 +4274,9 @@
                 // Allow more time for cascade retries: 15s (was 5s)
                 if (loadingStart && now - loadingStart > 15000) {
                   // Clear from queued resources so it can be re-queued
-                  console.warn(`[Stuck Image] Resetting ${lazyImage.dataset.src} - stuck for ${now - loadingStart}ms`);
+                  console.warn(
+                    `[Stuck Image] Resetting ${lazyImage.dataset.src} - stuck for ${now - loadingStart}ms`,
+                  );
                   medcrypt.queuedResources.delete(lazyImage.dataset.src);
                   medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                   lazyImage.classList.remove("lazy-loading");
@@ -4318,7 +4458,9 @@
                 // Allow more time for cascade retries: 15s (was 5s)
                 if (loadingStart && now - loadingStart > 15000) {
                   // Clear from queued resources so it can be re-queued
-                  console.warn(`[Stuck Image] Resetting ${lazyImage.dataset.src} - stuck for ${now - loadingStart}ms`);
+                  console.warn(
+                    `[Stuck Image] Resetting ${lazyImage.dataset.src} - stuck for ${now - loadingStart}ms`,
+                  );
                   medcrypt.queuedResources.delete(lazyImage.dataset.src);
                   medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                   lazyImage.classList.remove("lazy-loading");
@@ -4431,12 +4573,16 @@
           // Track this image so it can be cancelled if needed
           // Defensive limit: prevent unbounded growth (should never hit due to queue limit)
           if (medcrypt.activeImageLoads.size >= medcrypt.maxActiveLoads) {
-            console.warn(`[Memory] activeImageLoads limit reached (${medcrypt.activeImageLoads.size}), purging oldest`);
+            console.warn(
+              `[Memory] activeImageLoads limit reached (${medcrypt.activeImageLoads.size}), purging oldest`,
+            );
             const oldestKey = medcrypt.activeImageLoads.keys().next().value;
             medcrypt.activeImageLoads.delete(oldestKey);
           }
           if (medcrypt.queuedResources.size >= medcrypt.maxActiveLoads) {
-            console.warn(`[Memory] queuedResources limit reached (${medcrypt.queuedResources.size}), purging oldest`);
+            console.warn(
+              `[Memory] queuedResources limit reached (${medcrypt.queuedResources.size}), purging oldest`,
+            );
             const oldestKey = medcrypt.queuedResources.keys().next().value;
             medcrypt.queuedResources.delete(oldestKey);
           }
@@ -4501,27 +4647,38 @@
 
                 if (isTemporaryFailure) {
                   // Temporary failure - reset to waiting so it can be retried later
-                  console.log(`[Temporary Failure] ${error.message} for: ${lazyImage.dataset.src} - will retry later`);
+                  console.log(
+                    `[Temporary Failure] ${error.message} for: ${lazyImage.dataset.src} - will retry later`,
+                  );
                   medcrypt.queuedResources.delete(lazyImage.dataset.src);
                   medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                   lazyImage.classList.remove("lazy-loading");
-                  lazyImage.classList.remove("lazy-error");  // Remove error class!
+                  lazyImage.classList.remove("lazy-error"); // Remove error class!
                   lazyImage.classList.add("lazy-waiting");
-                  delete lazyImage.dataset.loadFailed;  // Remove failed flag
+                  delete lazyImage.dataset.loadFailed; // Remove failed flag
                   delete lazyImage.dataset.loadingStart;
 
                   // Reset image src to placeholder so browser doesn't cache the failed attempt
-                  lazyImage.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+                  lazyImage.src =
+                    "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
                 } else if (isPermanentFailure) {
                   // Permanent failure - ONLY show md5 placeholder for actual 404/exhausted errors
-                  console.log(`[Permanent Failure] ${error.message} for: ${lazyImage.dataset.src} - showing placeholder`);
+                  console.log(
+                    `[Permanent Failure] ${error.message} for: ${lazyImage.dataset.src} - showing placeholder`,
+                  );
 
                   // Mark as permanently failed so it won't be retried
                   // Enforce limit on failedResources to prevent unbounded growth
-                  if (medcrypt.failedResources.size >= medcrypt.maxFailedResources) {
-                    const firstKey = medcrypt.failedResources.values().next().value;
+                  if (
+                    medcrypt.failedResources.size >= medcrypt.maxFailedResources
+                  ) {
+                    const firstKey = medcrypt.failedResources
+                      .values()
+                      .next().value;
                     medcrypt.failedResources.delete(firstKey);
-                    console.warn(`[Memory] failedResources limit reached, removed oldest: ${firstKey}`);
+                    console.warn(
+                      `[Memory] failedResources limit reached, removed oldest: ${firstKey}`,
+                    );
                   }
                   medcrypt.failedResources.add(lazyImage.dataset.src);
                   medcrypt.queuedResources.delete(lazyImage.dataset.src);
@@ -4541,13 +4698,15 @@
                   }
                 } else {
                   // Unknown error - treat as temporary, reset to waiting
-                  console.warn(`[Unknown Error] ${error.message} for: ${lazyImage.dataset.src} - treating as temporary`);
+                  console.warn(
+                    `[Unknown Error] ${error.message} for: ${lazyImage.dataset.src} - treating as temporary`,
+                  );
                   medcrypt.queuedResources.delete(lazyImage.dataset.src);
                   medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                   lazyImage.classList.remove("lazy-loading");
-                  lazyImage.classList.remove("lazy-error");  // Remove error class!
+                  lazyImage.classList.remove("lazy-error"); // Remove error class!
                   lazyImage.classList.add("lazy-waiting");
-                  delete lazyImage.dataset.loadFailed;  // Remove failed flag
+                  delete lazyImage.dataset.loadFailed; // Remove failed flag
                   delete lazyImage.dataset.loadingStart;
                 }
               });
