@@ -624,8 +624,20 @@
             pathsToTry.push({ path: baseResource, encrypted: false });
             pathsToTry.push({ path: baseResource, encrypted: true });
           } else {
-            // Non-media files
-            pathsToTry.push({ path: baseResource, encrypted: false });
+            // Non-media files (JS, JSON, etc) - try all variations
+            if (!this.useCrypt) {
+              if (!this.skipPrFa) {
+                pathsToTry.push({ path: 'pr/' + baseResource, encrypted: false });
+                pathsToTry.push({ path: 'fa/' + baseResource, encrypted: false });
+              }
+              if (!this.usesPrFa) {
+                pathsToTry.push({ path: baseResource, encrypted: false });
+              }
+            }
+            // Try encrypted
+            pathsToTry.push({ path: 'pr/' + baseResource, encrypted: true });
+            pathsToTry.push({ path: 'fa/' + baseResource, encrypted: true });
+            pathsToTry.push({ path: baseResource, encrypted: true });
           }
 
           // Try each path (max 3 attempts each)
