@@ -370,7 +370,7 @@
       function loadMediaTypeSelections() {
         let currentMediaTypes = JSON.parse(
           window.localStorage.getItem("media-types-selected") ??
-            '{"gifs": true, "videos": true, "videoswithsound": true, "sortbyduration": false, "photos": true}',
+            '{"gifs": true, "videos": true, "videoswithsound": true, "sortbyduration": false, "sortbyscore": false, "photos": true}',
         );
         Object.entries(currentMediaTypes).forEach(([key, val]) => {
           val
@@ -383,7 +383,7 @@
       function saveMediaTypeSelections() {
         let currentMediaTypes = JSON.parse(
           window.localStorage.getItem("media-types-selected") ??
-            '{"gifs": true, "videos": true, "photos": true, "videoswithsound": true, "sortbyduration": false }',
+            '{"gifs": true, "videos": true, "photos": true, "videoswithsound": true, "sortbyduration": false, "sortbyscore": false }',
         );
         Object.entries(currentMediaTypes).forEach(([key, val]) => {
           currentMediaTypes[key] = $(`#media-type-${key}`).hasClass("active");
@@ -395,1216 +395,307 @@
       }
 
       let medcrypt = {
-        loadedCache: {},
-        transfers: {
-          loaded: 0,
-          size: 0,
-        },
-        displayProgress: function () {
-          if ($("#progress").length === 0) {
-            $("body").append(
-              $("<div><b></b><i></i></div>").attr("id", "progress"),
-            );
-          }
-          var progress = Math.round(
-            (medcrypt.transfers.loaded / medcrypt.transfers.size) * 100,
-          );
-          $("#progress")
-            .width(progress + "%")
-            .delay(800);
-          if (progress >= 100) {
-            $("#progress").fadeOut(1000, function () {
-              $(this).remove();
-            });
-          }
-        },
-        finishProgress: function () {
-          medcrypt.transfers.loaded = 0;
-          medcrypt.transfers.size = 0;
-          $("#progress").fadeOut(1000, function () {
-            $(this).remove();
-          });
-        },
-        extToMimes: {
-          jpg: "image/jpeg",
-          jpeg: "image/jpeg",
-          gif: "image/gif",
-          png: "image/png",
-          mp4: "video/mp4",
-          webm: "video/webm",
-          js: "application/javascript",
-          txt: "text/plain",
-        },
-        getMime: function (resource) {
-          var re = /(?:\.([^.]+))?$/;
-          var ext = re.exec(resource)[1];
-          if (medcrypt.extToMimes.hasOwnProperty(ext)) {
-            return medcrypt.extToMimes[ext];
-          }
-          return "application/octect-stream";
-        },
-        isImage: function (resource) {
-          var re = /(?:\.([^.]+))?$/;
-          var ext = re.exec(resource)[1];
-          return ["jpg", "jpeg", "png"].includes(ext);
-        },
-        isVideo: function (resource) {
-          var re = /(?:\.([^.]+))?$/;
-          var ext = re.exec(resource)[1];
-          return ["mp4", "webm", "gif"].includes(ext);
-        },
-        requestQueue: {
-          high: [], // Viewport images
-          medium: [], // Near viewport (±2 screens)
-          low: [], // Far from viewport
-        },
-        activeRequests: new Map(), // Track active requests for cancellation
-        pendingRequests: new Set(), // Prevent duplicate requests
-        corsFailedUrls: new Set(), // Track URLs that have CORS issues
-        decryptionStatus: new Map(), // Track whether paths need decryption: true/false/unknown
-        activeImageLoads: new Map(), // Track active image elements being loaded
-        rapidScrolling: false, // Track if we're in rapid scroll mode
-        imageFetches: new Map(), // Track active image fetch requests
-        blobCache: new Map(), // Cache blob URLs to avoid re-downloading
-        blobCacheMaxSize: (() => {
-          // Detect iOS for aggressive memory management
-          const isIOS =
-            /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-          return isIOS ? 15 : 50; // Much smaller cache on iOS
-        })(),
-        blobCacheMaxAge: (() => {
-          const isIOS =
-            /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-          return isIOS ? 3 * 60 * 1000 : 15 * 60 * 1000; // 3 min on iOS, 15 min otherwise
-        })(),
-        isIOSDevice:
-          /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
-        preferredPrefix: null, // null, "none", or "crypt" - set when we discover what works
-        preferredCryptPrefix: null, // null, "none", "pr", "fa", or "un" - which prefix to use inside crypt/ paths
-        usesPrefixes: false, // Set to true when we detect pr/ or fa/ resources work (they can coexist)
-        skipCryptFallback: false, // Default to false - try crypt/ until we discover files are unencrypted
-        skipPrefixFallbacks: false, // Default to false - try pr/ and fa/ prefixes first
-        failedResources: new Set(), // Track resources that have permanently failed
-        queuedResources: new Set(), // Track resources currently in queue to prevent duplicates
-        getBlobUrlForResource: function (resourceKey) {
-          // Check if we have a cached blob for this resource
-          if (this.blobCache.has(resourceKey)) {
-            const cachedBlob = this.blobCache.get(resourceKey);
-            if (cachedBlob && !cachedBlob.revoked) {
-              return cachedBlob.url;
-            }
-          }
-          return null;
-        },
-        cleanupBlobCache: function () {
-          const now = Date.now();
-          const entries = Array.from(this.blobCache.entries());
+        // Simple FIFO queue
+        queue: [],
+        processing: false,
 
-          // Sort by timestamp, oldest first
-          entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+        // Path optimization flags
+        usesPrFa: false,      // Set when /pr/ or /fa/ succeeds
+        skipPrFa: false,      // Set when no-prefix succeeds
+        useCrypt: false,      // Set when /crypt/ succeeds
 
-          // Remove expired or excess blobs
-          entries.forEach(([key, blobInfo], index) => {
-            const isExpired = now - blobInfo.timestamp > this.blobCacheMaxAge;
-            const isExcess = index < entries.length - this.blobCacheMaxSize;
+        // Blob management (48 max)
+        blobCache: new Map(),
+        maxBlobs: 48,
 
-            if ((isExpired || isExcess) && !blobInfo.revoked) {
-              try {
-                URL.revokeObjectURL(blobInfo.url);
-                blobInfo.revoked = true;
-                this.blobCache.delete(key);
-              } catch (e) {
-                console.warn("Error revoking blob URL:", e);
-              }
-            }
-          });
-        },
-        cleanupOutOfViewportBlobs: function () {
-          const now = Date.now();
-          const viewportTop = window.scrollY;
-          const viewportHeight = window.innerHeight;
-          const viewportBottom = viewportTop + viewportHeight;
-
-          this.blobCache.forEach((blobInfo, key) => {
-            if (blobInfo.revoked) return;
-
-            // Find elements using this blob URL
-            const elements = document.querySelectorAll(
-              `img[src="${blobInfo.url}"], video[src="${blobInfo.url}"], source[src="${blobInfo.url}"]`,
-            );
-
-            let allOutOfViewport = true;
-            let hasVideoOrGif =
-              key.toLowerCase().endsWith(".gif") ||
-              key.toLowerCase().endsWith(".mp4") ||
-              key.toLowerCase().endsWith(".webm") ||
-              key.toLowerCase().endsWith(".mov");
-
-            elements.forEach((el) => {
-              const rect = el.getBoundingClientRect();
-              const elementTop = rect.top + viewportTop;
-              const elementBottom = rect.bottom + viewportTop;
-
-              // Check if element is in viewport
-              if (elementBottom > viewportTop && elementTop < viewportBottom) {
-                allOutOfViewport = false;
-              }
-            });
-
-            // Track when blobs go out of viewport
-            if (allOutOfViewport && elements.length > 0) {
-              if (!blobInfo.outOfViewportSince) {
-                blobInfo.outOfViewportSince = now;
-              } else {
-                // iOS: 3 seconds, others: 10 seconds
-                const timeout = this.isIOSDevice ? 3000 : 10000;
-                if (now - blobInfo.outOfViewportSince > timeout) {
-                  try {
-                    URL.revokeObjectURL(blobInfo.url);
-                    blobInfo.revoked = true;
-                    this.blobCache.delete(key);
-                  } catch (e) {
-                    console.warn("Error revoking blob URL:", e);
-                  }
-                }
-              }
-            } else {
-              // Back in viewport or no elements using it - reset timer
-              delete blobInfo.outOfViewportSince;
-            }
-
-            // For video/gif, revoke immediately if not in use
-            if (hasVideoOrGif && elements.length === 0 && !blobInfo.revoked) {
-              try {
-                URL.revokeObjectURL(blobInfo.url);
-                blobInfo.revoked = true;
-                this.blobCache.delete(key);
-              } catch (e) {
-                console.warn("Error revoking blob URL:", e);
-              }
-            }
-          });
-        },
+        // Compatibility properties for existing code
+        rapidScrolling: false,
+        activeImageLoads: new Map(),
+        failedResources: new Set(),
+        queuedResources: new Set(),
         dirCache: {},
-        startQueue: async () => {
-          // Reduce concurrency on iOS to prevent memory issues
-          const maxConcurrency = medcrypt.isIOSDevice ? 3 : 8;
-          const itemTimeout = 30000; // 30s timeout per item
+        transfers: { loaded: 0, size: 0 },
+        isIOSDevice: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
 
-          while (
-            Object.values(medcrypt.requestQueue).some((q) => q.length > 0)
-          ) {
-            const batch = [];
-            const batchPromises = [];
-
-            // Process high priority first
-            for (const priority of ["high", "medium", "low"]) {
-              const queue = medcrypt.requestQueue[priority];
-              while (queue.length > 0 && batch.length < maxConcurrency) {
-                const item = queue.shift();
-                batch.push(item);
-                const itemPromise =
-                  typeof item === "function" ? item() : Promise.resolve(item);
-                batchPromises.push(
-                  Promise.race([
-                    itemPromise,
-                    new Promise((_, reject) =>
-                      setTimeout(
-                        () => reject(new Error("Item timeout")),
-                        itemTimeout,
-                      ),
-                    ),
-                  ]).catch((e) => {
-                    console.warn("Queue item timed out or errored:", e);
-                  }),
-                );
-              }
-              if (batch.length >= maxConcurrency) break;
-            }
-
-            if (batch.length > 0) {
-              await Promise.allSettled(batchPromises);
-            }
-          }
-          medcrypt.processingQueue = false;
+        // Compatibility stub methods
+        cleanupBlobCache() {
+          // Blob cleanup is now handled in cleanupOutOfViewportBlobs
         },
-        flushQueue: () => {
-          medcrypt.requestQueue = {
-            high: [],
-            medium: [],
-            low: [],
+
+        displayProgress() {
+          if ($("#progress").length === 0) {
+            $("body").append($("<div><b></b><i></i></div>").attr("id", "progress"));
+          }
+          const progress = Math.round((this.transfers.loaded / this.transfers.size) * 100);
+          $("#progress").width(progress + "%").delay(800);
+          if (progress >= 100) {
+            $("#progress").fadeOut(1000, function() { $(this).remove(); });
+          }
+        },
+
+        finishProgress() {
+          this.transfers.loaded = 0;
+          this.transfers.size = 0;
+          $("#progress").fadeOut(1000, function() { $(this).remove(); });
+        },
+
+        cancelAllRequests() {
+          // Clear queues
+          this.queue = [];
+          this.activeImageLoads.clear();
+          this.queuedResources.clear();
+        },
+
+        flushQueue() {
+          this.queue = [];
+          this.queuedResources.clear();
+        },
+
+        cancelNonViewport() {
+          // Viewport cancellation is now handled in fetchResource
+        },
+
+        // Helper methods (keep these for compatibility)
+        getMime(resource) {
+          const mimes = {
+            jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif",
+            png: "image/png", mp4: "video/mp4", webm: "video/webm",
+            js: "application/javascript", txt: "text/plain"
           };
-          // Clear CORS failures on navigation to allow retry
-          medcrypt.corsFailedUrls.clear();
-
-          // Clean up old blob URLs to prevent memory leaks
-          const now = Date.now();
-          const maxAge = 10 * 60 * 1000; // 10 minutes
-          medcrypt.blobCache.forEach((blobInfo, key) => {
-            if (now - blobInfo.timestamp > maxAge) {
-              if (!blobInfo.revoked) {
-                URL.revokeObjectURL(blobInfo.url);
-                blobInfo.revoked = true;
-              }
-              medcrypt.blobCache.delete(key);
-            }
-          });
+          const ext = resource.split('.').pop()?.toLowerCase();
+          return mimes[ext] || "application/octet-stream";
         },
-        cancelAllRequests: function () {
-          // Cancel all active requests with Safari compatibility
-          medcrypt.activeRequests.forEach((controller, resource) => {
-            try {
-              if (controller && typeof controller.abort === "function") {
-                controller.abort();
-              }
-            } catch (e) {
-              console.warn("Error aborting request:", e);
-            }
-          });
-          medcrypt.activeRequests.clear();
-          medcrypt.pendingRequests.clear();
 
-          // Cancel active image loads and fetches
-          medcrypt.cancelImageLoadsOutsideViewport(true); // Force cancel all
-          medcrypt.cancelImageFetchesOutsideViewport(true); // Force cancel all fetches
-
-          // Clear all queues
-          medcrypt.flushQueue();
+        isImage(resource) {
+          return /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(resource);
         },
-        fetchImageAsBlob: async function (imageUrl, resourceKey, imageElement) {
-          // For HTTP, skip blob conversion and return direct URL
-          if (window.location.protocol === "http:") {
-            return imageUrl;
-          }
 
-          // On iOS, skip blob conversion to reduce memory pressure
-          // This trades mixed content warnings for stability
-          if (this.isIOSDevice) {
-            return imageUrl;
-          }
-
-          // Never create blob URLs for placeholder images
-          if (
-            imageUrl.startsWith("data:image/gif;base64,R0lGOD") ||
-            imageUrl.includes("placeholder")
-          ) {
-            throw new Error("Cannot create blob for placeholder image");
-          }
-
-          // Check if we already have a blob for this resource
-          if (medcrypt.blobCache.has(resourceKey)) {
-            const cachedBlob = medcrypt.blobCache.get(resourceKey);
-            if (cachedBlob && !cachedBlob.revoked) {
-              return cachedBlob.url;
-            }
-          }
-
-          // Check if a fetch is already in progress for this resource
-          if (medcrypt.imageFetches.has(resourceKey)) {
-            // Wait for the existing fetch to complete
-            return new Promise((resolve, reject) => {
-              const checkInterval = setInterval(() => {
-                // Check if the blob is now available
-                if (medcrypt.blobCache.has(resourceKey)) {
-                  clearInterval(checkInterval);
-                  const cachedBlob = medcrypt.blobCache.get(resourceKey);
-                  if (cachedBlob && !cachedBlob.revoked) {
-                    resolve(cachedBlob.url);
-                  } else {
-                    resolve(imageUrl);
-                  }
-                } else if (!medcrypt.imageFetches.has(resourceKey)) {
-                  // Fetch completed but no blob (error case)
-                  clearInterval(checkInterval);
-                  resolve(imageUrl);
-                }
-              }, 100);
-
-              // Timeout after 10 seconds
-              setTimeout(() => {
-                clearInterval(checkInterval);
-                resolve(imageUrl);
-              }, 10000);
-            });
-          }
-
-          // Create AbortController for this image fetch - Safari/HTTP fallback
-          let controller;
-          try {
-            controller = new AbortController();
-          } catch (e) {
-            // Fallback for older Safari versions or HTTP restrictions
-            controller = {
-              signal: { aborted: false },
-              abort: function () {
-                this.signal.aborted = true;
-              },
-            };
-          }
-          medcrypt.imageFetches.set(resourceKey, {
-            controller: controller,
-            imageElement: imageElement,
-            url: imageUrl,
-          });
-
-          try {
-            const fetchOptions = {
-              cache: "force-cache", // Use browser cache if available
-            };
-
-            // Only add signal if AbortController is properly supported
-            if (
-              controller.signal &&
-              typeof controller.signal.addEventListener === "function"
-            ) {
-              fetchOptions.signal = controller.signal;
-            }
-
-            const response = await fetch(imageUrl, fetchOptions);
-
-            if (!response.ok) {
-              throw new Error(
-                `HTTP ${response.status}: ${response.statusText}`,
-              );
-            }
-
-            const blob = await response.blob();
-
-            // Check if URL.createObjectURL is available (might be restricted on HTTP)
-            if (typeof URL.createObjectURL !== "function") {
-              medcrypt.imageFetches.delete(resourceKey);
-              return imageUrl; // Fallback to direct URL
-            }
-
-            const blobUrl = URL.createObjectURL(blob);
-
-            // Cache the blob URL
-            medcrypt.blobCache.set(resourceKey, {
-              url: blobUrl,
-              revoked: false,
-              timestamp: Date.now(),
-            });
-
-            // Clean up fetch tracking
-            medcrypt.imageFetches.delete(resourceKey);
-            return blobUrl;
-          } catch (error) {
-            // Clean up fetch tracking
-            medcrypt.imageFetches.delete(resourceKey);
-
-            if (error.name === "AbortError") {
-              throw new Error("Fetch cancelled");
-            } else {
-              throw error;
-            }
-          }
+        isVideo(resource) {
+          return /\.(mp4|webm|ogg|mov|gif)$/i.test(resource);
         },
-        cancelImageFetchesOutsideViewport: function (forceAll = false) {
-          const viewportTop = window.scrollY;
-          const viewportHeight = window.innerHeight;
-          const cancelRange = viewportHeight * 1.2;
 
-          medcrypt.imageFetches.forEach((fetchInfo, resourceKey) => {
-            const { controller, imageElement } = fetchInfo;
-
-            if (!imageElement || !imageElement.parentNode) {
-              // Element was removed from DOM
-              controller.abort();
-              medcrypt.imageFetches.delete(resourceKey);
-              return;
-            }
-
-            if (forceAll) {
-              // Force cancel all fetches
-              controller.abort();
-              medcrypt.imageFetches.delete(resourceKey);
-              return;
-            }
-
-            const rect = imageElement.getBoundingClientRect();
-            const elementTop = rect.top + viewportTop;
-            const distance = Math.min(
-              Math.abs(elementTop - viewportTop),
-              Math.abs(elementTop - (viewportTop + viewportHeight)),
-            );
-
-            if (distance > cancelRange) {
-              // Cancel fetch for out-of-viewport images
-              controller.abort();
-              medcrypt.imageFetches.delete(resourceKey);
-            }
-          });
+        isMediaFile(resource) {
+          return this.isImage(resource) || this.isVideo(resource);
         },
-        cancelImageLoadsOutsideViewport: function (forceAll = false) {
-          const viewportTop = window.scrollY;
-          const viewportHeight = window.innerHeight;
-          const cancelRange = viewportHeight * 1.2;
 
-          medcrypt.activeImageLoads.forEach((imageElement, resource) => {
-            if (!imageElement || !imageElement.parentNode) {
-              // Element was removed from DOM
-              medcrypt.activeImageLoads.delete(resource);
-              return;
-            }
-
-            if (forceAll) {
-              // Force cancel all images
-              imageElement.src =
-                "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-              imageElement.classList.remove("lazy-loaded");
-              imageElement.classList.add("lazy-waiting");
-              medcrypt.queuedResources.delete(resource);
-              medcrypt.activeImageLoads.delete(resource);
-              return;
-            }
-
-            const rect = imageElement.getBoundingClientRect();
-            const elementTop = rect.top + viewportTop;
-            const distance = Math.min(
-              Math.abs(elementTop - viewportTop),
-              Math.abs(elementTop - (viewportTop + viewportHeight)),
-            );
-
-            if (distance > cancelRange) {
-              // Reset image to placeholder and mark as not loaded
-              imageElement.src =
-                "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-              imageElement.classList.remove("lazy-loaded");
-              imageElement.classList.add("lazy-waiting");
-              medcrypt.queuedResources.delete(resource);
-              medcrypt.activeImageLoads.delete(resource);
-            }
-          });
+        isNearViewport(element) {
+          if (!element) return true;
+          const rect = element.getBoundingClientRect();
+          const vh = window.innerHeight;
+          // Within 1.5 viewports above/below
+          return rect.top < vh * 2.5 && rect.bottom > -(vh * 2.5);
         },
-        cancelNonViewport: function () {
-          const viewportTop = window.scrollY;
-          const viewportHeight = window.innerHeight;
-          const cancelRange = viewportHeight * 1.2; // More aggressive - 1.2 screens
 
-          // Cancel active requests that are outside viewport range
-          medcrypt.activeRequests.forEach((controller, resource) => {
-            const element = document.querySelector(
-              `[data-resource="${resource}"]`,
-            );
-            if (element) {
-              const rect = element.getBoundingClientRect();
-              const elementTop = rect.top + viewportTop;
-              const distance = Math.min(
-                Math.abs(elementTop - viewportTop),
-                Math.abs(elementTop - (viewportTop + viewportHeight)),
-              );
-
-              if (distance > cancelRange) {
-                try {
-                  if (controller && typeof controller.abort === "function") {
-                    controller.abort();
-                  }
-                } catch (e) {
-                  console.warn("Error aborting request:", e);
-                }
-                medcrypt.activeRequests.delete(resource);
-                medcrypt.pendingRequests.delete(resource);
-              }
-            } else {
-              // Element not found, cancel the request
-              try {
-                if (controller && typeof controller.abort === "function") {
-                  controller.abort();
-                }
-              } catch (e) {
-                console.warn("Error aborting request:", e);
-              }
-              medcrypt.activeRequests.delete(resource);
-              medcrypt.pendingRequests.delete(resource);
-            }
-          });
-
-          // Cancel image loads and fetches outside viewport
-          medcrypt.cancelImageLoadsOutsideViewport();
-          medcrypt.cancelImageFetchesOutsideViewport();
-
-          // Clear all low and medium priority queued requests during rapid scrolling
-          medcrypt.requestQueue.low = [];
-          medcrypt.requestQueue.medium = [];
-
-          // Aggressively reduce medium priority queue
-          if (medcrypt.requestQueue.medium.length > 10) {
-            medcrypt.requestQueue.medium = medcrypt.requestQueue.medium.slice(
-              0,
-              5,
-            );
-          }
-
-          // Cancel requests in queue that are outside viewport
-          ["high", "medium", "low"].forEach((priority) => {
-            medcrypt.requestQueue[priority] = medcrypt.requestQueue[
-              priority
-            ].filter((item) => {
-              // This is a basic filter - in practice you'd need to associate queue items with elements
-              return true; // Keep for now, but could be improved
-            });
-          });
-        },
-        processingQueue: false,
-        maxTries: 2,
-        getSrc: function (
-          resource,
-          action = () => {},
-          currentTries = 0,
-          priority = "medium",
-        ) {
-          // Skip data URIs and blob URLs - return immediately
-          if (resource.startsWith("data:") || resource.startsWith("blob:")) {
-            action(resource);
-            return Promise.resolve(resource);
-          }
-
-          // Check if this resource has already permanently failed
-          if (medcrypt.failedResources.has(resource)) {
-            action(resource); // Use original resource as fallback
-            return Promise.reject(new Error("Resource previously failed"));
-          }
-
-          // Check if we already have a blob URL cached for this resource
-          const cachedBlobUrl = medcrypt.getBlobUrlForResource(resource);
-          if (cachedBlobUrl) {
-            action(cachedBlobUrl);
-            return Promise.resolve(cachedBlobUrl);
-          }
-
-          // Check if this resource is already queued - if so, don't queue again
-          if (medcrypt.queuedResources.has(resource)) {
-            // Wait for the existing queued request
-            return medcrypt.processingQueue || Promise.resolve(resource);
-          }
-
-          // Check viewport before queueing (except for high priority)
-          if (priority !== "high") {
-            const element = document.querySelector(
-              `[data-resource="${resource}"]`,
-            );
-            if (element) {
-              const rect = element.getBoundingClientRect();
-              const viewportHeight = window.innerHeight;
-              const isNearViewport =
-                rect.top < viewportHeight * 2 &&
-                rect.bottom > -(viewportHeight * 2);
-
-              if (!isNearViewport) {
-                return Promise.reject(new Error("Skipped - outside viewport"));
-              }
-            }
-
-            // Don't queue if rapid scrolling
-            if (medcrypt.rapidScrolling) {
-              return Promise.reject(new Error("Skipped - rapid scrolling"));
-            }
-          }
-
-          // Limit queue size by purging old items if queue is too large
-          const maxQueueSize =
-            priority === "high" ? 20 : priority === "medium" ? 15 : 8;
-          if (medcrypt.requestQueue[priority].length >= maxQueueSize) {
-            // Remove oldest items from the queue (from the front)
-            const itemsToRemove =
-              medcrypt.requestQueue[priority].length - maxQueueSize + 1;
-            medcrypt.requestQueue[priority].splice(0, itemsToRemove);
-          }
-
-          // Mark as queued
-          medcrypt.queuedResources.add(resource);
-
-          medcrypt.requestQueue[priority].push(async () => {
-            try {
-              const result = await medcrypt.getSrcRaw(
-                resource,
-                action,
-                currentTries,
-              );
-              action(result);
-              return result;
-            } catch (error) {
-              console.error(
-                `[getSrc] getSrcRaw failed for ${resource}:`,
-                error,
-              );
-              // Call action with the original resource as fallback
-              action(resource);
-              throw error;
-            } finally {
-              // Remove from queued set when done (success or failure)
-              medcrypt.queuedResources.delete(resource);
-            }
-          });
-
-          if (!medcrypt.processingQueue) {
-            medcrypt.processingQueue = medcrypt.startQueue();
-          }
-          return medcrypt.processingQueue;
-        },
-        getSrcRaw: async function (
-          resource,
-          action = () => {},
-          currentTries = 0,
-        ) {
+        // Main getSrc - returns Promise
+        getSrc(resource, priority = 'low') {
           return new Promise((resolve, reject) => {
-            (async () => {
-              // Store original resource name for failedResources tracking (outside try for catch access)
-              const originalResource = resource;
+            const task = { resource, resolve, reject };
 
-              try {
-                // Check if this resource has already permanently failed
-                if (medcrypt.failedResources.has(resource)) {
-                  throw new Error("Resource previously failed");
-                }
+            // High priority (fancybox) goes to front
+            if (priority === 'high') {
+              this.queue.unshift(task);
+            } else {
+              this.queue.push(task);
+            }
 
-                // Apply preferred prefix if we've discovered what works
-                let actualResource = resource;
-                if (currentTries === 0) {
-                  // Strip any existing prefix to get base resource
-                  let baseResource = resource;
-                  if (resource.startsWith("pr/")) {
-                    baseResource = resource.substring(3);
-                  } else if (resource.startsWith("fa/")) {
-                    baseResource = resource.substring(3);
-                  } else if (resource.startsWith("crypt/")) {
-                    baseResource = resource.substring(6);
-                  }
-
-                  // If skipPrefixFallbacks is set, strip pr/ and fa/ prefixes
-                  if (
-                    medcrypt.skipPrefixFallbacks &&
-                    (resource.startsWith("pr/") || resource.startsWith("fa/"))
-                  ) {
-                    actualResource = baseResource;
-                  }
-                  // Apply preferred prefix if we've discovered what works
-                  else if (medcrypt.preferredPrefix !== null) {
-                    // Apply preferred prefix
-                    if (medcrypt.preferredPrefix === "none") {
-                      // Use no prefix
-                      actualResource = baseResource;
-                    } else if (
-                      medcrypt.preferredPrefix === "crypt" &&
-                      !medcrypt.skipCryptFallback
-                    ) {
-                      // Use crypt/ prefix ONLY if we haven't detected unencrypted files
-                      actualResource = "crypt/" + baseResource;
-                    }
-                  }
-                }
-
-                if (medcrypt.loadedCache[actualResource]) {
-                  return resolve(medcrypt.loadedCache[actualResource]);
-                }
-
-                // Update resource to actualResource for the rest of the function
-                resource = actualResource;
-
-                if (resource.includes("blob:")) {
-                  return resolve(resource);
-                }
-
-                // Check if request is already pending to prevent duplicates
-                if (medcrypt.pendingRequests.has(resource)) {
-                  // Wait for the existing request instead of rejecting
-                  const waitForExisting = () => {
-                    return new Promise((resolve) => {
-                      const checkInterval = setInterval(() => {
-                        if (!medcrypt.pendingRequests.has(resource)) {
-                          clearInterval(checkInterval);
-                          if (medcrypt.loadedCache[resource]) {
-                            resolve(medcrypt.loadedCache[resource]);
-                          } else {
-                            resolve(resource); // Fallback to resource URL
-                          }
-                        }
-                      }, 100);
-
-                      // Don't wait forever
-                      setTimeout(() => {
-                        clearInterval(checkInterval);
-                        resolve(resource);
-                      }, 3000);
-                    });
-                  };
-                  return waitForExisting();
-                }
-
-                // Check if element is still in viewport before making request
-                if (medcrypt.rapidScrolling) {
-                  throw new Error("Request cancelled - rapid scrolling");
-                }
-
-                const element = document.querySelector(
-                  `[data-resource="${resource}"]`,
-                );
-                if (element) {
-                  const rect = element.getBoundingClientRect();
-                  const viewportHeight = window.innerHeight;
-                  const isNearViewport =
-                    rect.top < viewportHeight * 1.5 &&
-                    rect.bottom > -(viewportHeight * 1.5);
-
-                  if (!isNearViewport) {
-                    throw new Error("Request cancelled - outside viewport");
-                  }
-                }
-
-                // Apply preferred prefix pattern optimization
-                // If we know crypt/ works and we know the preferred crypt prefix, use it immediately
-                if (medcrypt.preferredPrefix === "crypt" &&
-                    !resource.startsWith("crypt/") &&
-                    !resource.startsWith("pr/") &&
-                    !resource.startsWith("fa/") &&
-                    !resource.startsWith("un/") &&
-                    medcrypt.preferredCryptPrefix !== null) {
-                  // Build the resource with the preferred crypt prefix pattern
-                  let optimizedResource;
-                  if (medcrypt.preferredCryptPrefix === "pr") {
-                    optimizedResource = "crypt/pr/" + resource;
-                  } else if (medcrypt.preferredCryptPrefix === "fa") {
-                    optimizedResource = "crypt/fa/" + resource;
-                  } else if (medcrypt.preferredCryptPrefix === "un") {
-                    optimizedResource = "crypt/un/" + resource;
-                  } else if (medcrypt.preferredCryptPrefix === "none") {
-                    optimizedResource = "crypt/" + resource;
-                  }
-
-                  if (optimizedResource) {
-                    // Use the optimized resource for the rest of this request
-                    resource = optimizedResource;
-                  }
-                }
-
-                // Check if this URL has previously failed with CORS
-                const urlBase = resource.split("?")[0]; // Remove query params for CORS check
-                if (medcrypt.corsFailedUrls.has(urlBase)) {
-                  const finalUrl = usingRapiServe.length
-                    ? resource
-                    : getBasePath() + resource;
-                  return resolve(finalUrl); // Return direct URL without making request
-                }
-
-                // Check if we already know the decryption status for this resource path
-                const resourcePath = resource.split("/").slice(0, -1).join("/"); // Get path without filename
-                const serverType = usingRapiServe.length
-                  ? "rapiServe"
-                  : "direct";
-                const decryptionKey = `${serverType}:${resourcePath}`;
-                const decryptionStatus =
-                  medcrypt.decryptionStatus.get(decryptionKey);
-
-                // If we know this path doesn't need decryption, skip straight to direct URL
-                if (decryptionStatus === false) {
-                  // Ensure we use the proper URL format with base path
-                  let targetSrc;
-                  if (usingRapiServe.length) {
-                    targetSrc = usingRapiServe + "/" + resource;
-                    if (resource.startsWith(usingRapiServe + "/")) {
-                      targetSrc = resource;
-                    }
-                  } else {
-                    // Use relative path from index.html location
-                    targetSrc = getBasePath() + resource;
-                  }
-                  medcrypt.loadedCache[resource] = targetSrc;
-                  return resolve(targetSrc);
-                }
-
-                // If we know this path needs decryption, skip straight to decryption
-                // BUT skip if we've detected unencrypted files work
-                if (decryptionStatus === true && !medcrypt.skipCryptFallback) {
-                  try {
-                    // Strip crypt/ prefix if present, keep everything else (pr/, fa/, etc.)
-                    const pathToEncrypt = resource.startsWith("crypt/")
-                      ? resource.substring(6)
-                      : resource;
-                    // Encrypt the FULL path including any pr/, fa/, un/ prefixes
-                    const encryptedPath = await window.rcloneCrypt.encryptPath(
-                      pathToEncrypt,
-                      passphrase,
-                    );
-                    const cryptPath = "crypt/" + encryptedPath;
-
-                    const decrypted = window.rcloneCrypt.render(
-                      await window.rcloneCrypt.decrypt(cryptPath, passphrase),
-                      "",
-                      false,
-                      false,
-                    );
-                    medcrypt.loadedCache[resource] = decrypted;
-                    return resolve(decrypted);
-                  } catch (e) {
-                    // If decryption fails, fall through to normal flow
-                    console.warn(
-                      `Decryption failed for known encrypted path ${resource}, falling back to normal flow:`,
-                      e,
-                    );
-                  }
-                }
-
-                // Mark as pending
-                medcrypt.pendingRequests.add(resource);
-
-                let controller;
-                try {
-                  controller = new AbortController();
-                } catch (e) {
-                  controller = {
-                    signal: { aborted: false },
-                    abort: () => {
-                      controller.signal.aborted = true;
-                    },
-                  };
-                }
-                medcrypt.activeRequests.set(resource, controller);
-
-                const cleanup = () => {
-                  medcrypt.activeRequests.delete(resource);
-                  medcrypt.pendingRequests.delete(resource);
-                };
-
-                try {
-                  if (usingRapiServe.length) {
-                    let targetSrc = usingRapiServe + "/" + resource;
-                    if (resource.startsWith(usingRapiServe + "/")) {
-                      targetSrc = resource;
-                    }
-
-                    medcrypt.decryptionStatus.set(
-                      `rapiServe:${resourcePath}`,
-                      false,
-                    );
-
-                    const fetchOptions = {
-                      headers: { range: "bytes=0-1" },
-                      signal: controller.signal,
-                    };
-
-                    const response = await fetch(targetSrc, {
-                      ...fetchOptions,
-                      signal: AbortSignal.timeout(10000),
-                    });
-
-                    if (!response.ok) {
-                      throw new Error(`HTTP ${response.status}`);
-                    }
-
-                    cleanup();
-                    medcrypt.loadedCache[resource] = targetSrc;
-                    return targetSrc;
-                  }
-
-                  // If resource starts with crypt/, skip HEAD request and go straight to decryption
-                  if (!resource.startsWith("crypt/")) {
-                    // HEAD request for decryption check (only for non-crypt resources)
-                    const headOptions = {
-                      method: "HEAD",
-                      signal: controller.signal,
-                    };
-
-                    const headResponse = await fetch(resource, {
-                      ...headOptions,
-                      signal: AbortSignal.timeout(10000),
-                    });
-
-                    // Check for 404 and other HTTP errors immediately
-                    if (!headResponse.ok) {
-                      cleanup();
-                      throw new Error(`HTTP ${headResponse.status}`);
-                    }
-
-                    const mimeType = headResponse.headers
-                      .get("Content-Type")
-                      ?.split(";")[0]
-                      ?.trim();
-
-                    if (headResponse.ok) {
-                      medcrypt.decryptionStatus.set(decryptionKey, false);
-                      cleanup();
-                      // Return with base path when not using RapiServe
-                      const finalUrl = usingRapiServe.length
-                        ? resource
-                        : getBasePath() + resource;
-                      medcrypt.loadedCache[resource] = finalUrl;
-
-                      // Set preferred prefix based on what worked
-                      if (
-                        resource.startsWith("pr/") ||
-                        resource.startsWith("fa/")
-                      ) {
-                        // pr/ or fa/ prefix worked - resources use prefixes (both pr/ and fa/ can coexist)
-                        // Skip crypt/ and no-prefix fallbacks, but still try both pr/ and fa/
-                        if (!medcrypt.usesPrefixes) {
-                          medcrypt.usesPrefixes = true;
-                          medcrypt.skipCryptFallback = true;
-                          medcrypt.skipPrefixFallbacks = false; // We DO use prefixes (pr/ and/or fa/)
-                        }
-                      } else {
-                        // No prefix - unencrypted file loaded successfully
-                        if (!medcrypt.skipCryptFallback) {
-                          medcrypt.skipCryptFallback = true;
-                        }
-                        // Clear preferredPrefix if it was set to "crypt" since we now know files are unencrypted
-                        if (medcrypt.preferredPrefix === "crypt") {
-                          medcrypt.preferredPrefix = null;
-                        }
-
-                        // Check if it's a special directory that uses prefixes
-                        const isSpecialDir =
-                          resource.startsWith("flash/") ||
-                          resource.startsWith("un/") ||
-                          resource.startsWith("vr/");
-
-                        if (!isSpecialDir) {
-                          // Not a special dir - set skipPrefixFallbacks for ALL unencrypted files
-                          if (!medcrypt.skipPrefixFallbacks) {
-                            medcrypt.skipPrefixFallbacks = true;
-                          }
-
-                          // If this was a no-prefix file, set preferred prefix
-                          if (medcrypt.preferredPrefix === null) {
-                            medcrypt.preferredPrefix = "none";
-                          }
-                        }
-                      }
-
-                      return finalUrl;
-                    }
-                  }
-
-                  // If we reach here, either resource starts with "crypt/" OR HEAD request didn't return ok
-                  // In both cases, try decryption
-                  medcrypt.decryptionStatus.set(decryptionKey, true);
-
-                  // Try decryption - strip crypt/ prefix if present, keep everything else
-                  const pathToEncrypt = resource.startsWith("crypt/")
-                    ? resource.substring(6)
-                    : resource;
-                  // Encrypt the FULL path including any pr/, fa/, un/ prefixes
-                  const encryptedPath = await window.rcloneCrypt.encryptPath(
-                    pathToEncrypt,
-                    passphrase,
-                  );
-                  const cryptPath = "crypt/" + encryptedPath;
-
-                  const decryptedData = await window.rcloneCrypt.decrypt(
-                    cryptPath,
-                    passphrase,
-                  );
-                  const decrypted = window.rcloneCrypt.render(
-                    decryptedData,
-                    "",
-                    false,
-                    false,
-                  );
-
-                  cleanup();
-                  medcrypt.loadedCache[resource] = decrypted;
-
-                  // Decryption succeeded - set preferred prefix to crypt
-                  if (medcrypt.preferredPrefix === null) {
-                    medcrypt.preferredPrefix = "crypt";
-                  }
-
-                  // Remember which crypt prefix structure worked
-                  if (medcrypt.preferredCryptPrefix === null && resource.startsWith("crypt/")) {
-                    const afterCrypt = resource.substring(6);
-                    if (afterCrypt.startsWith("pr/")) {
-                      medcrypt.preferredCryptPrefix = "pr";
-                    } else if (afterCrypt.startsWith("fa/")) {
-                      medcrypt.preferredCryptPrefix = "fa";
-                    } else if (afterCrypt.startsWith("un/")) {
-                      medcrypt.preferredCryptPrefix = "un";
-                    } else {
-                      medcrypt.preferredCryptPrefix = "none";
-                    }
-                  }
-
-                  return decrypted;
-                } catch (error) {
-                  cleanup();
-
-                  if (error.name === "AbortError") {
-                    throw new Error("Request cancelled");
-                  }
-
-                  if (error.message.includes("timeout")) {
-                    throw new Error("Request timed out");
-                  }
-
-                  if (
-                    error.message.includes("CORS") ||
-                    error.message.includes("access control")
-                  ) {
-                    console.warn(`CORS error for ${resource}, falling back`);
-                    medcrypt.corsFailedUrls.add(urlBase);
-                    const finalUrl = usingRapiServe.length
-                      ? resource
-                      : getBasePath() + resource;
-                    return finalUrl;
-                  }
-
-                  // Implement fallback chain: pr/ -> fa/ -> no prefix -> crypt/
-                  // Extract the base resource without any prefix
-                  let baseResource = resource;
-                  let hadPrefix = false;
-
-                  if (resource.startsWith("pr/")) {
-                    baseResource = resource.substring(3);
-                    hadPrefix = true;
-                  } else if (resource.startsWith("fa/")) {
-                    baseResource = resource.substring(3);
-                    hadPrefix = true;
-                  } else if (resource.startsWith("crypt/")) {
-                    baseResource = resource.substring(6);
-                    hadPrefix = true;
-                  }
-
-                  // Determine what to try next
-                  if (resource.startsWith("pr/")) {
-                    // pr/ failed, try fa/ (unless skipping prefix fallbacks)
-                    if (!medcrypt.skipPrefixFallbacks) {
-                      return medcrypt.getSrcRaw(
-                        "fa/" + baseResource,
-                        action,
-                        0,
-                      );
-                    } else {
-                      // Skip straight to no prefix
-                      return medcrypt.getSrcRaw(baseResource, action, 0);
-                    }
-                  } else if (resource.startsWith("fa/")) {
-                    // fa/ failed - if we know we use prefixes, don't try no-prefix or crypt/
-                    if (medcrypt.usesPrefixes) {
-                      throw error;
-                    }
-                    // Otherwise try without prefix (then crypt if that fails)
-                    return medcrypt.getSrcRaw(baseResource, action, 0);
-                  } else if (hadPrefix && resource.startsWith("crypt/")) {
-                    // crypt/ failed - try different prefix combinations
-                    // baseResource is what's after crypt/ (e.g., "photo.jpg" or "pr/photo.jpg")
-
-                    // If baseResource has no prefix (e.g., "photo.jpg"), try with prefixes
-                    if (!baseResource.startsWith("pr/") &&
-                        !baseResource.startsWith("fa/") &&
-                        !baseResource.startsWith("un/")) {
-                      // We tried crypt/photo.jpg, now try crypt/pr/photo.jpg
-                      return medcrypt.getSrcRaw("crypt/pr/" + baseResource, action, 0);
-                    } else if (baseResource.startsWith("pr/")) {
-                      // We tried crypt/pr/photo.jpg, now try crypt/fa/photo.jpg
-                      const withoutPrefix = baseResource.substring(3);
-                      return medcrypt.getSrcRaw("crypt/fa/" + withoutPrefix, action, 0);
-                    } else if (baseResource.startsWith("fa/")) {
-                      // We tried crypt/fa/photo.jpg, now try crypt/un/photo.jpg
-                      const withoutPrefix = baseResource.substring(3);
-                      return medcrypt.getSrcRaw("crypt/un/" + withoutPrefix, action, 0);
-                    } else if (baseResource.startsWith("un/")) {
-                      // We tried all prefixes, give up
-                      throw error;
-                    }
-                  } else if (!hadPrefix) {
-                    // Check if this resource should skip crypt/ fallback
-                    const isSpecialDir =
-                      resource.startsWith("flash/") ||
-                      resource.startsWith("un/") ||
-                      resource.startsWith("vr/");
-
-                    // no prefix failed, try crypt/ (this will use decryption) - but only if not skipped
-                    if (!medcrypt.skipCryptFallback && !isSpecialDir) {
-                      // Use the preferred crypt prefix if we know it
-                      if (medcrypt.preferredCryptPrefix === "pr") {
-                        return medcrypt.getSrcRaw("crypt/pr/" + resource, action, 0);
-                      } else if (medcrypt.preferredCryptPrefix === "fa") {
-                        return medcrypt.getSrcRaw("crypt/fa/" + resource, action, 0);
-                      } else if (medcrypt.preferredCryptPrefix === "un") {
-                        return medcrypt.getSrcRaw("crypt/un/" + resource, action, 0);
-                      } else if (medcrypt.preferredCryptPrefix === "none") {
-                        return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
-                      } else {
-                        // Don't know yet, try no prefix first
-                        return medcrypt.getSrcRaw("crypt/" + resource, action, 0);
-                      }
-                    }
-                  }
-
-                  throw error;
-                }
-              } catch (error) {
-                medcrypt.finishProgress();
-
-                // Check if cancelled, previously failed, or other non-retryable errors
-                if (error.message && error.message.includes("cancelled")) {
-                  // Cancelled requests (viewport/scrolling) - allow retry later
-                  // Remove from queued set so it can be re-queued
-                  medcrypt.queuedResources.delete(originalResource);
-                  medcrypt.queuedResources.delete(resource);
-                  throw error;
-                }
-
-                if (
-                  error.message &&
-                  (error.message.includes("previously failed") ||
-                    error.message.includes("HTTP 404") ||
-                    error.message.includes("404"))
-                ) {
-                  // Don't retry 404 errors - file doesn't exist (permanent failure)
-                  if (error.message.includes("404")) {
-                    medcrypt.failedResources.add(originalResource);
-                    medcrypt.failedResources.add(resource); // Also add transformed resource
-                  }
-                  throw error;
-                }
-
-                // Retry on timeouts and other errors, but with much shorter delays
-                if (currentTries < medcrypt.maxTries) {
-                  const delay = Math.min(100 * (currentTries + 1), 300); // Much faster: 100ms, 200ms max
-                  await sleep(delay);
-                  return medcrypt.getSrcRaw(
-                    originalResource,
-                    action,
-                    currentTries + 1,
-                  );
-                }
-
-                // Final fallback - don't mark as permanently failed (allow retry if user scrolls back)
-                // Only 404s are permanently failed - timeouts/network errors are temporary
-                medcrypt.queuedResources.delete(originalResource);
-                medcrypt.queuedResources.delete(resource);
-                throw new Error(
-                  `Failed to load resource after ${medcrypt.maxTries} attempts`,
-                );
-              }
-            })()
-              .then(resolve)
-              .catch(reject);
+            this.startProcessing();
           });
         },
 
-        setWithExpiry: function (key, value, ttl) {
-          const now = new Date();
+        async startProcessing() {
+          if (this.processing) return;
+          this.processing = true;
+
+          while (this.queue.length > 0) {
+            const task = this.queue.shift();
+
+            try {
+              const url = await this.fetchResource(task.resource);
+              task.resolve(url);
+            } catch (error) {
+              task.reject(error); // Bubble error to caller
+            }
+          }
+
+          this.processing = false;
+        },
+
+        async fetchResource(resource) {
+          const isFlashOrVr = resource.startsWith('flash/') || resource.startsWith('vr/');
+          const isMedia = this.isMediaFile(resource);
+
+          // Build path variations
+          const paths = [];
+
+          if (isMedia && !isFlashOrVr) {
+            // Regular media file path sequence
+            if (!this.useCrypt) {
+              // Try unencrypted first
+              if (!this.skipPrFa) {
+                paths.push('pr/' + resource);
+                paths.push('fa/' + resource);
+              }
+              if (!this.usesPrFa) {
+                paths.push(resource);
+              }
+            }
+            // Try encrypted
+            paths.push('crypt/pr/' + resource);
+            paths.push('crypt/fa/' + resource);
+            paths.push('crypt/' + resource);
+          } else if (isFlashOrVr) {
+            // Flash/VR specific
+            paths.push(resource);
+            paths.push('crypt/' + resource);
+          } else {
+            // Non-media files
+            paths.push(resource);
+          }
+
+          // Try each path (max 3 attempts each)
+          for (const path of paths) {
+            for (let attempt = 1; attempt <= 3; attempt++) {
+              try {
+                // Check viewport before each fetch
+                const element = document.querySelector(`[data-src="${resource}"]`);
+                if (!this.isNearViewport(element)) {
+                  throw new Error('Outside viewport');
+                }
+
+                const url = usingRapiServe.length
+                  ? `${usingRapiServe}/${path}`
+                  : getBasePath() + path;
+
+                // HEAD request to check if file exists
+                const response = await fetch(url, {
+                  method: 'HEAD',
+                  signal: AbortSignal.timeout(10000)
+                });
+
+                if (response.ok) {
+                  // Update optimization flags
+                  if (path.startsWith('crypt/')) {
+                    this.useCrypt = true;
+                  } else if (path.startsWith('pr/') || path.startsWith('fa/')) {
+                    this.usesPrFa = true;
+                  } else if (path === resource && isMedia && !isFlashOrVr) {
+                    this.skipPrFa = true;
+                  }
+
+                  // Handle encrypted files
+                  if (path.startsWith('crypt/') && typeof window.rcloneCrypt !== 'undefined') {
+                    return await this.decryptFile(path.substring(6), resource);
+                  }
+
+                  // Get blob URL for HTTPS media
+                  if (isMedia && window.location.protocol === 'https:') {
+                    return await this.getBlobUrl(url, resource);
+                  }
+
+                  return url;
+                }
+
+                // 404 - try next path immediately
+                if (response.status === 404) break;
+
+              } catch (error) {
+                // Viewport check failed - abort completely
+                if (error.message === 'Outside viewport') {
+                  throw error;
+                }
+
+                // Retry on timeout/network error
+                if (attempt < 3) {
+                  await new Promise(r => setTimeout(r, 100 * attempt));
+                }
+              }
+            }
+          }
+
+          // All paths exhausted
+          throw new Error(`Failed to load: ${resource}`);
+        },
+
+        async decryptFile(pathToEncrypt, originalResource) {
+          const encryptedPath = await window.rcloneCrypt.encryptPath(pathToEncrypt, passphrase);
+          const cryptUrl = (usingRapiServe.length ? usingRapiServe + '/' : getBasePath()) + 'crypt/' + encryptedPath;
+
+          const decryptedData = await window.rcloneCrypt.decrypt(cryptUrl, passphrase);
+          const decrypted = window.rcloneCrypt.render(decryptedData, "", false, false);
+
+          return decrypted;
+        },
+
+        async getBlobUrl(url, resource) {
+          // Check cache
+          if (this.blobCache.has(resource)) {
+            return this.blobCache.get(resource);
+          }
+
+          // Enforce 48 blob limit
+          if (this.blobCache.size >= this.maxBlobs) {
+            const oldestKey = this.blobCache.keys().next().value;
+            const oldBlob = this.blobCache.get(oldestKey);
+            try {
+              URL.revokeObjectURL(oldBlob);
+            } catch (e) {}
+            this.blobCache.delete(oldestKey);
+          }
+
+          // Fetch and create blob
+          const response = await fetch(url, {
+            signal: AbortSignal.timeout(10000)
+          });
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+
+          this.blobCache.set(resource, blobUrl);
+          return blobUrl;
+        },
+
+        cleanupOutOfViewportBlobs() {
+          const viewportImages = Array.from(document.querySelectorAll('img[data-src]'))
+            .filter(img => this.isNearViewport(img))
+            .map(img => img.dataset.src);
+
+          const inViewport = new Set(viewportImages);
+
+          for (const [resource, blobUrl] of this.blobCache.entries()) {
+            if (!inViewport.has(resource)) {
+              try {
+                URL.revokeObjectURL(blobUrl);
+              } catch (e) {}
+              this.blobCache.delete(resource);
+            }
+          }
+        },
+
+        // Keep these for compatibility with existing code
+        setWithExpiry(key, value, ttl) {
           const item = {
             value: value,
-            expiry: now.getTime() + ttl,
+            expiry: new Date().getTime() + ttl
           };
           localStorage.setItem(key, btoa(JSON.stringify(item)));
         },
 
-        getWithExpiry: function (key) {
+        getWithExpiry(key) {
           const itemStr = localStorage.getItem(key);
-          if (!itemStr) {
-            return null;
-          }
+          if (!itemStr) return null;
+
           const item = JSON.parse(atob(itemStr));
-          const now = new Date();
-          if (now.getTime() > item.expiry) {
+          if (new Date().getTime() > item.expiry) {
             localStorage.removeItem(key);
             return null;
           }
           return item.value;
-        },
+        }
       };
+
+      // Cleanup blobs every 5 seconds
+      setInterval(() => {
+        medcrypt.cleanupOutOfViewportBlobs();
+      }, 5000);
 
       window.idleTimer = setInterval(() => {
         if (typeof passphrase !== "undefined" && passphrase.length < 512) {
@@ -2123,6 +1214,24 @@
       <ul id="tags" class="collapsible collapsed"></ul>
     </div>
     <ul id="media-types">
+      <li id="media-type-sortbyscore">
+        <svg width="30px" height="30px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+            <g transform="matrix(0.0117188,0,0,0.0117188,0.160534,6.04957)">
+                <g transform="matrix(1.11619,0,0,1.11619,-337.756,-1248.26)">
+                    <path d="M1666.12,1145.19C1762.42,1145.19 1821.51,1398.16 1821.51,1398.16C1821.51,1398.16 2087.36,1397.72 2110.12,1467.78C2139.88,1559.36 1917.55,1693.74 1917.55,1693.74C1917.55,1693.74 2000.12,1946.43 1940.53,1989.73C1862.62,2046.33 1666.12,1876.41 1666.12,1876.41C1666.12,1876.41 1451.3,2033.03 1391.71,1989.73C1313.81,1933.13 1414.69,1693.74 1414.69,1693.74C1414.69,1693.74 1199.36,1537.83 1222.12,1467.78C1251.88,1376.19 1510.73,1398.16 1510.73,1398.16C1510.73,1398.16 1592.46,1145.19 1666.12,1145.19Z" style="fill:white;"/>
+                </g>
+                <g transform="matrix(0.575566,0,0,0.938068,-53.4881,711.775)">
+                    <path d="M1982.51,190.388C1982.51,246.384 1908.41,291.845 1817.15,291.845L258.288,291.845C167.025,291.845 92.931,246.384 92.931,190.388C92.931,134.393 167.025,88.931 258.288,88.931L1817.15,88.931C1908.41,88.931 1982.51,134.393 1982.51,190.388Z" style="fill:white;"/>
+                </g>
+                <g transform="matrix(0.513422,0,0,0.938068,-47.713,329.173)">
+                    <path d="M1982.51,190.388C1982.51,246.384 1899.45,291.845 1797.14,291.845L278.302,291.845C175.993,291.845 92.931,246.384 92.931,190.388C92.931,134.393 175.993,88.931 278.302,88.931L1797.14,88.931C1899.45,88.931 1982.51,134.393 1982.51,190.388Z" style="fill:white;"/>
+                </g>
+                <g transform="matrix(0.436467,0,0,0.938068,-40.5615,-53.4296)">
+                    <path d="M1982.51,190.388C1982.51,246.384 1884.8,291.845 1764.45,291.845L310.985,291.845C190.638,291.845 92.931,246.384 92.931,190.388C92.931,134.393 190.638,88.931 310.985,88.931L1764.45,88.931C1884.8,88.931 1982.51,134.393 1982.51,190.388Z" style="fill:white;"/>
+                </g>
+            </g>
+        </svg>
+      </li>
       <li id="media-type-sortbyduration">
         <svg
           width="30px"
@@ -2705,10 +1814,12 @@
           (window.mobileCheck()
             ? "pr/ZW/ZW5jcnlwdGVkX21vYmlsZV9kYXRh.js"
             : "pr/ZW/ZW5jcnlwdGVkX2RhdGE=.js") + tail,
-          (encrypted_data_file) => {
-            loadScript(encrypted_data_file, loadPacks);
-          },
-        );
+          'high'
+        ).then((encrypted_data_file) => {
+          loadScript(encrypted_data_file, loadPacks);
+        }).catch((error) => {
+          console.error("Failed to load encrypted data:", error);
+        });
       }
 
       var unlock = function (setPassword = true) {
@@ -2918,7 +2029,7 @@
 
       function getMetaDataForHash(hash, target) {
         let targetSrc = "pr/meta/" + btoa(hash).substring(0, 2) + ".json";
-        medcrypt.getSrc(targetSrc, (uri) => {
+        medcrypt.getSrc(targetSrc, 'low').then((uri) => {
           fetch(uri)
             .then((response) => response.json())
             .then((data) => {
@@ -2927,6 +2038,8 @@
             .catch((error) => {
               console.error("Error fetching MetaData Store: ", error);
             });
+        }).catch((error) => {
+          console.error("Failed to load metadata:", error);
         });
       }
 
@@ -3225,7 +2338,7 @@
 
               // Load ruffle script independently
               medcrypt
-                .getSrcRaw("flash/ruffle/ruffle.js")
+                .getSrc("flash/ruffle/ruffle.js", 'high')
                 .then((scriptUrl) => {
                   try {
                     loadScript(scriptUrl);
@@ -3256,6 +2369,7 @@
                 vr: 1,
                 duration: item["Duration"] ?? 0,
                 sound: item["Sound"] ?? -91,
+                score: item["score"] ?? 0,
               }));
               window.alldata = [
                 ...(window.alldata ?? []),
@@ -3289,6 +2403,7 @@
                       time: item.times[index],
                       duration: item.duration,
                       sound: item.sound,
+                      score: item.score ?? 0
                     });
                   });
                 } else {
@@ -3318,7 +2433,7 @@
             return Promise.resolve().then(pack.processor);
           }
           return medcrypt
-            .getSrcRaw(pack.url)
+            .getSrc(pack.url, 'high')
             .then((uri) => fetch(uri))
             .then((response) => {
               if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -3359,6 +2474,7 @@
                 time: item.times[index],
                 duration: item.duration,
                 sound: item.sound,
+                score: item.score ?? 0
               });
             });
           } else {
@@ -3667,9 +2783,13 @@
               ) {
                 return 1;
               }
-
+              
               if (mediaFilters["sortbyduration"]) {
                 return b["duration"] - a["duration"];
+              }
+              
+              if (mediaFilters["sortbyscore"]) {
+                return b["score"] - a["score"];
               }
 
               return b["time"] - a["time"];
@@ -3797,6 +2917,7 @@
                     flash,
                     item.duration > 0 ? item.duration : 0,
                     item.sound > -70 ? 1 : 0,
+                    item.score ?? 0
                   ]);
                 }
                 if (("photo" == kind || "all" == kind) && !isVideo) {
@@ -3844,6 +2965,7 @@
                       flash,
                       duration,
                       sound,
+                      score
                     ]) =>
                       flash
                         ? jQuery("#content").append(
@@ -4156,21 +3278,18 @@
             $("#fb-bg-overlay").css("height", height);
             if (slide.opts.$orig.hasClass("vr-link")) {
               const playerUrl = slide.opts.$orig.data("url");
-              medcrypt.getSrc(
-                playerUrl,
-                (uri) => {
-                  let hash = get3dHash(
-                    basename(
-                      decodePath(playerUrl),
-                      "." + getFileExtension(playerUrl),
-                    ),
-                  );
-                  window.localStorage.setItem("vr-type", hash);
-                  reloadPlayer(uri);
-                },
-                0,
-                "high",
-              );
+              medcrypt.getSrc(playerUrl, 'high').then((uri) => {
+                let hash = get3dHash(
+                  basename(
+                    decodePath(playerUrl),
+                    "." + getFileExtension(playerUrl),
+                  ),
+                );
+                window.localStorage.setItem("vr-type", hash);
+                reloadPlayer(uri);
+              }).catch((error) => {
+                console.error("Failed to load VR content:", error);
+              });
             } else if (slide.opts.$orig.hasClass("flash-link")) {
               const player = ruffle.createPlayer();
               $("#inline-player").empty().html(player);
@@ -4270,39 +3389,36 @@
                 window.currentAlbum,
               );
 
-              medcrypt.getSrc(
-                targetsrc,
-                (uri) => {
-                  $(".fancybox-container a[data-fancybox-download]").attr(
-                    "href",
-                    uri,
-                  );
-                  element.attr("href", uri);
-                  slide.src = uri;
-                  slide.original = targetsrc;
-                  let elementa = $('.gallerypicture[href="' + slide.src + '"]');
-                  let attempts =
-                    parseInt(elementa.attr("data-attempts") ?? "0", 10) ?? 0;
-                  if (slide.hasError && attempts < 3) {
-                    elementa.attr("data-attempts", attempts + 1);
-                    $(".fancybox-content.fancybox-error").remove();
-                    const fancyInstance = $.fancybox.getInstance();
-                    if (
-                      fancyInstance &&
-                      fancyInstance.current &&
-                      fancyInstance.current.$slide
-                    ) {
-                      fancyInstance.current.$slide.trigger("onReset");
-                    }
-                    slide.hasError = false;
-                    slide.isLoading = false;
-                    slide.isLoaded = false;
-                    instance.loadSlide(slide);
+              medcrypt.getSrc(targetsrc, 'high').then((uri) => {
+                $(".fancybox-container a[data-fancybox-download]").attr(
+                  "href",
+                  uri,
+                );
+                element.attr("href", uri);
+                slide.src = uri;
+                slide.original = targetsrc;
+                let elementa = $('.gallerypicture[href="' + slide.src + '"]');
+                let attempts =
+                  parseInt(elementa.attr("data-attempts") ?? "0", 10) ?? 0;
+                if (slide.hasError && attempts < 3) {
+                  elementa.attr("data-attempts", attempts + 1);
+                  $(".fancybox-content.fancybox-error").remove();
+                  const fancyInstance = $.fancybox.getInstance();
+                  if (
+                    fancyInstance &&
+                    fancyInstance.current &&
+                    fancyInstance.current.$slide
+                  ) {
+                    fancyInstance.current.$slide.trigger("onReset");
                   }
-                },
-                0,
-                "high",
-              );
+                  slide.hasError = false;
+                  slide.isLoading = false;
+                  slide.isLoaded = false;
+                  instance.loadSlide(slide);
+                }
+              }).catch((error) => {
+                console.error("Failed to load fancybox content:", error);
+              });
               if ($.fancybox.getInstance().SlideShow.isActive) {
                 $.fancybox.getInstance().SlideShow.stop();
                 window.slideshowStarted = true;
@@ -4418,70 +3534,67 @@
               console.error(e);
             }
 
-            medcrypt.getSrc(
-              slide.src,
-              (uri) => {
-                element.attr("href", uri);
-                slide.src = uri;
-                slide.original = targetsrc;
-                if (slide.hasError) {
-                  $(".fancybox-content.fancybox-error").remove();
-                  $.fancybox.getInstance().current.$slide.trigger("onReset");
-                  slide.hasError = false;
-                  slide.isLoading = false;
-                  slide.isLoaded = false;
-                  instance.loadSlide(slide);
+            medcrypt.getSrc(slide.src, 'high').then((uri) => {
+              element.attr("href", uri);
+              slide.src = uri;
+              slide.original = targetsrc;
+              if (slide.hasError) {
+                $(".fancybox-content.fancybox-error").remove();
+                $.fancybox.getInstance().current.$slide.trigger("onReset");
+                slide.hasError = false;
+                slide.isLoading = false;
+                slide.isLoaded = false;
+                instance.loadSlide(slide);
+              }
+
+              var retry = 0;
+              $("video").on("error", function () {
+                if (retry < 4) {
+                  retry++;
+                  setTimeout(function () {
+                    $("video")
+                      .find("source")
+                      .attr("src", uri)
+                      .parent()
+                      .trigger("load");
+
+                    $("video").prop(
+                      "currentTime",
+                      window.currentAlbumPosition?.currentTime ?? 0,
+                    );
+                    $("video").trigger("play");
+                  }, 1000);
                 }
+              });
+              $("video")
+                .find("source")
+                .attr("src", uri)
+                .parent()
+                .trigger("load");
 
-                var retry = 0;
-                $("video").on("error", function () {
-                  if (retry < 4) {
-                    retry++;
-                    setTimeout(function () {
-                      $("video")
-                        .find("source")
-                        .attr("src", uri)
-                        .parent()
-                        .trigger("load");
-
-                      $("video").prop(
-                        "currentTime",
-                        window.currentAlbumPosition?.currentTime ?? 0,
-                      );
-                      $("video").trigger("play");
-                    }, 1000);
-                  }
-                });
-                $("video")
-                  .find("source")
-                  .attr("src", uri)
-                  .parent()
-                  .trigger("load");
-
-                $("video").prop(
+              $("video").prop(
+                "currentTime",
+                window.currentAlbumPosition?.currentTime ?? 0,
+              );
+              $("video").trigger("play");
+              $("video").on("loadedmetadata", function () {
+                $(this).prop(
                   "currentTime",
                   window.currentAlbumPosition?.currentTime ?? 0,
                 );
                 $("video").trigger("play");
-                $("video").on("loadedmetadata", function () {
-                  $(this).prop(
-                    "currentTime",
-                    window.currentAlbumPosition?.currentTime ?? 0,
-                  );
-                  $("video").trigger("play");
-                });
+              });
 
-                $("video").on("timeupdate", function () {
-                  updatePlaybackTimestamp(
-                    originalLink.data("filehash"),
-                    window.currentAlbum,
-                    $("video").get(0),
-                  );
-                });
-              },
-              0,
-              "high",
-            );
+              $("video").on("timeupdate", function () {
+                updatePlaybackTimestamp(
+                  originalLink.data("filehash"),
+                  window.currentAlbum,
+                  $("video").get(0),
+                );
+              });
+            }).catch((error) => {
+              console.error("Failed to load video content:", error);
+            });
             $("video").removeAttr("controls");
             $("video").click(function toggleControls() {
               if (this.hasAttribute("controls")) {
@@ -4750,13 +3863,15 @@
                 (rect.top >= -800 && rect.top < viewportHeight + 800) ||
                 (rect.bottom > -800 && rect.bottom < viewportHeight + 800);
 
-              // Reset stuck images that have been loading for too long (5 seconds)
+              // Reset stuck images that have been loading for too long (15 seconds for full cascade)
               if (lazyImage.classList.contains("lazy-loading")) {
                 const loadingStart = lazyImage.dataset.loadingStart
                   ? parseInt(lazyImage.dataset.loadingStart)
                   : 0;
-                if (loadingStart && now - loadingStart > 5000) {
+                // Allow more time for cascade retries: 15s (was 5s)
+                if (loadingStart && now - loadingStart > 15000) {
                   // Clear from queued resources so it can be re-queued
+                  console.warn(`[Stuck Image] Resetting ${lazyImage.dataset.src} - stuck for ${now - loadingStart}ms`);
                   medcrypt.queuedResources.delete(lazyImage.dataset.src);
                   medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                   lazyImage.classList.remove("lazy-loading");
@@ -4827,7 +3942,8 @@
           setTimeout(checkLazyLoad, 100);
 
           // Run interval-based check to catch any images that IntersectionObserver might miss
-          setInterval(checkLazyLoad, 300); // Check every 300ms
+          // More frequent checks to catch temporary failures quickly
+          setInterval(checkLazyLoad, 200); // Check every 200ms (was 300ms)
 
           // Run blob URL cleanup for iOS Safari memory management
           // More aggressive on iOS: 2s vs 5s
@@ -4926,13 +4042,15 @@
                 (rect.top >= -800 && rect.top < viewportHeight + 800) ||
                 (rect.bottom > -800 && rect.bottom < viewportHeight + 800);
 
-              // Reset stuck images that have been loading for too long (5 seconds)
+              // Reset stuck images that have been loading for too long (15 seconds for full cascade)
               if (lazyImage.classList.contains("lazy-loading")) {
                 const loadingStart = lazyImage.dataset.loadingStart
                   ? parseInt(lazyImage.dataset.loadingStart)
                   : 0;
-                if (loadingStart && now - loadingStart > 5000) {
+                // Allow more time for cascade retries: 15s (was 5s)
+                if (loadingStart && now - loadingStart > 15000) {
                   // Clear from queued resources so it can be re-queued
+                  console.warn(`[Stuck Image] Resetting ${lazyImage.dataset.src} - stuck for ${now - loadingStart}ms`);
                   medcrypt.queuedResources.delete(lazyImage.dataset.src);
                   medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                   lazyImage.classList.remove("lazy-loading");
@@ -5050,27 +4168,18 @@
 
           const attemptLoad = () => {
             lazyImage.onerror = function () {
-              // Mark as permanently failed in the global set
-              medcrypt.failedResources.add(lazyImage.dataset.src);
-              medcrypt.queuedResources.delete(lazyImage.dataset.src);
-              medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+              // Clean up state to prevent infinite re-queuing, but DON'T show md5 placeholder
+              // The .catch() handler will show placeholder ONLY if truly permanent
+              console.warn(
+                `Image onerror fired for ${lazyImage.dataset.src} - cleaning up to prevent re-queue`,
+              );
 
+              // Clean up state so image doesn't get re-queued in infinite loop
+              medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
               lazyImage.classList.remove("lazy-loading");
-              lazyImage.classList.add("lazy-error");
-              lazyImage.dataset.loadFailed = "true";
               delete lazyImage.dataset.loadingStart;
 
-              // Generate hash-based placeholder image
-              const hash =
-                lazyImage.dataset.filehash ||
-                lazyImage.closest("img[data-filehash]")?.dataset?.filehash;
-              if (hash && typeof md5ToImage === "function") {
-                lazyImage.src = md5ToImage(hash);
-              }
-
-              console.warn(
-                `Image onerror fired for ${lazyImage.dataset.src}, marked as permanently failed`,
-              );
+              // DON'T set md5 placeholder here - wait for .catch() to determine if permanent
             };
 
             lazyImage.onload = function () {
@@ -5081,119 +4190,89 @@
             };
 
             medcrypt
-              .getSrc(
-                lazyImage.dataset.src,
-                async (uri) => {
-                  // Check if rapid scrolling - if so, reset and try again later
-                  if (medcrypt.rapidScrolling) {
-                    medcrypt.queuedResources.delete(lazyImage.dataset.src);
-                    medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
-                    lazyImage.classList.remove("lazy-loading");
-                    lazyImage.classList.add("lazy-waiting");
-                    delete lazyImage.dataset.loadingStart;
-                    return;
-                  }
-
-                  const currentRect = lazyImage.getBoundingClientRect();
-                  const currentViewportHeight = window.innerHeight;
-                  // More lenient check - allow images that are partially in viewport or nearby
-                  const isInViewport =
-                    currentRect.top < currentViewportHeight &&
-                    currentRect.bottom > 0;
-                  const isNearViewport =
-                    currentRect.top < currentViewportHeight * 3 &&
-                    currentRect.bottom > -(currentViewportHeight * 3);
-
-                  if (isNearViewport) {
-                    // For HTTP, skip blob conversion and use direct URL
-                    if (window.location.protocol === "http:") {
-                      lazyImage.src = uri;
-                    } else {
-                      try {
-                        const blobUrl = await medcrypt.fetchImageAsBlob(
-                          uri,
-                          lazyImage.dataset.src,
-                          lazyImage,
-                        );
-
-                        // Final check before setting src
-                        if (!medcrypt.rapidScrolling) {
-                          lazyImage.src = blobUrl;
-                        } else {
-                          // Rapid scrolling started during fetch, reset state
-                          medcrypt.queuedResources.delete(
-                            lazyImage.dataset.src,
-                          );
-                          medcrypt.activeImageLoads.delete(
-                            lazyImage.dataset.src,
-                          );
-                          lazyImage.classList.remove("lazy-loading");
-                          lazyImage.classList.add("lazy-waiting");
-                          delete lazyImage.dataset.loadingStart;
-                        }
-                      } catch (error) {
-                        // Check if cancelled or outside viewport
-                        if (
-                          error.message &&
-                          (error.message.includes("cancelled") ||
-                            error.message.includes("outside viewport"))
-                        ) {
-                          // Cancelled, reset state to try again later
-                          medcrypt.queuedResources.delete(
-                            lazyImage.dataset.src,
-                          );
-                          medcrypt.activeImageLoads.delete(
-                            lazyImage.dataset.src,
-                          );
-                          lazyImage.classList.remove("lazy-loading");
-                          lazyImage.classList.add("lazy-waiting");
-                          delete lazyImage.dataset.loadingStart;
-                        } else {
-                          // Failed to fetch - use original resource as fallback
-                          console.warn(
-                            `Failed to create blob for ${lazyImage.dataset.src}, using fallback:`,
-                            error,
-                          );
-                          lazyImage.src = lazyImage.dataset.src;
-                        }
-                      }
-                    }
-                  } else {
-                    // Not visible anymore, reset state
-                    medcrypt.queuedResources.delete(lazyImage.dataset.src);
-                    medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
-                    lazyImage.classList.remove("lazy-loading");
-                    lazyImage.classList.add("lazy-waiting");
-                    delete lazyImage.dataset.loadingStart;
-                  }
-                },
-                0,
-                priority,
-              )
-              .catch((error) => {
-                // Check if this was a temporary failure (cancelled, viewport) or permanent (404, exhausted retries)
-                const isCancelled =
-                  error.message &&
-                  (error.message.includes("cancelled") ||
-                    error.message.includes("outside viewport") ||
-                    error.message.includes("rapid scrolling"));
-
-                if (isCancelled) {
-                  // Temporary failure - reset to waiting so it can be retried later
-                  medcrypt.queuedResources.delete(lazyImage.dataset.src);
+              .getSrc(lazyImage.dataset.src, priority)
+              .then((uri) => {
+                // Check if rapid scrolling - if so, reset and try again later
+                if (medcrypt.rapidScrolling) {
                   medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                   lazyImage.classList.remove("lazy-loading");
                   lazyImage.classList.add("lazy-waiting");
                   delete lazyImage.dataset.loadingStart;
+                  return;
+                }
+
+                const currentRect = lazyImage.getBoundingClientRect();
+                const currentViewportHeight = window.innerHeight;
+                // More lenient check - allow images that are partially in viewport or nearby
+                const isNearViewport =
+                  currentRect.top < currentViewportHeight * 3 &&
+                  currentRect.bottom > -(currentViewportHeight * 3);
+
+                if (isNearViewport) {
+                  // Set the image source (already a blob URL if needed)
+                  lazyImage.src = uri;
                 } else {
-                  // Permanent failure (404 or exhausted retries)
+                  // Not visible anymore, reset state
+                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+                  lazyImage.classList.remove("lazy-loading");
+                  lazyImage.classList.add("lazy-waiting");
+                  delete lazyImage.dataset.loadingStart;
+                }
+              })
+              .catch((error) => {
+                // Check if this was a temporary failure (cancelled, viewport) or permanent (404, exhausted retries)
+                const isTemporaryFailure =
+                  error.message &&
+                  (error.message.includes("cancelled") ||
+                    error.message.includes("outside viewport") ||
+                    error.message.includes("rapid scrolling") ||
+                    error.message.includes("timeout"));
+
+                const isPermanentFailure =
+                  error.message &&
+                  (error.message.includes("404") ||
+                    error.message.includes("exhausted") ||
+                    error.message.includes("All fallbacks exhausted"));
+
+                if (isTemporaryFailure) {
+                  // Temporary failure - reset to waiting so it can be retried later
+                  console.log(`[Temporary Failure] ${error.message} for: ${lazyImage.dataset.src} - will retry later`);
+                  medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+                  lazyImage.classList.remove("lazy-loading");
+                  lazyImage.classList.remove("lazy-error");  // Remove error class!
+                  lazyImage.classList.add("lazy-waiting");
+                  delete lazyImage.dataset.loadFailed;  // Remove failed flag
+                  delete lazyImage.dataset.loadingStart;
+
+                  // Reset image src to placeholder so browser doesn't cache the failed attempt
+                  lazyImage.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+                } else if (isPermanentFailure) {
+                  // Permanent failure - ONLY show md5 placeholder for actual 404/exhausted errors
+                  console.log(`[Permanent Failure] ${error.message} for: ${lazyImage.dataset.src} - showing placeholder`);
                   medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                   lazyImage.classList.remove("lazy-loading");
                   lazyImage.classList.add("lazy-error");
                   lazyImage.dataset.loadFailed = "true";
                   delete lazyImage.dataset.loadingStart;
-                  // Use original resource URL as final fallback
-                  lazyImage.src = lazyImage.dataset.src;
+
+                  // Show md5 placeholder for permanent failures
+                  const hash =
+                    lazyImage.dataset.filehash ||
+                    lazyImage.closest("img[data-filehash]")?.dataset?.filehash;
+                  if (hash && typeof md5ToImage === "function") {
+                    lazyImage.src = md5ToImage(hash);
+                  }
+                } else {
+                  // Unknown error - treat as temporary, reset to waiting
+                  console.warn(`[Unknown Error] ${error.message} for: ${lazyImage.dataset.src} - treating as temporary`);
+                  medcrypt.queuedResources.delete(lazyImage.dataset.src);
+                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+                  lazyImage.classList.remove("lazy-loading");
+                  lazyImage.classList.remove("lazy-error");  // Remove error class!
+                  lazyImage.classList.add("lazy-waiting");
+                  delete lazyImage.dataset.loadFailed;  // Remove failed flag
+                  delete lazyImage.dataset.loadingStart;
                 }
               });
           };

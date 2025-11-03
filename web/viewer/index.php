@@ -170,7 +170,7 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false): array
     }
 
     // Optimized query with better indexing hints
-    $sql = "SELECT filename, album, dupe, time, hash, duration, sound, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE $blocked hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc";
+    $sql = "SELECT filename, album, dupe, time, hash, duration, sound, score, REGEXP_REPLACE(metadata, 'www\.[a-zA-Z0-9\_\.\/\:\-\?\=\&]*|(http|https|ftp):\/\/[a-zA-Z0-9\_\.\/\:\-\?\=\&]*', 'Link Removed') as metadata FROM (SELECT * FROM media WHERE $blocked hash is not null and hash != '' and hash != 'compressed') t1 ORDER BY time desc";
 
     $stmt = $conn->prepare($sql);
     $stmt->execute();
@@ -246,7 +246,8 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false): array
                   'times' => [$item['time']],
                   'metadata' => $item['metadata'],
                   'duration' => $item['duration'],
-                  'sound' => $item['sound']
+                  'sound' => $item['sound'],
+                  'score' => $item['score']
                 ];
             } else {
                 $array[$item['hash']]['albums'][] = sanitizeLine($item['album']);

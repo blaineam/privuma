@@ -97,6 +97,7 @@ class privuma
                 `blocked` int(1) DEFAULT 1,
                 `duration` bigint(20) DEFAULT NULL,
                 `sound` FLOAT DEFAULT NULL,
+                `score` bigint(20) DEFAULT NULL,
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `media_id_IDX` (`id`) USING BTREE,
                 KEY `media_hash_IDX` (`hash`) USING BTREE,
@@ -135,7 +136,8 @@ class privuma
                     `metadata` TEXT DEFAULT NULL,
                     `blocked` INTEGER DEFAULT 1,
                     `duration` INTEGER DEFAULT NULL,
-                    `sound` REAL DEFAULT NULL
+                    `sound` REAL DEFAULT NULL,
+                    `score` INTEGER DEFAULT NULL,
                     );');
 
                 $this->pdo->exec(

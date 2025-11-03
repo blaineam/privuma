@@ -329,7 +329,7 @@ class cloudFS
         try {
             $data = json_decode($this->execute('size', $file, null, false, true, [
                 '--json'
-            ], false, true, 5.0), true);
+            ], false, true, 15.0), true);
         } catch (Exception $e) {
             error_log($e->getMessage());
             return false;
@@ -427,7 +427,7 @@ class cloudFS
         if (!is_string($this->env->get('CLOUDFS_HTTP_REMOTE')) || !is_string($this->env->get('CLOUDFS_HTTP_ENDPOINT'))) {
             try {
                 $flags = ['--expire', $expire];
-                $link = $this->execute('link', $path, null, false, true, $flags, false, true, 5.0);
+                $link = $this->execute('link', $path, null, false, true, $flags, false, true, 15.0);
                 $lines = explode(PHP_EOL, $link);
                 return array_pop($lines);
             } catch (Exception $e) {
