@@ -86,3 +86,10 @@ if (count($blocklist) > 0) {
         )->rowCount()
         . ' rows';
 }
+
+ echo PHP_EOL
+. 'Set Score column for: '
+. $conn->query(
+    "UPDATE media SET score = COALESCE(CAST(NULLIF(SUBSTRING(REGEXP_SUBSTR(metadata, 'Rating: [0-9]+'), 9), '') AS SIGNED), null) WHERE metadata like '%Rating:%' and score is null;"
+)->rowCount() 
+. ' rows';
