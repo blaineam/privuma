@@ -381,7 +381,9 @@ if ($ifNoneMatch === $etag || strtotime($ifModifiedSince) >= $lastModified) {
 
 // Set caching headers for HTML
 header('Content-Type: text/html; charset=utf-8');
-header('Cache-Control: public, max-age=300, must-revalidate'); // 5 minutes with validation
+header('Cache-Control: no-cache, no-store, must-revalidate'); // TEMPORARY: Force reload
+header('Pragma: no-cache');
+header('Expires: 0');
 header('ETag: ' . $etag);
 header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
 header('Content-Length: ' . filesize($htmlFile));
