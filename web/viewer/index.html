@@ -4243,32 +4243,10 @@
             medcrypt
               .getSrc(lazyImage.dataset.src, priority)
               .then((uri) => {
-                // Check if rapid scrolling - if so, reset and try again later
-                if (medcrypt.rapidScrolling) {
-                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
-                  lazyImage.classList.remove("lazy-loading");
-                  lazyImage.classList.add("lazy-waiting");
-                  delete lazyImage.dataset.loadingStart;
-                  return;
-                }
-
-                const currentRect = lazyImage.getBoundingClientRect();
-                const currentViewportHeight = window.innerHeight;
-                // More lenient check - allow images that are partially in viewport or nearby
-                const isNearViewport =
-                  currentRect.top < currentViewportHeight * 3 &&
-                  currentRect.bottom > -(currentViewportHeight * 3);
-
-                if (isNearViewport) {
-                  // Set the image source (already a blob URL if needed)
-                  lazyImage.src = uri;
-                } else {
-                  // Not visible anymore, reset state
-                  medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
-                  lazyImage.classList.remove("lazy-loading");
-                  lazyImage.classList.add("lazy-waiting");
-                  delete lazyImage.dataset.loadingStart;
-                }
+                // Once we successfully got the URL, set it regardless of viewport
+                // The viewport check in fetchResource already prevented far-away fetches
+                // Setting it here avoids infinite retry loops
+                lazyImage.src = uri;
               })
               .catch((error) => {
                 // Check if this was a temporary failure (cancelled, viewport) or permanent (404, exhausted retries)
