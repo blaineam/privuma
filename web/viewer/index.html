@@ -534,47 +534,13 @@
             return Promise.resolve(resource);
           }
 
-          // Check if already queued or being processed
-          if (this.pendingRequests.has(resource)) {
-            // Return a new promise that waits for the existing request
-            return new Promise((resolve, reject) => {
-              const checkInterval = setInterval(() => {
-                if (!this.pendingRequests.has(resource)) {
-                  clearInterval(checkInterval);
-                  // Request completed, but we don't have the result
-                  // Try to get it from blob cache or fetch again
-                  if (this.blobCache.has(resource)) {
-                    resolve(this.blobCache.get(resource));
-                  } else {
-                    // Queue a new request
-                    this.pendingRequests.add(resource);
-                    this.getSrc(resource, priority).then(resolve).catch(reject);
-                  }
-                }
-              }, 50);
-
-              // Timeout after 30 seconds
-              setTimeout(() => {
-                clearInterval(checkInterval);
-                reject(new Error('Request timeout waiting for duplicate'));
-              }, 30000);
-            });
+          // Check blob cache first
+          if (this.blobCache.has(resource)) {
+            return Promise.resolve(this.blobCache.get(resource));
           }
 
-          this.pendingRequests.add(resource);
-
           return new Promise((resolve, reject) => {
-            const task = {
-              resource,
-              resolve: (url) => {
-                this.pendingRequests.delete(resource);
-                resolve(url);
-              },
-              reject: (error) => {
-                this.pendingRequests.delete(resource);
-                reject(error);
-              }
-            };
+            const task = { resource, resolve, reject };
 
             // High priority (fancybox) goes to front
             if (priority === 'high') {
@@ -609,12 +575,6 @@
           // Safety check: return data URIs and blob URLs as-is
           if (resource.startsWith('data:') || resource.startsWith('blob:')) {
             return resource;
-          }
-
-          // One-time viewport check at the start
-          const element = document.querySelector(`[data-src="${resource}"]`);
-          if (!this.isNearViewport(element)) {
-            throw new Error('Outside viewport');
           }
 
           const isFlashOrVr = resource.startsWith('flash/') || resource.startsWith('vr/');
