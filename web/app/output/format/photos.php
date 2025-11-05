@@ -74,10 +74,7 @@ function isUrl($path): bool
       filter_var($path, FILTER_VALIDATE_URL);
 }
 
-// Cache for presigned URLs to avoid recalculation
-static $presignedCache = [];
-static $presignedCacheSize = 0;
-static $maxPresignedCacheSize = 500;
+// All caching removed - not beneficial for most requests
 
 function RClone_S3_PresignedURL(
     $AWSAccessKeyId,
@@ -88,20 +85,6 @@ function RClone_S3_PresignedURL(
     $S3Endpoint = null,
     $expires = 86400
 ) {
-    global $presignedCache, $presignedCacheSize, $maxPresignedCacheSize;
-
-    // Create cache key
-    $cacheKey = md5($AWSAccessKeyId . $BucketName . $canonical_uri . $S3Endpoint);
-
-    // Check cache first (with 5 minute TTL)
-    if (isset($presignedCache[$cacheKey])) {
-        $cached = $presignedCache[$cacheKey];
-        if (time() - $cached['created'] < 300) { // 5 minutes
-            return $cached['url'];
-        }
-        unset($presignedCache[$cacheKey]);
-        $presignedCacheSize--;
-    }
     $encoded_uri = str_replace('%2F', '/', rawurlencode($canonical_uri));
     // Specify the hostname for the S3 endpoint
     if (!is_null($S3Endpoint)) {
@@ -190,16 +173,6 @@ function RClone_S3_PresignedURL(
       $query_string .
       '&X-Amz-Signature=' .
       $signature;
-
-    // Cache the result with size management
-    if ($presignedCacheSize < $maxPresignedCacheSize) {
-        $presignedCache[$cacheKey] = ['url' => $url, 'created' => time()];
-        $presignedCacheSize++;
-    } elseif ($presignedCacheSize >= $maxPresignedCacheSize) {
-        // Reset cache when it gets too large
-        $presignedCache = [$cacheKey => ['url' => $url, 'created' => time()]];
-        $presignedCacheSize = 1;
-    }
 
     return $url;
 }
@@ -479,8 +452,7 @@ function realFilePath($filePath, $dirnamed_sync_folder = false)
     return false;
 }
 
-// Cache for protected URLs to avoid repeated token generation
-static $protectedUrlCache = [];
+// All caching removed - not beneficial for most requests
 
 function getProtectedUrlForMediaPath(
     $path,
@@ -491,27 +463,9 @@ function getProtectedUrlForMediaPath(
     global $FALLBACK_ENDPOINT;
     global $AUTHTOKEN;
     global $tokenizer;
-    global $protectedUrlCache;
-
-    // Create cache key
-    $cacheKey = md5($path . $use_fallback . $noIp);
-
-    // Check cache first (1 minute TTL for token-based URLs)
-    if (isset($protectedUrlCache[$cacheKey])) {
-        $cached = $protectedUrlCache[$cacheKey];
-        if (time() - $cached['time'] < 60) {
-            return $cached['url'];
-        }
-        unset($protectedUrlCache[$cacheKey]);
-    }
 
     $uri = '?token=' . $tokenizer->rollingTokens($AUTHTOKEN, $noIp)[1] . '&media=' . urlencode(base64_encode($path));
     $url = $use_fallback ? $FALLBACK_ENDPOINT . $uri : $ENDPOINT . $uri;
-
-    // Cache result with size limit
-    if (count($protectedUrlCache) < 200) {
-        $protectedUrlCache[$cacheKey] = ['url' => $url, 'time' => time()];
-    }
 
     return $url;
 }

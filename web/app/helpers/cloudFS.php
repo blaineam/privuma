@@ -16,16 +16,7 @@ class cloudFS
     private bool $segmented;
     private dotenv $env;
 
-    // Performance caches
-    private static array $pathInfoCache = [];
-    private static array $pathInfoCacheTime = [];
-    private static array $scandirCache = [];
-    private static array $scandirCacheTime = [];
-    private static array $encodingCache = [];
-    private static int $cacheHits = 0;
-    private static int $cacheMisses = 0;
-    private static int $maxCacheSize = 1000;
-    private static int $cacheTTL = 300; // 5 minutes
+    // All caching removed - not beneficial for most requests
 
     public function __construct(
         string $rCloneDestination = 'privuma:',
@@ -116,20 +107,9 @@ class cloudFS
             if (is_array($files)) {
                 foreach ($files as $object) {
                     if ($this->encoded) {
-                        $nameKey = 'name_' . $object['Name'];
-                        $pathKey = 'path_' . $object['Path'];
-
-                        if (!isset(self::$encodingCache[$nameKey])) {
-                            self::$encodingCache[$nameKey] = $this->decode($object['Name'], $this->segmented);
-                        }
-                        if (!isset(self::$encodingCache[$pathKey])) {
-                            self::$encodingCache[$pathKey] = $this->decode($object['Path'], $this->segmented);
-                        }
-
-                        $object['Name'] = self::$encodingCache[$nameKey];
-                        $object['Path'] = self::$encodingCache[$pathKey];
-
-                        // REMOVED: LRU eviction (not needed, cache is per-request)
+                        // All caching removed - not beneficial for most requests
+                        $object['Name'] = $this->decode($object['Name'], $this->segmented);
+                        $object['Path'] = $this->decode($object['Path'], $this->segmented);
                     }
                     $response[] = $object;
                 }
@@ -191,28 +171,7 @@ class cloudFS
     public function getPathInfo(string $path, bool $modTime = true, bool $mimetype = true, bool $onlyDirs = false, bool $onlyFiles = false, bool $showMD5 = false)
     {
         // Create cache key based on path and parameters
-        // REMOVED: Redis cache (caused data integrity issues)
-        // $cacheKey = 'cloudfs:pathinfo:' . md5($path . (int) $modTime . (int) $mimetype . (int) $onlyDirs . (int) $onlyFiles . (int) $showMD5);
-        // $cached = redisCache::get($cacheKey);
-        // if ($cached !== null) {
-        //     self::$cacheHits++;
-        //     return $cached;
-        // }
-
-        // Check local cache (request-specific only)
-        $localCacheKey = md5($path . (int) $modTime . (int) $mimetype . (int) $onlyDirs . (int) $onlyFiles . (int) $showMD5);
-        if (isset(self::$pathInfoCache[$localCacheKey])) {
-            $cacheTime = self::$pathInfoCacheTime[$localCacheKey];
-            if (time() - $cacheTime < self::$cacheTTL) {
-                self::$cacheHits++;
-                return self::$pathInfoCache[$localCacheKey];
-            }
-            // Expired cache entry
-            unset(self::$pathInfoCache[$localCacheKey], self::$pathInfoCacheTime[$localCacheKey]);
-        }
-
-        self::$cacheMisses++;
-
+        // All caching removed - not beneficial for most requests
         try {
             $list = json_decode($this->execute('lsjson', $path, null, false, true, [
                 '--min-size 1B',
@@ -229,16 +188,6 @@ class cloudFS
         }
 
         $result = is_null($list) ? false : $list;
-
-        // REMOVED: Redis cache (caused data integrity issues)
-        // redisCache::set($cacheKey, $result, 600);
-
-        // Cache locally for this request
-        // REMOVED: LRU eviction (not needed, cache is per-request and will be cleared anyway)
-
-        self::$pathInfoCache[$localCacheKey] = $result;
-        self::$pathInfoCacheTime[$localCacheKey] = time();
-
         return $result;
     }
 
@@ -301,18 +250,7 @@ class cloudFS
 
     public function filesize(string $file)
     {
-        // Try to get size from pathInfo cache first (if available)
-        $cacheKey = md5($file . '00000'); // Use same pattern as getPathInfo but for filesize
-        if (isset(self::$pathInfoCache[$cacheKey])) {
-            $cached = self::$pathInfoCache[$cacheKey];
-            if (is_array($cached) && isset($cached['Size'])) {
-                self::$cacheHits++;
-                return $cached['Size'];
-            }
-        }
-
-        self::$cacheMisses++;
-
+        // All caching removed - not beneficial for most requests
         try {
             $data = json_decode($this->execute('size', $file, null, false, true, [
                 '--json'
@@ -323,13 +261,6 @@ class cloudFS
         }
 
         $result = is_null($data) ? false : $data['bytes'];
-
-        // Cache the filesize result
-        if ($result !== false && count(self::$pathInfoCache) < self::$maxCacheSize) {
-            self::$pathInfoCache[$cacheKey] = ['Size' => $result];
-            self::$pathInfoCacheTime[$cacheKey] = time();
-        }
-
         return $result;
     }
 
@@ -576,12 +507,7 @@ class cloudFS
 
     public static function encode(string $path, bool $segmented = false): string
     {
-        // Check encoding cache first
-        $cacheKey = 'encode_' . $path . '_' . (int) $segmented;
-        if (isset(self::$encodingCache[$cacheKey])) {
-            return self::$encodingCache[$cacheKey];
-        }
-
+        // All caching removed - not beneficial for most requests
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         $encoded = implode(DIRECTORY_SEPARATOR, array_map(function ($part) use ($ext) {
             return implode('*', array_map(function ($p) use ($ext) {
@@ -596,20 +522,12 @@ class cloudFS
         ? dirname($encoded) . DIRECTORY_SEPARATOR . substr(basename($encoded), 0, 2) . DIRECTORY_SEPARATOR . $encoded
         : $encoded;
 
-        // Cache result (no size limit - per-request only)
-        self::$encodingCache[$cacheKey] = $result;
-
         return $result;
     }
 
     public static function decode(string $path, bool $segmented = false): string
     {
-        // Check encoding cache first
-        $cacheKey = 'decode_' . $path . '_' . (int) $segmented;
-        if (isset(self::$encodingCache[$cacheKey])) {
-            return self::$encodingCache[$cacheKey];
-        }
-
+        // All caching removed - not beneficial for most requests
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         $processPath = $segmented ? (dirname($path, 2) . DIRECTORY_SEPARATOR . basename($path)) : $path;
 
@@ -622,37 +540,9 @@ class cloudFS
             }, explode('*', $part)));
         }, explode(DIRECTORY_SEPARATOR, $processPath))) . (empty($ext) ? '' :  '.' . $ext);
 
-        // Cache result (no size limit - per-request only)
-        self::$encodingCache[$cacheKey] = $result;
-
         return $result;
     }
 
-    // Add method to get cache statistics for monitoring performance
-    public static function getCacheStats(): array
-    {
-        return [
-            'cache_hits' => self::$cacheHits,
-            'cache_misses' => self::$cacheMisses,
-            'hit_ratio' => self::$cacheMisses > 0 ? round((self::$cacheHits / (self::$cacheHits + self::$cacheMisses)) * 100, 2) : 0,
-            'pathinfo_cache_size' => count(self::$pathInfoCache),
-            'scandir_cache_size' => count(self::$scandirCache),
-            'encoding_cache_size' => count(self::$encodingCache),
-            'total_cache_entries' => count(self::$pathInfoCache) + count(self::$scandirCache) + count(self::$encodingCache)
-        ];
-    }
-
-    // Add method to clear caches if needed
-    public static function clearCaches(): void
-    {
-        self::$pathInfoCache = [];
-        self::$pathInfoCacheTime = [];
-        self::$scandirCache = [];
-        self::$scandirCacheTime = [];
-        self::$encodingCache = [];
-        self::$cacheHits = 0;
-        self::$cacheMisses = 0;
-    }
 
     public function moveSync(string $source, string $destination, bool $encodeDestination = true, bool $decodeSource = false, bool $preserveBucketName = true, array $flags = []): bool
     {
