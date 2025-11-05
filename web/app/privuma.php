@@ -14,6 +14,7 @@ foreach ($classes as $class) {
 use privuma\helpers\cloudFS;
 use privuma\helpers\dotenv;
 use privuma\helpers\redisCache;
+use privuma\helpers\AuditedPDO;
 
 use PDO;
 use privuma\queue\QueueManager;
@@ -82,7 +83,8 @@ class privuma
             PDO::ATTR_TIMEOUT => 900,
         ];
         try {
-            $this->pdo = new PDO($dsn, $user, $pass, $options);
+            $rawPDO = new PDO($dsn, $user, $pass, $options);
+            $this->pdo = new AuditedPDO($rawPDO);
 
             $this->pdo->exec('CREATE TABLE IF NOT EXISTS  `media` (
                 `id` bigint(20) NOT NULL AUTO_INCREMENT,
@@ -113,7 +115,7 @@ class privuma
             var_dump($e);
             die('skipping sqlite3');
             try {
-                $this->pdo = new \PDO(
+                $rawPDO = new \PDO(
                     'sqlite:' . __DIR__ . DIRECTORY_SEPARATOR . 'db.sqlite3',
                     '',
                     '',
@@ -123,6 +125,7 @@ class privuma
                         \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
                     ]
                 );
+                $this->pdo = new AuditedPDO($rawPDO);
 
                 $this->pdo->exec('CREATE TABLE IF NOT EXISTS  `media` (
                     `id` INTEGER PRIMARY KEY AUTOINCREMENT,
