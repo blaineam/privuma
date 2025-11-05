@@ -26,24 +26,24 @@ class dbAuditLog
         self::$inAuditOperation = true;
         $this->pdo->exec("
             CREATE TABLE IF NOT EXISTS audit_log (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT NOT NULL,
-                operation TEXT NOT NULL,
-                table_name TEXT NOT NULL,
-                record_id TEXT,
-                calling_script TEXT NOT NULL,
-                line_number INTEGER,
-                before_data TEXT,
-                after_data TEXT,
-                sql_query TEXT,
-                reverted INTEGER DEFAULT 0,
-                reverted_at TEXT,
+                id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                timestamp DATETIME NOT NULL,
+                operation VARCHAR(20) NOT NULL,
+                table_name VARCHAR(255) NOT NULL,
+                record_id VARCHAR(255),
+                calling_script VARCHAR(500) NOT NULL,
+                line_number INT,
+                before_data LONGTEXT,
+                after_data LONGTEXT,
+                sql_query LONGTEXT,
+                reverted TINYINT DEFAULT 0,
+                reverted_at DATETIME,
                 INDEX idx_timestamp (timestamp),
                 INDEX idx_operation (operation),
                 INDEX idx_table (table_name),
-                INDEX idx_script (calling_script),
+                INDEX idx_script (calling_script(255)),
                 INDEX idx_reverted (reverted)
-            )
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
         self::$inAuditOperation = false;
     }
