@@ -719,49 +719,8 @@
               baseResource.startsWith("vr/");
             const isMedia = this.isMediaFile(baseResource);
 
-            // Build path variations (logical paths, not encrypted yet)
-            const pathsToTry = [];
-
-            if (isMedia && !isFlashOrVr) {
-              // Regular media file path sequence
-              if (!this.useCrypt) {
-                // Try unencrypted first
-                if (!this.skipPrFa) {
-                  pathsToTry.push({
-                    path: "pr/" + baseResource,
-                    encrypted: false,
-                  });
-                  pathsToTry.push({
-                    path: "fa/" + baseResource,
-                    encrypted: false,
-                  });
-                }
-                if (!this.usesPrFa) {
-                  pathsToTry.push({ path: baseResource, encrypted: false });
-                }
-              }
-              // Try encrypted
-              pathsToTry.push({ path: "pr/" + baseResource, encrypted: true });
-              pathsToTry.push({ path: "fa/" + baseResource, encrypted: true });
-              pathsToTry.push({ path: baseResource, encrypted: true });
-            } else if (isFlashOrVr) {
-              // Flash/VR specific
-              pathsToTry.push({ path: baseResource, encrypted: false });
-              pathsToTry.push({ path: baseResource, encrypted: true });
-            } else {
-              // Non-media files (JS, JSON, etc) - ALWAYS try all variations
-              // Don't use optimization flags for non-media files
-              pathsToTry.push({ path: "pr/" + baseResource, encrypted: false });
-              pathsToTry.push({ path: "fa/" + baseResource, encrypted: false });
-              pathsToTry.push({ path: baseResource, encrypted: false });
-              // Try encrypted
-              pathsToTry.push({ path: "pr/" + baseResource, encrypted: true });
-              pathsToTry.push({ path: "fa/" + baseResource, encrypted: true });
-              pathsToTry.push({ path: baseResource, encrypted: true });
-            }
-
-            // Try each path (max 3 attempts each)
-            for (const pathConfig of pathsToTry) {
+            // Helper function to try a path with retries
+            const tryPath = async (pathConfig) => {
               for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
                   // Check viewport before each network request (media only)
@@ -863,7 +822,14 @@
                   }
 
                   // 404 - try next path immediately
-                  if (response.status === 404) break;
+                  if (response.status === 404) {
+                    return { status: 404 };
+                  }
+
+                  // 4xx or 5xx error - try next path
+                  if (response.status >= 400) {
+                    return { status: response.status };
+                  }
                 } catch (error) {
                   // Check if aborted
                   if (error.name === "AbortError") {
@@ -881,9 +847,74 @@
                   }
                 }
               }
+              return null; // All attempts failed
+            };
+
+            // Build non-encrypted paths first
+            const unencryptedPaths = [];
+
+            if (isMedia && !isFlashOrVr) {
+              // Regular media file path sequence
+              if (!this.useCrypt) {
+                // Try unencrypted first
+                if (!this.skipPrFa) {
+                  unencryptedPaths.push({ path: "pr/" + baseResource, encrypted: false });
+                  unencryptedPaths.push({ path: "fa/" + baseResource, encrypted: false });
+                }
+                if (!this.usesPrFa) {
+                  unencryptedPaths.push({ path: baseResource, encrypted: false });
+                }
+              }
+            } else if (isFlashOrVr) {
+              // Flash/VR specific
+              unencryptedPaths.push({ path: baseResource, encrypted: false });
+            } else {
+              // Non-media files (JS, JSON, etc)
+              unencryptedPaths.push({ path: "pr/" + baseResource, encrypted: false });
+              unencryptedPaths.push({ path: "fa/" + baseResource, encrypted: false });
+              unencryptedPaths.push({ path: baseResource, encrypted: false });
             }
 
-            // All paths exhausted
+            // Try all non-encrypted paths first
+            for (const pathConfig of unencryptedPaths) {
+              const result = await tryPath(pathConfig);
+              // If we got a successful URL (string), return it immediately
+              if (typeof result === 'string') {
+                return result;
+              }
+              // Otherwise continue to next path (404 or error)
+            }
+
+            // Only try encrypted paths if ALL non-encrypted paths failed
+            // Build encrypted paths
+            const encryptedPaths = [];
+
+            if (isMedia && !isFlashOrVr) {
+              // Regular media file encrypted paths
+              encryptedPaths.push({ path: "pr/" + baseResource, encrypted: true });
+              encryptedPaths.push({ path: "fa/" + baseResource, encrypted: true });
+              encryptedPaths.push({ path: baseResource, encrypted: true });
+            } else if (isFlashOrVr) {
+              // Flash/VR encrypted
+              encryptedPaths.push({ path: baseResource, encrypted: true });
+            } else {
+              // Non-media files encrypted
+              encryptedPaths.push({ path: "pr/" + baseResource, encrypted: true });
+              encryptedPaths.push({ path: "fa/" + baseResource, encrypted: true });
+              encryptedPaths.push({ path: baseResource, encrypted: true });
+            }
+
+            // Try encrypted paths
+            for (const pathConfig of encryptedPaths) {
+              const result = await tryPath(pathConfig);
+              // If we got a successful URL (string), return it immediately
+              if (typeof result === 'string') {
+                return result;
+              }
+              // Otherwise continue to next path (404 or error)
+            }
+
+            // All paths exhausted (both non-encrypted and encrypted failed)
             throw new Error(`All fallbacks exhausted for: ${resource}`);
           } finally {
             // Always clean up the abort controller
