@@ -21,32 +21,27 @@ echo "Creating audit_log table..." . PHP_EOL;
 try {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS audit_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT NOT NULL,
-            operation TEXT NOT NULL,
-            table_name TEXT NOT NULL,
-            record_id TEXT,
-            calling_script TEXT NOT NULL,
-            line_number INTEGER,
-            before_data TEXT,
-            after_data TEXT,
-            sql_query TEXT,
-            reverted INTEGER DEFAULT 0,
-            reverted_at TEXT
-        )
+            id BIGINT PRIMARY KEY AUTO_INCREMENT,
+            timestamp DATETIME NOT NULL,
+            operation VARCHAR(20) NOT NULL,
+            table_name VARCHAR(255) NOT NULL,
+            record_id VARCHAR(255),
+            calling_script VARCHAR(500) NOT NULL,
+            line_number INT,
+            before_data LONGTEXT,
+            after_data LONGTEXT,
+            sql_query LONGTEXT,
+            reverted TINYINT DEFAULT 0,
+            reverted_at DATETIME,
+            INDEX idx_audit_timestamp (timestamp),
+            INDEX idx_audit_operation (operation),
+            INDEX idx_audit_table (table_name),
+            INDEX idx_audit_script (calling_script(255)),
+            INDEX idx_audit_reverted (reverted)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
 
-    echo "✓ Table created successfully" . PHP_EOL;
-
-    echo "Creating indexes..." . PHP_EOL;
-
-    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp)");
-    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit_log(operation)");
-    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_audit_table ON audit_log(table_name)");
-    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_audit_script ON audit_log(calling_script)");
-    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_audit_reverted ON audit_log(reverted)");
-
-    echo "✓ Indexes created successfully" . PHP_EOL . PHP_EOL;
+    echo "✓ Table and indexes created successfully" . PHP_EOL . PHP_EOL;
 
     // Check if table has any existing data
     $stmt = $pdo->query("SELECT COUNT(*) FROM audit_log");
