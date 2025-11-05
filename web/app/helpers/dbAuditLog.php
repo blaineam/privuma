@@ -50,45 +50,79 @@ class dbAuditLog
 
     /**
      * Get calling script and line number from backtrace
+     * Traces back to find the original initiating script/job, skipping helpers/models
      */
     private static function getCallingContext(): array
     {
         $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
 
-        // Look for first non-audit, non-PDO file
+        // Files to skip when tracing back to find the original caller
+        $skipPatterns = [
+            'dbAuditLog.php',
+            'AuditedPDO.php',
+            '/helpers/',        // Skip all helper files
+            '/models/',         // Skip all model files
+            '/output/format/',  // Skip output formatters
+        ];
+
+        // Look for first non-skipped file that represents the actual caller
         foreach ($trace as $frame) {
-            if (isset($frame['file']) &&
-                !str_contains($frame['file'], 'dbAuditLog.php') &&
-                !str_contains($frame['file'], 'AuditedPDO.php')) {
+            if (!isset($frame['file'])) {
+                continue;
+            }
 
-                $file = $frame['file'];
-                $line = $frame['line'] ?? 0;
+            $file = $frame['file'];
 
-                // If it's a job, extract job name
-                if (str_contains($file, '/jobs/')) {
-                    preg_match('/\/jobs\/(core|plugins)\/([^\/]+)\//', $file, $matches);
-                    if (isset($matches[2])) {
-                        return [
-                            'script' => "JOB:{$matches[2]} (" . basename($file) . ")",
-                            'line' => $line
-                        ];
-                    }
+            // Check if this file should be skipped
+            $shouldSkip = false;
+            foreach ($skipPatterns as $pattern) {
+                if (str_contains($file, $pattern)) {
+                    $shouldSkip = true;
+                    break;
                 }
+            }
 
-                // If it's a cron job
-                if (str_contains($file, 'cron.php')) {
+            if ($shouldSkip) {
+                continue;
+            }
+
+            $line = $frame['line'] ?? 0;
+
+            // If it's a job, extract job name
+            if (str_contains($file, '/jobs/')) {
+                preg_match('/\/jobs\/(core|plugins)\/([^\/]+)\//', $file, $matches);
+                if (isset($matches[2])) {
                     return [
-                        'script' => 'CRON (' . basename($file) . ')',
+                        'script' => "JOB:{$matches[2]} (" . basename($file) . ")",
                         'line' => $line
                     ];
                 }
+            }
 
-                // Otherwise return the file and line
+            // If it's a cron job
+            if (str_contains($file, 'cron.php')) {
                 return [
-                    'script' => basename($file),
+                    'script' => 'CRON (' . basename($file) . ')',
                     'line' => $line
                 ];
             }
+
+            // If it's an API endpoint
+            if (str_contains($file, '/api/')) {
+                preg_match('/\/api\/([^\/]+\.php)/', $file, $matches);
+                if (isset($matches[1])) {
+                    return [
+                        'script' => "API:{$matches[1]}",
+                        'line' => $line
+                    ];
+                }
+            }
+
+            // Otherwise return the file and line
+            return [
+                'script' => basename($file),
+                'line' => $line
+            ];
         }
 
         return ['script' => 'UNKNOWN', 'line' => 0];
