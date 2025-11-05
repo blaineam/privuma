@@ -670,11 +670,10 @@ function run()
         static $favoritesCacheTime = 0;
         static $favoritesCacheTTL = 300; // 5 minutes
 
-        // Try Redis cache first
-        $redisCacheKey = 'photos:favorites';
-        $favoritesCache = redisCache::get($redisCacheKey);
+        // REMOVED: Redis cache (caused data integrity issues)
+        // Use static cache only (per-request)
 
-        if ($favoritesCache === null || (time() - $favoritesCacheTime) > $favoritesCacheTTL) {
+        if ((time() - $favoritesCacheTime) > $favoritesCacheTTL) {
             $favoritesStmt = $conn->prepare("select filename, hash, time
                 from media
                 where album = 'Favorites'
@@ -692,11 +691,8 @@ function run()
             }
             $favoritesCache = $favorites;
             $favoritesCacheTime = time();
-
-            // Cache in Redis for 5 minutes
-            redisCache::set($redisCacheKey, $favorites, 300);
         } else {
-            $favorites = $favoritesCache;
+            $favorites = $favoritesCache ?? [];
         }
 
         // Optimize query by reducing subquery complexity and using indexes

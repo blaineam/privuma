@@ -4,6 +4,7 @@ namespace privuma\helpers;
 use Exception;
 use resource;
 use privuma\privuma;
+use privuma\helpers\auditLog;
 
 class cloudFS
 {
@@ -128,10 +129,7 @@ class cloudFS
                         $object['Name'] = self::$encodingCache[$nameKey];
                         $object['Path'] = self::$encodingCache[$pathKey];
 
-                        // Limit encoding cache size
-                        if (count(self::$encodingCache) > 2000) {
-                            self::$encodingCache = array_slice(self::$encodingCache, -1000, 1000, true);
-                        }
+                        // REMOVED: LRU eviction (not needed, cache is per-request)
                     }
                     $response[] = $object;
                 }
@@ -193,16 +191,15 @@ class cloudFS
     public function getPathInfo(string $path, bool $modTime = true, bool $mimetype = true, bool $onlyDirs = false, bool $onlyFiles = false, bool $showMD5 = false)
     {
         // Create cache key based on path and parameters
-        $cacheKey = 'cloudfs:pathinfo:' . md5($path . (int) $modTime . (int) $mimetype . (int) $onlyDirs . (int) $onlyFiles . (int) $showMD5);
+        // REMOVED: Redis cache (caused data integrity issues)
+        // $cacheKey = 'cloudfs:pathinfo:' . md5($path . (int) $modTime . (int) $mimetype . (int) $onlyDirs . (int) $onlyFiles . (int) $showMD5);
+        // $cached = redisCache::get($cacheKey);
+        // if ($cached !== null) {
+        //     self::$cacheHits++;
+        //     return $cached;
+        // }
 
-        // Try Redis cache first (persistent across requests)
-        $cached = redisCache::get($cacheKey);
-        if ($cached !== null) {
-            self::$cacheHits++;
-            return $cached;
-        }
-
-        // Check local cache second (faster but request-specific)
+        // Check local cache (request-specific only)
         $localCacheKey = md5($path . (int) $modTime . (int) $mimetype . (int) $onlyDirs . (int) $onlyFiles . (int) $showMD5);
         if (isset(self::$pathInfoCache[$localCacheKey])) {
             $cacheTime = self::$pathInfoCacheTime[$localCacheKey];
@@ -233,21 +230,11 @@ class cloudFS
 
         $result = is_null($list) ? false : $list;
 
-        // Cache the result in Redis (persistent across requests) with 10 minute TTL
-        redisCache::set($cacheKey, $result, 600);
+        // REMOVED: Redis cache (caused data integrity issues)
+        // redisCache::set($cacheKey, $result, 600);
 
-        // Also cache locally for this request
-        if (count(self::$pathInfoCache) >= self::$maxCacheSize) {
-            // Remove oldest 25% of entries
-            $removeCount = intval(self::$maxCacheSize * 0.25);
-            $sortedKeys = array_keys(self::$pathInfoCacheTime);
-            asort(self::$pathInfoCacheTime);
-            $keysToRemove = array_slice(array_keys(self::$pathInfoCacheTime), 0, $removeCount);
-
-            foreach ($keysToRemove as $key) {
-                unset(self::$pathInfoCache[$key], self::$pathInfoCacheTime[$key]);
-            }
-        }
+        // Cache locally for this request
+        // REMOVED: LRU eviction (not needed, cache is per-request and will be cleared anyway)
 
         self::$pathInfoCache[$localCacheKey] = $result;
         self::$pathInfoCacheTime[$localCacheKey] = time();
@@ -357,8 +344,10 @@ class cloudFS
         if (!$this->is_dir($directory)) {
             try {
                 $this->execute('mkdir', $directory);
+                auditLog::logMkdir($directory, true);
             } catch (Exception $e) {
                 error_log($e->getMessage());
+                auditLog::logMkdir($directory, false, $e->getMessage());
                 return false;
             }
             return true;
@@ -370,14 +359,17 @@ class cloudFS
     {
         if (empty($contents)) {
             error_log('Not storing empty file: ' . $path);
+            auditLog::logWrite($path, false, 'Empty content');
             return false;
         }
         $tmpfile = tempnam(sys_get_temp_dir(), 'PVMA');
         file_put_contents($tmpfile, $contents);
         try {
             $this->execute('copyto', $path, $tmpfile, false, true, [], false, false);
+            auditLog::logWrite($path, true);
         } catch (Exception $e) {
             error_log($e->getMessage());
+            auditLog::logWrite($path, false, $e->getMessage());
             unlink($tmpfile);
             return false;
         }
@@ -456,8 +448,10 @@ class cloudFS
     {
         try {
             $this->execute('delete', $path);
+            auditLog::logDelete($path, true);
         } catch (Exception $e) {
             error_log($e->getMessage());
+            auditLog::logDelete($path, false, $e->getMessage());
             return false;
         }
         return true;
@@ -468,8 +462,10 @@ class cloudFS
         if ($this->is_dir($path)) {
             try {
                 $this->execute($recursive ? 'purge' : 'rmdir', $path);
+                auditLog::logDelete($path, true, $recursive ? 'Recursive purge' : 'Remove directory');
             } catch (Exception $e) {
                 error_log($e->getMessage());
+                auditLog::logDelete($path, false, $e->getMessage());
                 return false;
             }
             return true;
@@ -482,12 +478,15 @@ class cloudFS
         clearstatcache(true, $oldname);
         if ((!$remoteSource && filesize($oldname) == 0) || $remoteSource && $this->filesize($oldname) == 0) {
             error_log('Not moving empty file: ' . $oldname);
+            auditLog::logRename($oldname, $newname, false, 'Empty file');
             return false;
         }
         try {
             $this->execute('moveto', $newname, $oldname, $remoteSource);
+            auditLog::logRename($oldname, $newname, true);
         } catch (Exception $e) {
             error_log($e->getMessage());
+            auditLog::logRename($oldname, $newname, false, $e->getMessage());
             return false;
         }
         return true;
@@ -498,12 +497,15 @@ class cloudFS
         clearstatcache(true, $oldname);
         if ((!$remoteSource && filesize($oldname) == 0) || $remoteSource && $this->filesize($oldname) == 0) {
             error_log('Not moving empty file: ' . $oldname);
+            auditLog::logCopy($oldname, $newname, false, 'Empty file');
             return false;
         }
         try {
             $this->execute('copyto', $newname, $oldname, $remoteSource, $remoteDestination);
+            auditLog::logCopy($oldname, $newname, true);
         } catch (Exception $e) {
             error_log($e->getMessage());
+            auditLog::logCopy($oldname, $newname, false, $e->getMessage());
             return false;
         }
         return true;
@@ -594,10 +596,7 @@ class cloudFS
         ? dirname($encoded) . DIRECTORY_SEPARATOR . substr(basename($encoded), 0, 2) . DIRECTORY_SEPARATOR . $encoded
         : $encoded;
 
-        // Cache result with size management
-        if (count(self::$encodingCache) > 2000) {
-            self::$encodingCache = array_slice(self::$encodingCache, -1000, 1000, true);
-        }
+        // Cache result (no size limit - per-request only)
         self::$encodingCache[$cacheKey] = $result;
 
         return $result;
@@ -623,10 +622,7 @@ class cloudFS
             }, explode('*', $part)));
         }, explode(DIRECTORY_SEPARATOR, $processPath))) . (empty($ext) ? '' :  '.' . $ext);
 
-        // Cache result with size management
-        if (count(self::$encodingCache) > 2000) {
-            self::$encodingCache = array_slice(self::$encodingCache, -1000, 1000, true);
-        }
+        // Cache result (no size limit - per-request only)
         self::$encodingCache[$cacheKey] = $result;
 
         return $result;
@@ -704,8 +700,10 @@ class cloudFS
                 false,
                 $flags
             );
+            auditLog::logMove($source, $destination, true);
         } catch (Exception $e) {
             var_dump($e->getMessage());
+            auditLog::logMove($source, $destination, false, $e->getMessage());
             return false;
         }
         return true;
@@ -757,8 +755,10 @@ class cloudFS
                 false,
                 [...$flags, '--ignore-existing']
             );
+            auditLog::logMutation('SYNC', $source, $destination, true, 'Sync operation with --ignore-existing');
         } catch (Exception $e) {
             var_dump($e->getMessage());
+            auditLog::logMutation('SYNC', $source, $destination, false, $e->getMessage());
             return false;
         }
         return true;
