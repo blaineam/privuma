@@ -368,6 +368,14 @@ class mediaFile
 
     public function delete(?string $hash = null)
     {
+        // DISABLED: This method caused catastrophic data loss (50% of files deleted, 75% of favorites)
+        // Delete operations are now DISABLED except for explicit favorite removal via toggleFavorite()
+        error_log("WARNING: mediaFile->delete() called but is DISABLED to prevent data loss. Use toggleFavorite() for favorites.");
+        error_log("Attempted delete - hash: " . ($hash ?? 'null') . ", id: " . ($this->id ?? 'null') . ", filename: " . ($this->filename ?? 'null'));
+        return;
+
+        // ORIGINAL CODE DISABLED BELOW - DO NOT RE-ENABLE WITHOUT EXTREME CAUTION
+        /*
         $this->hash = $this->persistedHash();
         if (!$this->duplicateHashes()) {
             $dlPath = str_replace(
@@ -404,6 +412,7 @@ class mediaFile
         $fileParts = explode('---', $this->filename);
         $stmt = $this->pdo->prepare('DELETE FROM media WHERE album = ? AND filename LIKE "' . trim($fileParts[0], '-') . '%"');
         $stmt->execute([$this->album]);
+        */
     }
 
     public static function titleCase(string $name): string

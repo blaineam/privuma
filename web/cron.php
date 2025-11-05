@@ -83,8 +83,10 @@ foreach (array_diff(array_merge(scandir($coreJobsDir), scandir($pluginsJobsDir))
         continue;
     };
 
-    // Truncate logs to last 3k lines;
-    exec('echo "$(tail -3000 \'' . $log . '\')" > "' . $log . '"');
+    // Truncate logs to last 3k lines (fixed to prevent null bytes)
+    // Use temp file to avoid corruption from command substitution
+    $tmpLog = $log . '.tmp';
+    exec('tail -n 3000 ' . escapeshellarg($log) . ' > ' . escapeshellarg($tmpLog) . ' && mv ' . escapeshellarg($tmpLog) . ' ' . escapeshellarg($log));
     $flockPath = PHP_OS_FAMILY == 'Darwin' ? '/usr/local/bin/flock' : '/usr/bin/flock';
     $cmd = implode(' ', [
                 // path to flock in container
