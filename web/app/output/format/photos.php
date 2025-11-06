@@ -15,7 +15,6 @@ use privuma\privuma;
 use privuma\helpers\cloudFS;
 use privuma\helpers\tokenizer;
 use privuma\helpers\mediaFile;
-use privuma\helpers\redisCache;
 
 privuma::prof_flag('Photos File Start');
 

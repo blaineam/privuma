@@ -4,7 +4,6 @@ namespace privuma\helpers;
 use Exception;
 use resource;
 use privuma\privuma;
-use privuma\helpers\auditLog;
 
 class cloudFS
 {
@@ -542,7 +541,6 @@ class cloudFS
 
         return $result;
     }
-
 
     public function moveSync(string $source, string $destination, bool $encodeDestination = true, bool $decodeSource = false, bool $preserveBucketName = true, array $flags = []): bool
     {

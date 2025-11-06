@@ -156,9 +156,15 @@ class AuditedPDO extends PDO
     private function getOperationType(string $sql): ?string
     {
         $sql = trim(strtoupper($sql));
-        if (str_starts_with($sql, 'INSERT')) return 'INSERT';
-        if (str_starts_with($sql, 'UPDATE')) return 'UPDATE';
-        if (str_starts_with($sql, 'DELETE')) return 'DELETE';
+        if (str_starts_with($sql, 'INSERT')) {
+            return 'INSERT';
+        }
+        if (str_starts_with($sql, 'UPDATE')) {
+            return 'UPDATE';
+        }
+        if (str_starts_with($sql, 'DELETE')) {
+            return 'DELETE';
+        }
         return null; // SELECT and other read operations are not logged
     }
 }
@@ -291,9 +297,15 @@ class AuditedPDOStatement extends PDOStatement
     private function getOperationType(string $sql): ?string
     {
         $sql = trim(strtoupper($sql));
-        if (str_starts_with($sql, 'INSERT')) return 'INSERT';
-        if (str_starts_with($sql, 'UPDATE')) return 'UPDATE';
-        if (str_starts_with($sql, 'DELETE')) return 'DELETE';
+        if (str_starts_with($sql, 'INSERT')) {
+            return 'INSERT';
+        }
+        if (str_starts_with($sql, 'UPDATE')) {
+            return 'UPDATE';
+        }
+        if (str_starts_with($sql, 'DELETE')) {
+            return 'DELETE';
+        }
         return null;
     }
 }
