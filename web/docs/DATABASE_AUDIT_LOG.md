@@ -5,6 +5,7 @@ Complete audit logging for all database modifications with revert capabilities.
 ## Overview
 
 The database audit log system automatically tracks all INSERT, UPDATE, and DELETE operations, recording:
+
 - Timestamp of change
 - Operation type (INSERT/UPDATE/DELETE)
 - Table name and record ID
@@ -55,6 +56,7 @@ php scripts/revert_audit_log.php --show=123
 ```
 
 This displays:
+
 - Full timestamp and operation details
 - Calling script and line number
 - SQL query executed
@@ -97,12 +99,15 @@ php scripts/revert_audit_log.php --range=100-200 --filter="media" --dry-run
 ## How Reverts Work
 
 ### INSERT Operations
+
 Reverts by **deleting** the inserted record using the record ID.
 
 ### UPDATE Operations
+
 Reverts by **restoring** the previous values from `before_data`.
 
 ### DELETE Operations
+
 Reverts by **re-inserting** the deleted record(s) from `before_data`.
 
 ## Examples
@@ -213,6 +218,7 @@ sqlite3 /path/to/db.sqlite3 "DELETE FROM audit_log WHERE timestamp < datetime('n
 ### "No before data available"
 
 Some DELETE/UPDATE reverts may fail if the `before_data` wasn't captured. This can happen if:
+
 - The WHERE clause was too complex to parse
 - The operation was done outside the PDO wrapper
 - The audit log table didn't exist at the time
