@@ -36,39 +36,39 @@ class AuditLogReverter
      */
     public function listEntries(?string $filter = null, ?array $range = null): void
     {
-        $sql = "SELECT id, timestamp, operation, table_name, record_id, calling_script, line_number, reverted
-                FROM audit_log WHERE 1=1";
+        $sql = 'SELECT id, timestamp, operation, table_name, record_id, calling_script, line_number, reverted
+                FROM audit_log WHERE 1=1';
         $params = [];
 
         if ($range) {
-            $sql .= " AND id BETWEEN ? AND ?";
+            $sql .= ' AND id BETWEEN ? AND ?';
             $params[] = $range[0];
             $params[] = $range[1];
         }
 
         if ($filter) {
-            $sql .= " AND (table_name LIKE ? OR calling_script LIKE ? OR sql_query LIKE ?)";
+            $sql .= ' AND (table_name LIKE ? OR calling_script LIKE ? OR sql_query LIKE ?)';
             $filterParam = "%{$filter}%";
             $params[] = $filterParam;
             $params[] = $filterParam;
             $params[] = $filterParam;
         }
 
-        $sql .= " ORDER BY id DESC LIMIT 100";
+        $sql .= ' ORDER BY id DESC LIMIT 100';
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($entries)) {
-            echo "No audit log entries found matching criteria." . PHP_EOL;
+            echo 'No audit log entries found matching criteria.' . PHP_EOL;
             return;
         }
 
-        echo PHP_EOL . "=== Audit Log Entries ===" . PHP_EOL . PHP_EOL;
+        echo PHP_EOL . '=== Audit Log Entries ===' . PHP_EOL . PHP_EOL;
         printf("%-6s %-20s %-10s %-15s %-10s %-30s %-6s %-10s\n",
-            "ID", "Timestamp", "Operation", "Table", "Record ID", "Script", "Line", "Reverted");
-        echo str_repeat("-", 120) . PHP_EOL;
+            'ID', 'Timestamp', 'Operation', 'Table', 'Record ID', 'Script', 'Line', 'Reverted');
+        echo str_repeat('-', 120) . PHP_EOL;
 
         foreach ($entries as $entry) {
             printf("%-6d %-20s %-10s %-15s %-10s %-30s %-6s %-10s\n",
@@ -83,9 +83,9 @@ class AuditLogReverter
             );
         }
 
-        echo PHP_EOL . "Total entries: " . count($entries) . PHP_EOL;
+        echo PHP_EOL . 'Total entries: ' . count($entries) . PHP_EOL;
         if (count($entries) == 100) {
-            echo "(Limited to 100 entries - use --range to narrow results)" . PHP_EOL;
+            echo '(Limited to 100 entries - use --range to narrow results)' . PHP_EOL;
         }
     }
 
@@ -94,7 +94,7 @@ class AuditLogReverter
      */
     public function showEntry(int $id): void
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM audit_log WHERE id = ?");
+        $stmt = $this->pdo->prepare('SELECT * FROM audit_log WHERE id = ?');
         $stmt->execute([$id]);
         $entry = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -107,28 +107,28 @@ class AuditLogReverter
         echo "Timestamp:      {$entry['timestamp']}" . PHP_EOL;
         echo "Operation:      {$entry['operation']}" . PHP_EOL;
         echo "Table:          {$entry['table_name']}" . PHP_EOL;
-        echo "Record ID:      " . ($entry['record_id'] ?? 'N/A') . PHP_EOL;
+        echo 'Record ID:      ' . ($entry['record_id'] ?? 'N/A') . PHP_EOL;
         echo "Calling Script: {$entry['calling_script']}:{$entry['line_number']}" . PHP_EOL;
-        echo "Reverted:       " . ($entry['reverted'] ? 'YES (at ' . $entry['reverted_at'] . ')' : 'NO') . PHP_EOL;
+        echo 'Reverted:       ' . ($entry['reverted'] ? 'YES (at ' . $entry['reverted_at'] . ')' : 'NO') . PHP_EOL;
         echo PHP_EOL;
 
-        echo "SQL Query:" . PHP_EOL;
+        echo 'SQL Query:' . PHP_EOL;
         echo $entry['sql_query'] . PHP_EOL . PHP_EOL;
 
         if ($entry['before_data']) {
-            echo "BEFORE DATA:" . PHP_EOL;
+            echo 'BEFORE DATA:' . PHP_EOL;
             $this->printJson($entry['before_data']);
             echo PHP_EOL;
         }
 
         if ($entry['after_data']) {
-            echo "AFTER DATA:" . PHP_EOL;
+            echo 'AFTER DATA:' . PHP_EOL;
             $this->printJson($entry['after_data']);
             echo PHP_EOL;
         }
 
         if ($entry['before_data'] && $entry['after_data']) {
-            echo "DIFF:" . PHP_EOL;
+            echo 'DIFF:' . PHP_EOL;
             $this->showDiff($entry['before_data'], $entry['after_data']);
         }
     }
@@ -138,7 +138,7 @@ class AuditLogReverter
      */
     public function revertEntry(int $id): bool
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM audit_log WHERE id = ?");
+        $stmt = $this->pdo->prepare('SELECT * FROM audit_log WHERE id = ?');
         $stmt->execute([$id]);
         $entry = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -181,7 +181,7 @@ class AuditLogReverter
                     $this->pdo->rollBack();
                 } else {
                     // Mark as reverted
-                    $stmt = $this->pdo->prepare("UPDATE audit_log SET reverted = 1, reverted_at = ? WHERE id = ?");
+                    $stmt = $this->pdo->prepare('UPDATE audit_log SET reverted = 1, reverted_at = ? WHERE id = ?');
                     $stmt->execute([date('Y-m-d H:i:s'), $id]);
                     $this->pdo->commit();
                     echo "✓ Successfully reverted entry #{$id}" . PHP_EOL;
@@ -205,7 +205,7 @@ class AuditLogReverter
     private function revertInsert(array $entry): bool
     {
         if (!$entry['record_id']) {
-            echo "  ✗ No record ID to delete" . PHP_EOL;
+            echo '  ✗ No record ID to delete' . PHP_EOL;
             return false;
         }
 
@@ -222,20 +222,20 @@ class AuditLogReverter
     private function revertUpdate(array $entry): bool
     {
         if (!$entry['before_data']) {
-            echo "  ✗ No before data available" . PHP_EOL;
+            echo '  ✗ No before data available' . PHP_EOL;
             return false;
         }
 
         $beforeData = json_decode($entry['before_data'], true);
         if (!$beforeData || !is_array($beforeData)) {
-            echo "  ✗ Invalid before data" . PHP_EOL;
+            echo '  ✗ Invalid before data' . PHP_EOL;
             return false;
         }
 
         // Take first record (in case multiple were updated)
         $record = $beforeData[0];
         if (!isset($record['id'])) {
-            echo "  ✗ No ID in before data" . PHP_EOL;
+            echo '  ✗ No ID in before data' . PHP_EOL;
             return false;
         }
 
@@ -250,9 +250,9 @@ class AuditLogReverter
         }
 
         $params[] = $record['id'];
-        $sql = "UPDATE {$entry['table_name']} SET " . implode(', ', $sets) . " WHERE id = ?";
+        $sql = "UPDATE {$entry['table_name']} SET " . implode(', ', $sets) . ' WHERE id = ?';
 
-        echo "  Restoring " . count($sets) . " columns to previous values" . PHP_EOL;
+        echo '  Restoring ' . count($sets) . ' columns to previous values' . PHP_EOL;
 
         $stmt = $this->pdo->prepare($sql);
         return $stmt->execute($params);
@@ -264,13 +264,13 @@ class AuditLogReverter
     private function revertDelete(array $entry): bool
     {
         if (!$entry['before_data']) {
-            echo "  ✗ No before data available to restore" . PHP_EOL;
+            echo '  ✗ No before data available to restore' . PHP_EOL;
             return false;
         }
 
         $beforeData = json_decode($entry['before_data'], true);
         if (!$beforeData || !is_array($beforeData)) {
-            echo "  ✗ Invalid before data" . PHP_EOL;
+            echo '  ✗ Invalid before data' . PHP_EOL;
             return false;
         }
 
@@ -280,8 +280,8 @@ class AuditLogReverter
             $columns = array_keys($record);
             $placeholders = array_fill(0, count($columns), '?');
 
-            $sql = "INSERT INTO {$entry['table_name']} (" . implode(', ', $columns) . ")
-                    VALUES (" . implode(', ', $placeholders) . ")";
+            $sql = "INSERT INTO {$entry['table_name']} (" . implode(', ', $columns) . ')
+                    VALUES (' . implode(', ', $placeholders) . ')';
 
             $stmt = $this->pdo->prepare($sql);
             if ($stmt->execute(array_values($record))) {
@@ -298,40 +298,40 @@ class AuditLogReverter
      */
     public function revertRange(array $range, ?string $filter = null): void
     {
-        $sql = "SELECT id FROM audit_log WHERE id BETWEEN ? AND ? AND reverted = 0";
+        $sql = 'SELECT id FROM audit_log WHERE id BETWEEN ? AND ? AND reverted = 0';
         $params = [$range[0], $range[1]];
 
         if ($filter) {
-            $sql .= " AND (table_name LIKE ? OR calling_script LIKE ? OR sql_query LIKE ?)";
+            $sql .= ' AND (table_name LIKE ? OR calling_script LIKE ? OR sql_query LIKE ?)';
             $filterParam = "%{$filter}%";
             $params[] = $filterParam;
             $params[] = $filterParam;
             $params[] = $filterParam;
         }
 
-        $sql .= " ORDER BY id DESC"; // Revert in reverse order (newest first)
+        $sql .= ' ORDER BY id DESC'; // Revert in reverse order (newest first)
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         if (empty($ids)) {
-            echo "No entries found matching criteria." . PHP_EOL;
+            echo 'No entries found matching criteria.' . PHP_EOL;
             return;
         }
 
-        echo PHP_EOL . "Found " . count($ids) . " entries to revert." . PHP_EOL;
+        echo PHP_EOL . 'Found ' . count($ids) . ' entries to revert.' . PHP_EOL;
 
         if ($this->dryRun) {
-            echo "[DRY RUN MODE - No changes will be made]" . PHP_EOL;
+            echo '[DRY RUN MODE - No changes will be made]' . PHP_EOL;
         }
 
-        echo "Proceed? (yes/no): ";
-        $handle = fopen("php://stdin", "r");
+        echo 'Proceed? (yes/no): ';
+        $handle = fopen('php://stdin', 'r');
         $line = trim(fgets($handle));
 
         if (strtolower($line) !== 'yes') {
-            echo "Cancelled." . PHP_EOL;
+            echo 'Cancelled.' . PHP_EOL;
             return;
         }
 
@@ -346,7 +346,7 @@ class AuditLogReverter
             }
         }
 
-        echo PHP_EOL . "=== Revert Summary ===" . PHP_EOL;
+        echo PHP_EOL . '=== Revert Summary ===' . PHP_EOL;
         echo "Successful: {$success}" . PHP_EOL;
         echo "Failed:     {$failed}" . PHP_EOL;
     }
@@ -373,7 +373,7 @@ class AuditLogReverter
         $after = json_decode($afterJson, true);
 
         if (!$before || !$after) {
-            echo "Could not parse data for diff" . PHP_EOL;
+            echo 'Could not parse data for diff' . PHP_EOL;
             return;
         }
 
@@ -384,7 +384,7 @@ class AuditLogReverter
             $afterValue = $afterRecord[$key] ?? null;
             if ($beforeValue !== $afterValue) {
                 echo "  {$key}: ";
-                echo json_encode($beforeValue) . " → " . json_encode($afterValue) . PHP_EOL;
+                echo json_encode($beforeValue) . ' → ' . json_encode($afterValue) . PHP_EOL;
             }
         }
     }
@@ -455,7 +455,7 @@ HELP;
 // Handle dry-run flag
 if (isset($options['dry-run'])) {
     $reverter->setDryRun(true);
-    echo "[DRY RUN MODE - No changes will be made]" . PHP_EOL . PHP_EOL;
+    echo '[DRY RUN MODE - No changes will be made]' . PHP_EOL . PHP_EOL;
 }
 
 // Handle --list
@@ -466,7 +466,7 @@ if (isset($options['list'])) {
     if (isset($options['range'])) {
         $parts = explode('-', $options['range']);
         if (count($parts) === 2) {
-            $range = [(int)$parts[0], (int)$parts[1]];
+            $range = [(int) $parts[0], (int) $parts[1]];
         }
     }
 
@@ -476,13 +476,13 @@ if (isset($options['list'])) {
 
 // Handle --show
 if (isset($options['show'])) {
-    $reverter->showEntry((int)$options['show']);
+    $reverter->showEntry((int) $options['show']);
     exit(0);
 }
 
 // Handle --id (single revert)
 if (isset($options['id'])) {
-    $reverter->revertEntry((int)$options['id']);
+    $reverter->revertEntry((int) $options['id']);
     exit(0);
 }
 
@@ -490,18 +490,18 @@ if (isset($options['id'])) {
 if (isset($options['range'])) {
     $parts = explode('-', $options['range']);
     if (count($parts) !== 2) {
-        echo "Error: Invalid range format. Use --range=START-END (e.g., --range=100-200)" . PHP_EOL;
+        echo 'Error: Invalid range format. Use --range=START-END (e.g., --range=100-200)' . PHP_EOL;
         exit(1);
     }
 
-    $range = [(int)$parts[0], (int)$parts[1]];
+    $range = [(int) $parts[0], (int) $parts[1]];
     $filter = $options['filter'] ?? null;
 
     $reverter->revertRange($range, $filter);
     exit(0);
 }
 
-echo "No action specified. Use --help for usage information." . PHP_EOL;
+echo 'No action specified. Use --help for usage information.' . PHP_EOL;
 exit(1);
 
 HELP;

@@ -3,7 +3,6 @@
 namespace privuma\helpers;
 
 use PDO;
-use PDOStatement;
 use DateTime;
 
 class dbAuditLog
@@ -24,7 +23,7 @@ class dbAuditLog
     private function ensureAuditTableExists(): void
     {
         self::$inAuditOperation = true;
-        $this->pdo->exec("
+        $this->pdo->exec('
             CREATE TABLE IF NOT EXISTS audit_log (
                 id BIGINT PRIMARY KEY AUTO_INCREMENT,
                 timestamp DATETIME NOT NULL,
@@ -44,7 +43,7 @@ class dbAuditLog
                 INDEX idx_script (calling_script(255)),
                 INDEX idx_reverted (reverted)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        ");
+        ');
         self::$inAuditOperation = false;
     }
 
@@ -93,7 +92,7 @@ class dbAuditLog
                 preg_match('/\/jobs\/(core|plugins)\/([^\/]+)\//', $file, $matches);
                 if (isset($matches[2])) {
                     return [
-                        'script' => "JOB:{$matches[2]} (" . basename($file) . ")",
+                        'script' => "JOB:{$matches[2]} (" . basename($file) . ')',
                         'line' => $line
                     ];
                 }
@@ -198,7 +197,7 @@ class dbAuditLog
                 return $data ?: null;
             }
         } catch (\Exception $e) {
-            error_log("Error fetching before data: " . $e->getMessage());
+            error_log('Error fetching before data: ' . $e->getMessage());
         }
 
         self::$inAuditOperation = false;
@@ -251,12 +250,12 @@ class dbAuditLog
             }
 
             // Insert audit log entry
-            $stmt = $this->pdo->prepare("
+            $stmt = $this->pdo->prepare('
                 INSERT INTO audit_log (
                     timestamp, operation, table_name, record_id,
                     calling_script, line_number, before_data, after_data, sql_query
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
+            ');
 
             $stmt->execute([
                 (new DateTime())->format('Y-m-d H:i:s'),
@@ -270,7 +269,7 @@ class dbAuditLog
                 $sql
             ]);
         } catch (\Exception $e) {
-            error_log("Audit logging error: " . $e->getMessage());
+            error_log('Audit logging error: ' . $e->getMessage());
         }
 
         self::$inAuditOperation = false;

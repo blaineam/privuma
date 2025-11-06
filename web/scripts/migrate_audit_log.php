@@ -11,15 +11,15 @@ use privuma\privuma;
 
 require_once(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'privuma.php');
 
-echo "=== Database Audit Log Migration ===" . PHP_EOL . PHP_EOL;
+echo '=== Database Audit Log Migration ===' . PHP_EOL . PHP_EOL;
 
 $privuma = privuma::getInstance();
 $pdo = $privuma->getPDO();
 
-echo "Creating audit_log table..." . PHP_EOL;
+echo 'Creating audit_log table...' . PHP_EOL;
 
 try {
-    $pdo->exec("
+    $pdo->exec('
         CREATE TABLE IF NOT EXISTS audit_log (
             id BIGINT PRIMARY KEY AUTO_INCREMENT,
             timestamp DATETIME NOT NULL,
@@ -39,19 +39,19 @@ try {
             INDEX idx_audit_script (calling_script(255)),
             INDEX idx_audit_reverted (reverted)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    ");
+    ');
 
-    echo "✓ Table and indexes created successfully" . PHP_EOL . PHP_EOL;
+    echo '✓ Table and indexes created successfully' . PHP_EOL . PHP_EOL;
 
     // Check if table has any existing data
-    $stmt = $pdo->query("SELECT COUNT(*) FROM audit_log");
+    $stmt = $pdo->query('SELECT COUNT(*) FROM audit_log');
     $count = $stmt->fetchColumn();
 
     echo "Current audit log entries: {$count}" . PHP_EOL . PHP_EOL;
-    echo "=== Migration Complete ===" . PHP_EOL;
-    echo "Database audit logging is now ready to use." . PHP_EOL;
+    echo '=== Migration Complete ===' . PHP_EOL;
+    echo 'Database audit logging is now ready to use.' . PHP_EOL;
 
 } catch (Exception $e) {
-    echo "✗ Error: " . $e->getMessage() . PHP_EOL;
+    echo '✗ Error: ' . $e->getMessage() . PHP_EOL;
     exit(1);
 }
