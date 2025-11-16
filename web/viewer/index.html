@@ -858,11 +858,20 @@
               if (!this.useCrypt) {
                 // Try unencrypted first
                 if (!this.skipPrFa) {
-                  unencryptedPaths.push({ path: "pr/" + baseResource, encrypted: false });
-                  unencryptedPaths.push({ path: "fa/" + baseResource, encrypted: false });
+                  unencryptedPaths.push({
+                    path: "pr/" + baseResource,
+                    encrypted: false,
+                  });
+                  unencryptedPaths.push({
+                    path: "fa/" + baseResource,
+                    encrypted: false,
+                  });
                 }
                 if (!this.usesPrFa) {
-                  unencryptedPaths.push({ path: baseResource, encrypted: false });
+                  unencryptedPaths.push({
+                    path: baseResource,
+                    encrypted: false,
+                  });
                 }
               }
             } else if (isFlashOrVr) {
@@ -870,8 +879,14 @@
               unencryptedPaths.push({ path: baseResource, encrypted: false });
             } else {
               // Non-media files (JS, JSON, etc)
-              unencryptedPaths.push({ path: "pr/" + baseResource, encrypted: false });
-              unencryptedPaths.push({ path: "fa/" + baseResource, encrypted: false });
+              unencryptedPaths.push({
+                path: "pr/" + baseResource,
+                encrypted: false,
+              });
+              unencryptedPaths.push({
+                path: "fa/" + baseResource,
+                encrypted: false,
+              });
               unencryptedPaths.push({ path: baseResource, encrypted: false });
             }
 
@@ -879,7 +894,7 @@
             for (const pathConfig of unencryptedPaths) {
               const result = await tryPath(pathConfig);
               // If we got a successful URL (string), return it immediately
-              if (typeof result === 'string') {
+              if (typeof result === "string") {
                 return result;
               }
               // Otherwise continue to next path (404 or error)
@@ -891,16 +906,28 @@
 
             if (isMedia && !isFlashOrVr) {
               // Regular media file encrypted paths
-              encryptedPaths.push({ path: "pr/" + baseResource, encrypted: true });
-              encryptedPaths.push({ path: "fa/" + baseResource, encrypted: true });
+              encryptedPaths.push({
+                path: "pr/" + baseResource,
+                encrypted: true,
+              });
+              encryptedPaths.push({
+                path: "fa/" + baseResource,
+                encrypted: true,
+              });
               encryptedPaths.push({ path: baseResource, encrypted: true });
             } else if (isFlashOrVr) {
               // Flash/VR encrypted
               encryptedPaths.push({ path: baseResource, encrypted: true });
             } else {
               // Non-media files encrypted
-              encryptedPaths.push({ path: "pr/" + baseResource, encrypted: true });
-              encryptedPaths.push({ path: "fa/" + baseResource, encrypted: true });
+              encryptedPaths.push({
+                path: "pr/" + baseResource,
+                encrypted: true,
+              });
+              encryptedPaths.push({
+                path: "fa/" + baseResource,
+                encrypted: true,
+              });
               encryptedPaths.push({ path: baseResource, encrypted: true });
             }
 
@@ -908,7 +935,7 @@
             for (const pathConfig of encryptedPaths) {
               const result = await tryPath(pathConfig);
               // If we got a successful URL (string), return it immediately
-              if (typeof result === 'string') {
+              if (typeof result === "string") {
                 return result;
               }
               // Otherwise continue to next path (404 or error)
