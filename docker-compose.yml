@@ -74,7 +74,6 @@ services:
       - "./web/:/var/www/html/"
     depends_on:
       - db
-      - redis
       - gluetun
     network_mode: "service:gluetun"
     deploy:
@@ -103,15 +102,14 @@ services:
       - "./cron.log:/var/log/cron.log"
     depends_on:
       - db
-      - redis
       - cloudfs-http
       - gluetun
     network_mode: "service:gluetun"
-    #deploy:
-    # resources:
-    #  limits:
-    # cpus: "2.0"
-    # memory: 3G
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
   db:
     image: mariadb:lts-jammy
     restart: always
@@ -133,27 +131,11 @@ services:
       - db_data:/var/lib/mysql
       - ./docker/etc/mariadb/custom.cnf:/etc/mysql/conf.d/custom.cnf
       - ./docker/images/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
-    # deploy:
-    # resources:
-    #  limits:
-    # cpus: "1.0"
-    #   memory: 1G
-  redis:
-    image: redis:7-alpine
-    container_name: privuma_redis
-    restart: always
-    networks:
-      internal:
-        ipv4_address: 172.20.0.98
-    ports:
-      - "${TS_IP:-127.0.0.1}:6379:6379"
-    volumes:
-      - redis_data:/data
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 512M
+          cpus: "1.0"
+          memory: 4G
   cloudfs-http:
     image: rclone/rclone:latest
     container_name: privuma_cloudfs_http
@@ -164,7 +146,7 @@ services:
     depends_on:
       - gluetun
     network_mode: "service:gluetun"
-    command: serve http --read-only --no-checksum --no-modtime --multi-thread-streams=1 --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8991 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz,json,swf,wasm} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+    command: serve http --read-only --no-checksum --no-modtime --multi-thread-streams=1 --transfers 1 --bwlimit 20M  --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8991 ${CLOUDFS_HTTP_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz,json,swf,wasm} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 0
   cloudfs-http-secondary:
     image: rclone/rclone:latest
     container_name: privuma_cloudfs_http_secondary
@@ -175,7 +157,7 @@ services:
     depends_on:
       - gluetun
     network_mode: "service:gluetun"
-    command: serve http --read-only --no-checksum --no-modtime --multi-thread-streams=1 --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8992 ${CLOUDFS_HTTP_SECONDARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz,json,swf,wasm} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G  --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+    command: serve http --read-only --no-checksum --no-modtime --multi-thread-streams=1  --transfers 1 --bwlimit 20M --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8992 ${CLOUDFS_HTTP_SECONDARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz,json,swf,wasm} --dir-cache-time 1m --fast-list --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G  --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 0
   cloudfs-http-tertiary:
     image: rclone/rclone:latest
     container_name: privuma_cloudfs_http_teriary
@@ -184,7 +166,6 @@ services:
       - ./web/config/rclone:/config/rclone
     user: ${DOCKER_USER:-0}
     network_mode: "service:gluetun"
-    command: serve http --read-only --no-checksum --no-modtime --multi-thread-streams=1 --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8993 ${CLOUDFS_HTTP_TERTIARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz,json,swf,wasm} --dir-cache-time 1m --fast-list  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 64M
+    command: serve http --read-only --no-checksum --no-modtime --multi-thread-streams=1 --transfers 1 --bwlimit 20M --s3-no-check-bucket --s3-no-head --s3-no-head-object  --addr :8993 ${CLOUDFS_HTTP_TERTIARY_REMOTE} --include *.{jpg,jpeg,png,gif,mp4,mov,webm,pdf,html,txt,js,css,svg,js\-gz,txt\-gz,json,swf,wasm} --dir-cache-time 1m --fast-list  --vfs-cache-mode full --vfs-cache-max-age 30m --vfs-cache-max-size 8G --vfs-read-chunk-size 64M --vfs-read-chunk-size-limit off --buffer-size 0
 volumes:
   db_data:
-  redis_data:

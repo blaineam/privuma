@@ -623,7 +623,6 @@ function run()
         static $favoritesCacheTime = 0;
         static $favoritesCacheTTL = 300; // 5 minutes
 
-        // REMOVED: Redis cache (caused data integrity issues)
         // Use static cache only (per-request)
 
         if ((time() - $favoritesCacheTime) > $favoritesCacheTTL) {

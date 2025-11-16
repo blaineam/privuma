@@ -13,7 +13,6 @@ foreach ($classes as $class) {
 
 use privuma\helpers\cloudFS;
 use privuma\helpers\dotenv;
-use privuma\helpers\redisCache;
 use privuma\helpers\AuditedPDO;
 
 use PDO;
@@ -285,20 +284,6 @@ class privuma
 
     public static function accel($url)
     {
-        // Try Redis cache first (persistent across requests)
-        $cacheKey = 'accel:' . md5($url);
-        $cachedPath = redisCache::get($cacheKey);
-        if ($cachedPath !== null) {
-            header('X-Accel-Redirect: ' . $cachedPath);
-            exit();
-        }
-
-        // Check local cache second (faster but request-specific)
-        if (isset(self::$urlCache[$url])) {
-            header('X-Accel-Redirect: ' . self::$urlCache[$url]);
-            exit();
-        }
-
         // Parse URL once and extract all components
         $parsed = parse_url($url);
 
@@ -320,19 +305,6 @@ class privuma
 
         // Build internal media path efficiently
         $internalMediaPath = "/media/$protocol/$hostname:$port/$path/";
-
-        // Cache the result in Redis with 1 hour TTL (URLs are relatively stable)
-        redisCache::set($cacheKey, $internalMediaPath, 3600);
-
-        // Also cache locally for this request (with size limit)
-        if (self::$cacheSize < self::$maxCacheSize) {
-            self::$urlCache[$url] = $internalMediaPath;
-            self::$cacheSize++;
-        } elseif (self::$cacheSize >= self::$maxCacheSize) {
-            // Reset cache when it gets too large
-            self::$urlCache = [$url => $internalMediaPath];
-            self::$cacheSize = 1;
-        }
 
         header('X-Accel-Redirect: ' . $internalMediaPath);
         exit();
