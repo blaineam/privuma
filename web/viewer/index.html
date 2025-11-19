@@ -422,6 +422,8 @@
         queue: [],
         processing: false,
         maxQueueSize: 50, // Limit queue to prevent memory issues (reduced from 100)
+        maxConcurrency: 6, // Max parallel requests (4-8 range, 6 is a good middle ground)
+        activeConcurrentFetches: 0, // Track active concurrent fetches
 
         // Path optimization flags
         usesPrFa: false, // Set when /pr/ or /fa/ succeeds
@@ -655,13 +657,18 @@
           if (this.processing) return;
           this.processing = true;
 
-          while (this.queue.length > 0) {
+          // Process queue with parallel requests up to maxConcurrency
+          const processNext = async () => {
             // Break out if rapid scrolling is happening
             if (this.rapidScrolling) {
               console.log(
                 `[Queue] Pausing processing during rapid scroll (${this.queue.length} items queued)`,
               );
-              this.processing = false;
+              return;
+            }
+
+            // Check if we have queue items and available concurrency slots
+            if (this.queue.length === 0 || this.activeConcurrentFetches >= this.maxConcurrency) {
               return;
             }
 
@@ -674,21 +681,35 @@
             if (element && !this.isNearViewport(element)) {
               // Element scrolled out of viewport - skip and reject
               task.reject(new Error("Skipped: outside viewport"));
-              continue;
+              // Try to process next item immediately
+              processNext();
+              return;
             }
+
+            // Increment active fetches counter
+            this.activeConcurrentFetches++;
 
             try {
               const url = await this.fetchResource(task.resource);
               task.resolve(url);
             } catch (error) {
-              task.reject(error); // Bubble error to caller
+              task.reject(error);
+            } finally {
+              // Decrement counter and process next item
+              this.activeConcurrentFetches--;
+              processNext();
             }
+          };
 
-            // Yield to event loop every 5 items to prevent blocking
-            if (this.queue.length > 0 && this.queue.length % 5 === 0) {
-              await new Promise((resolve) => setTimeout(resolve, 0));
-            }
+          // Start initial batch of parallel requests
+          const initialBatch = Math.min(this.maxConcurrency, this.queue.length);
+          const promises = [];
+          for (let i = 0; i < initialBatch; i++) {
+            promises.push(processNext());
           }
+
+          // Wait for all processing to complete
+          await Promise.all(promises);
 
           this.processing = false;
         },
