@@ -668,7 +668,10 @@
             }
 
             // Check if we have queue items and available concurrency slots
-            if (this.queue.length === 0 || this.activeConcurrentFetches >= this.maxConcurrency) {
+            if (
+              this.queue.length === 0 ||
+              this.activeConcurrentFetches >= this.maxConcurrency
+            ) {
               return;
             }
 
