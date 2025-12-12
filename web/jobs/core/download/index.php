@@ -197,7 +197,7 @@ $opsPlain->file_put_contents('index.html', $viewerHTML);
 $opsNoEncodeNoPrefix->file_put_contents('index.html', $viewerHTML);
 $opsNoEncodeNoPrefix->file_put_contents('fa/index.html', $viewerHTML);
 unset($viewerHTML);
-
+clearstatcache();
 if (!file_exists(__DIR__ . '/restore_point.txt')) {
     $array = [];
     $metaDataFiles = [];
