@@ -183,6 +183,7 @@ $previouslyDownloadedMedia = array_flip(
         )
     )
 );
+clearstatcache();
 if (!file_exists(__DIR__ . '/restore_point.txt')) {
     $array = [];
     $metaDataFiles = [];
