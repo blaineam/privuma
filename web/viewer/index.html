@@ -96,13 +96,13 @@
       margin: 0px;
     }
 
-    /* Hide all buttons except favorite for VR and Flash */
-    body.vr .fancybox-button:not(.fancybox-button--favorite),
-    body.flash .fancybox-button:not(.fancybox-button--favorite) {
+    /* Hide all buttons EXCEPT close and favorite for VR and Flash */
+    body.vr .fancybox-button:not(.fancybox-button--favorite):not(.fancybox-button--close),
+    body.flash .fancybox-button:not(.fancybox-button--favorite):not(.fancybox-button--close) {
       display: none !important;
     }
 
-    /* Keep toolbar and favorite button visible with high z-index for VR and Flash */
+    /* Keep toolbar, close button, and favorite button visible with high z-index for VR and Flash */
     body.vr .fancybox-toolbar,
     body.flash .fancybox-toolbar {
       opacity: 1 !important;
@@ -111,12 +111,14 @@
     }
 
     body.vr .fancybox-button--favorite,
-    body.flash .fancybox-button--favorite {
+    body.flash .fancybox-button--favorite,
+    body.vr .fancybox-button--close,
+    body.flash .fancybox-button--close {
       opacity: 1 !important;
       visibility: visible !important;
     }
 
-    /* Hide close button inside inline-player for VR and Flash */
+    /* Hide small close button inside inline-player for VR and Flash (not the toolbar close) */
     body.vr #inline-player .fancybox-close-small,
     body.flash #inline-player .fancybox-close-small {
       display: none !important;
@@ -4002,7 +4004,8 @@
               // });
 
               // Update favorite button for VR videos
-              let vrHash = originalLink.data("filehash");
+              // Hash is stored in the img element's data-filehash attribute
+              let vrHash = slide.opts.$orig.find('img').data('filehash');
               if (vrHash) {
                 let vrFavorited =
                   alldata.filter((item) => {
