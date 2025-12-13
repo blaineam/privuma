@@ -2244,12 +2244,23 @@
         }
 
         // Helper function to setup the player with a video URL
-        function setupPlayer(finalVideoUrl) {
+        async function setupPlayer(finalVideoUrl) {
           // Use stored thumbnail URL, or derive from video URL as fallback
-          const thumbnail = window.currentVRThumbnail ||
+          const thumbnailPath = window.currentVRThumbnail ||
             finalVideoUrl
               .replace(".mp4", ".jpg")
               .replace(".webm", ".jpg");
+
+          // Fetch thumbnail through getSrc to get blob URL
+          let thumbnailBlobUrl = thumbnailPath;
+          if (thumbnailPath && !thumbnailPath.startsWith("blob:") && !thumbnailPath.startsWith("data:")) {
+            try {
+              thumbnailBlobUrl = await medcrypt.getSrc(thumbnailPath, "high");
+            } catch (error) {
+              console.warn("Failed to fetch thumbnail, using path directly:", error);
+              thumbnailBlobUrl = thumbnailPath;
+            }
+          }
 
           if (window.player) {
             try {
@@ -2268,7 +2279,7 @@
           }
           $("#inline-player").empty()
             .html(`<div style="width:100%; height: calc( 100% - 25px );display:block;position:absolute; margin:0; padding:0;top:0;left:0;">
-        <video loop poster="${thumbnail}" id="videojs-vr-player" class="video-js vjs-fill vjs-default-skin" playsinline controls>
+        <video loop poster="${thumbnailBlobUrl}" id="videojs-vr-player" class="video-js vjs-fill vjs-default-skin" playsinline controls>
           <source type="video/mp4" src="${finalVideoUrl}">
         </video>
         </div>
