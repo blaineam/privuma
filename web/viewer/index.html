@@ -2339,20 +2339,42 @@
         if (urlParams.has("nocache")) {
           tail += "&nocache=1";
         }
+
+        // Try to load album_list.json first, fallback to encrypted_data.js
         medcrypt
-          .getSrc(
-            (window.mobileCheck()
-              ? "pr/ZW/ZW5jcnlwdGVkX21vYmlsZV9kYXRh.js"
-              : "pr/ZW/ZW5jcnlwdGVkX2RhdGE=.js") + tail,
-            "high",
-          )
-          .then((encrypted_data_file) => {
-            loadScript(encrypted_data_file, loadPacks);
+          .getSrc("pr/favorites.json" + tail, "high")
+          .then((album_list_url) => {
+            return fetch(album_list_url)
+              .then(response => {
+                if (response.ok) {
+                  console.log("Using album_list.json");
+                  return response.json();
+                }
+                throw new Error("album_list.json not available");
+              })
+              .then(data => {
+                window.encrypted_data = JSON.stringify(data);
+                loadPacks();
+              });
           })
           .catch((error) => {
-            console.error("Failed to load encrypted data:", error);
-            // Still call loadPacks even if main data file fails
-            loadPacks();
+            console.log("album_list.json not available, falling back to encrypted_data.js");
+            // Fallback to legacy encrypted_data.js
+            medcrypt
+              .getSrc(
+                (window.mobileCheck()
+                  ? "pr/ZW/ZW5jcnlwdGVkX21vYmlsZV9kYXRh.js"
+                  : "pr/ZW/ZW5jcnlwdGVkX2RhdGE=.js") + tail,
+                "high",
+              )
+              .then((encrypted_data_file) => {
+                loadScript(encrypted_data_file, loadPacks);
+              })
+              .catch((error) => {
+                console.error("Failed to load encrypted data:", error);
+                // Still call loadPacks even if main data file fails
+                loadPacks();
+              });
           });
       }
 
@@ -4719,6 +4741,36 @@
             return;
           }
 
+          // Initialize retry counter if not present
+          if (!lazyImage.dataset.retryCount) {
+            lazyImage.dataset.retryCount = "0";
+          }
+
+          const currentRetryCount = parseInt(lazyImage.dataset.retryCount || "0");
+          const MAX_RETRIES = 3;
+
+          // Check if we've exceeded max retries
+          if (currentRetryCount >= MAX_RETRIES) {
+            console.log(`[Max Retries] Giving up on ${lazyImage.dataset.src} after ${MAX_RETRIES} attempts`);
+
+            // Mark as permanently failed
+            medcrypt.failedResources.add(lazyImage.dataset.src);
+            medcrypt.queuedResources.delete(lazyImage.dataset.src);
+            medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
+
+            lazyImage.classList.remove("lazy-loading", "lazy-waiting");
+            lazyImage.classList.add("lazy-error");
+            lazyImage.dataset.loadFailed = "true";
+            delete lazyImage.dataset.loadingStart;
+
+            // Show md5 placeholder
+            const hash = lazyImage.dataset.filehash || lazyImage.dataset.hash;
+            if (hash && typeof md5ToImage === "function") {
+              lazyImage.src = md5ToImage(hash);
+            }
+            return;
+          }
+
           // Skip if already loading or loaded
           if (
             lazyImage.classList.contains("lazy-loading") ||
@@ -4779,6 +4831,8 @@
             };
 
             lazyImage.onload = function () {
+              // Success - reset retry counter
+              delete lazyImage.dataset.retryCount;
               medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
               medcrypt.queuedResources.delete(lazyImage.dataset.src);
               lazyImage.classList.remove("lazy-loading");
@@ -4814,10 +4868,23 @@
                     error.message.includes("All fallbacks exhausted"));
 
                 if (isTemporaryFailure) {
-                  // Temporary failure - reset to waiting so it can be retried later
-                  console.log(
-                    `[Temporary Failure] ${error.message} for: ${lazyImage.dataset.src} - will retry later`,
-                  );
+                  // Increment retry counter for temporary failures
+                  const retries = parseInt(lazyImage.dataset.retryCount || "0");
+                  lazyImage.dataset.retryCount = String(retries + 1);
+
+                  // Log with retry count (rate limited to avoid spam)
+                  const failureKey = `temp_fail_${lazyImage.dataset.src}`;
+                  const lastLogTime = window.tempFailureLogTimes?.[failureKey] || 0;
+                  const now = Date.now();
+
+                  if (now - lastLogTime > 5000) { // Only log once per 5 seconds per resource
+                    console.log(
+                      `[Temporary Failure] ${error.message} for: ${lazyImage.dataset.src} - will retry later (${retries + 1}/${MAX_RETRIES})`,
+                    );
+                    window.tempFailureLogTimes = window.tempFailureLogTimes || {};
+                    window.tempFailureLogTimes[failureKey] = now;
+                  }
+
                   medcrypt.queuedResources.delete(lazyImage.dataset.src);
                   medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                   lazyImage.classList.remove("lazy-loading");
