@@ -3714,7 +3714,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                         : vr
                           ? (window.vrGalleryItems.push({
                               title: filename,
-                              thumbnail: uri,
+                              thumbnail: new URL(uri, window.location.href).href,
                               duration: duration || 0,
                               url: videoResource,
                               hash: hash
