@@ -3177,7 +3177,7 @@
             ]
           : []
         ).forEach((item) => {
-          if (item.albums.length) {
+          if (item.albums && item.albums.length) {
             item.albums.forEach((album, index) => {
               decompressedArray.push({
                 album,
