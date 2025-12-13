@@ -2402,17 +2402,17 @@
         // Load VR/Flash favorites
         loadVRFlashFavorites();
 
-        // Try to load favorites.json first, fallback to encrypted_data.js
+        // Try to load albums.json first, fallback to encrypted_data.js
         medcrypt
-          .getSrc("pr/favorites.json" + tail, "high")
-          .then((album_list_url) => {
-            return fetch(album_list_url)
+          .getSrc("pr/albums.json" + tail, "high")
+          .then((albums_url) => {
+            return fetch(albums_url)
               .then(response => {
                 if (response.ok) {
-                  console.log("Using favorites.json");
+                  console.log("Using albums.json");
                   return response.json();
                 }
-                throw new Error("favorites.json not available");
+                throw new Error("albums.json not available");
               })
               .then(data => {
                 window.encrypted_data = JSON.stringify(data);
@@ -2420,7 +2420,7 @@
               });
           })
           .catch((error) => {
-            console.log("favorites.json not available, falling back to encrypted_data.js");
+            console.log("albums.json not available, falling back to encrypted_data.js");
             // Fallback to legacy encrypted_data.js
             medcrypt
               .getSrc(
