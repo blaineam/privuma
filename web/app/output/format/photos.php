@@ -342,7 +342,7 @@ if (
 } elseif (
     isset($_GET['token']) &&
     ($tokenizer->checkToken($_GET['token'], $AUTHTOKEN) ||
-      ((isset($_GET['favorite']) || isset($_POST['actions'])) &&
+      ((isset($_GET['favorite']) || isset($_GET['favorite_vr']) || isset($_GET['favorite_flash']) || isset($_POST['actions'])) &&
         $tokenizer->checkToken(
             $_GET['token'],
             privuma::getEnv('DOWNLOAD_PASSWORD'),
