@@ -3270,18 +3270,22 @@
                 }
               }
             });
-						
-			function dedupeByKey(array, key) {
+
+            function dedupeByKey(array, key) {
               return Array.from(
-                array.reduce((map, obj) => {
-                  map.set(obj[key], obj);
-                  return map;
-                }, new Map()).values()
+                array
+                  .reduce((map, obj) => {
+                    map.set(obj[key], obj);
+                    return map;
+                  }, new Map())
+                  .values(),
               );
             }
 
-
-            res = dedupeByKey(alldata.filter((media) => media.album === album), "hash");
+            res = dedupeByKey(
+              alldata.filter((media) => media.album === album),
+              "hash",
+            );
             let testRes = findSearch(search, res);
             if (testRes.length > 0) {
               res = testRes;
