@@ -825,4 +825,66 @@ class cloudFS
         return implode(PHP_EOL, $response ?? []);
     }
 
+    /**
+     * Sync a local directory to remote storage with parallel transfers
+     * Optimized for batch uploading many files at once
+     * Uses rclone sync to remove orphan files in destination that don't exist in source
+     *
+     * @param string $localSource Local directory path to sync from
+     * @param string $remoteDestination Remote destination path (relative to rCloneDestination)
+     * @param int $transfers Number of parallel file transfers (default 16)
+     * @param int $checkers Number of parallel checkers (default 16)
+     * @param bool $verbose Show progress output
+     * @return bool Success status
+     */
+    public function syncDir(string $localSource, string $remoteDestination, int $transfers = 16, int $checkers = 16, bool $verbose = false): bool
+    {
+        $localSource = rtrim($localSource, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        $remoteDestination = ltrim($remoteDestination, DIRECTORY_SEPARATOR);
+
+        // Build the remote path - don't encode since we want plain paths for JSON files
+        $remotePath = rtrim($this->rCloneDestination, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $remoteDestination;
+
+        $cmd = implode(' ', [
+            'export GOGC=20;',
+            'nice',
+            $this->rCloneBinaryPath,
+            '--config',
+            escapeshellarg($this->rCloneConfigPath),
+            '--auto-confirm',
+            $verbose ? '-v' : '--log-level ERROR',
+            '--s3-no-check-bucket',
+            '--s3-no-head',
+            '--ignore-checksum',
+            '--size-only',
+            '--retries 3',
+            '--checkers ' . $checkers,
+            '--transfers ' . $transfers,
+            '--fast-list',
+            '--use-mmap',
+            '--buffer-size 16M',
+            'sync',
+            escapeshellarg($localSource),
+            escapeshellarg($remotePath),
+            '2>&1'
+        ]);
+
+        if ($verbose) {
+            echo PHP_EOL . 'Running: ' . $cmd;
+            passthru($cmd, $resultCode);
+            $response = [];
+        } else {
+            exec($cmd, $response, $resultCode);
+        }
+
+        if ($resultCode !== 0) {
+            error_log('syncDir failed: ' . (!empty($response) ? implode(PHP_EOL, $response) : 'exit code ' . $resultCode));
+            auditLog::logMutation('SYNCDIR', $localSource, $remotePath, false, 'Exit code: ' . $resultCode);
+            return false;
+        }
+
+        auditLog::logMutation('SYNCDIR', $localSource, $remotePath, true, "Parallel sync with {$transfers} transfers");
+        return true;
+    }
+
 }

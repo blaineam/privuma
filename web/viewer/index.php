@@ -15,6 +15,7 @@ session_start();
 
 use privuma\privuma;
 use privuma\helpers\tokenizer;
+use privuma\helpers\databaseBuilder;
 
 require_once __DIR__ .
   DIRECTORY_SEPARATOR .
@@ -136,15 +137,7 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false): array
     // Use cached instance
     $conn = getPrivumaInstance()->getPDO();
 
-    $cachePath = __DIR__ .
-      DIRECTORY_SEPARATOR .
-      '..' .
-      DIRECTORY_SEPARATOR .
-      'app' .
-      DIRECTORY_SEPARATOR .
-      'output' .
-      DIRECTORY_SEPARATOR .
-      'cache' .
+    $cachePath = getCacheDir() .
       DIRECTORY_SEPARATOR .
       'viewer_db_' .
       ($mobile ? 'mobile_' : '') .
@@ -180,112 +173,28 @@ function getDB($mobile = false, $unfiltered = false, $nocache = false): array
     $rawData = $stmt->fetchAll();
     $data = str_replace('`', '', json_encode($rawData, JSON_UNESCAPED_UNICODE));
 
-    // Helper function for array filtering
-    if (!function_exists('filterArrayByKeys')) {
-        function filterArrayByKeys($originalArray, $blacklistedKeys)
-        {
-            $newArray = array();
-            foreach ($originalArray as $key => $value) {
-                if (!in_array($key, $blacklistedKeys)) {
-                    $newArray[$key] = $value;
-                }
-            }
-            return $newArray;
-        }
-    }
+    // Use shared databaseBuilder for consistency
+    $metaDataFiles = [];
+    $dataset = json_decode($data, true);
+    $array = databaseBuilder::buildDatabaseArray($dataset, $metaDataFiles);
 
-    if (!function_exists('getFirst')) {
-        function getFirst($array, $key, $value = null, $negate = false)
-        {
-            foreach ($array as $element) {
-                if (
-                    isset($element[$key])
-                    && (
-                        is_null($value)
-                        || (
-                            (
-                                !$negate
-                                && $element[$key] === $value
-                            )
-                            ||
-                            (
-                                $negate
-                                && $element[$key] !== $value
-                            )
-                        )
-                    )
-                ) {
-                    return $element;
-                }
-            }
-            return null;
-        }
-    }
+    $fullData = array_values($array);
 
+    // Generate traditional encrypted_data.js as fallback
     if ($mobile) {
-        $array = [];
-        $metaDataFiles = [];
-        $dataset = json_decode($data, true);
-        foreach ($dataset as $item) {
-            if (!is_null($item['metadata']) && strlen($item['metadata']) > 3) {
-                $targetMetaDataPrefix = substr(base64_encode($item['hash']), 0, 2);
-                if (!array_key_exists($targetMetaDataPrefix, $metaDataFiles)) {
-                    $metaDataFiles[$targetMetaDataPrefix] = [];
-                }
-                $metaDataFiles[$targetMetaDataPrefix][$item['hash']] = $item['metadata'];
-            }
-            $tags = substr(sanitizeLine(implode(', ', array_slice(explode(', ', explode(PHP_EOL, explode('Tags: ', $item['metadata'])[1] ?? '')[0]) ??
-            [], 0, 60))), 0, 500);
-            $item['metadata'] = is_null($item['metadata']) ? '' : (strlen($tags) < 1 ? 'Using MetaData Store...' : $tags);
-            if (!array_key_exists($item['hash'], $array)) {
-                $filenameParts = explode('-----', $item['filename']);
-                $array[$item['hash']] = [
-                  'albums' => [sanitizeLine($item['album'])],
-                  'filename' => sanitizeLine(substr(end($filenameParts), 0, 20)) . '.' . pathinfo($item['filename'], PATHINFO_EXTENSION),
-                  'hash' => $item['hash'],
-                  'times' => [$item['time']],
-                  'metadata' => $item['metadata'],
-                  'duration' => $item['duration'],
-                  'sound' => $item['sound'],
-                  'score' => $item['score']
-                ];
-            } else {
-                $array[$item['hash']]['albums'][] = sanitizeLine($item['album']);
-                $array[$item['hash']]['times'][] = $item['time'];
-            }
-        }
-        $data = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
-            array_values($array),
-            JSON_THROW_ON_ERROR
-        ))));
+        $data = databaseBuilder::encodeForJS($fullData);
         $data = 'const encrypted_data = `' . $data . '`;';
     } else {
-        $array = [];
-        $dataset = json_decode($data, true);
-        foreach ($dataset as $item) {
-            if (!array_key_exists($item['hash'], $array)) {
-                $filenameParts = explode('-----', $item['filename']);
-                $array[$item['hash']] = [
-                  ...filterArrayByKeys($item, ['filename', 'album', 'time']),
-                   'filename' => end($filenameParts),
-                   'albums' => [$item['album']],
-                   'times' => [$item['time']],
-                 ];
-            } else {
-                $array[$item['hash']]['albums'][] = $item['album'];
-                $array[$item['hash']]['times'][] = $item['time'];
-            }
-        }
-        $data = str_replace('$', 'USD', str_replace("'", '-', str_replace('`', '-', json_encode(
-            array_values($array),
-            JSON_THROW_ON_ERROR
-        ))));
+        $data = databaseBuilder::encodeForJS($fullData);
         $data = 'const encrypted_data = ' . $data . ';';
     }
 
     file_put_contents($cachePath, $data);
 
-    return ['data' => file_get_contents($cachePath), 'size' => filesize($cachePath)];
+    return [
+        'data' => file_get_contents($cachePath),
+        'size' => filesize($cachePath)
+    ];
 }
 
 // RapiServe check already handled at top of file
@@ -341,7 +250,8 @@ if (isset($_GET['path'])) {
     $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm'];
 
     if (!in_array($ext, $allowedExts) || !str_starts_with($path, '/pr')) {
-        $dlurl = 'http://' . privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT') . $path;
+        $endpoint = rtrim(privuma::getEnv('CLOUDFS_HTTP_SECONDARY_ENDPOINT'), '/');
+        $dlurl = 'http://' . $endpoint . '/' . ltrim($path, '/');
 
         // Add caching headers for external resources
         header('Cache-Control: public, max-age=86400'); // 24 hours
