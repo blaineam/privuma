@@ -96,13 +96,30 @@
       margin: 0px;
     }
 
-    body.vr .fancybox-button:not(.fancybox-button--close):not(.fancybox-button--favorite) {
+    /* Hide all buttons except favorite for VR and Flash */
+    body.vr .fancybox-button:not(.fancybox-button--favorite),
+    body.flash .fancybox-button:not(.fancybox-button--favorite) {
       display: none !important;
     }
 
-    body.vr .fancybox-toolbar, .fancybox-button--close, body.vr .fancybox-button--favorite {
+    /* Keep toolbar and favorite button visible with high z-index for VR and Flash */
+    body.vr .fancybox-toolbar,
+    body.flash .fancybox-toolbar {
       opacity: 1 !important;
       visibility: visible !important;
+      z-index: 99999 !important;
+    }
+
+    body.vr .fancybox-button--favorite,
+    body.flash .fancybox-button--favorite {
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+
+    /* Hide close button inside inline-player for VR and Flash */
+    body.vr #inline-player .fancybox-close-small,
+    body.flash #inline-player .fancybox-close-small {
+      display: none !important;
     }
 
     body:not(.album) #tags-toggle, body:not(.album) #media-types {
@@ -3430,6 +3447,7 @@
             if (album.toLowerCase().includes("flash")) {
               $.fancybox.defaults.touch = false;
               $.fancybox.defaults.keyboard = false;
+              $("body").addClass("flash");
               window.ruffle = window.RufflePlayer.newest();
               let rufflePath = "flash/ruffle/";
               if (
@@ -4312,7 +4330,7 @@
 
           let scrollMemory = {};
           $("#backBtn").click(function () {
-            $("body").removeClass("vr");
+            $("body").removeClass("vr flash");
             $("#tags").empty();
             let hash = window.location?.hash?.slice(1);
             if (hash) {
