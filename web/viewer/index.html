@@ -2832,7 +2832,8 @@
 
         if (isVR || isFlash) {
           // Handle VR/Flash favorites
-          const hash = slide.opts.$orig.find('img').data('filehash');
+          // VR uses data-filehash, Flash uses data-hash
+          const hash = slide.opts.$orig.find('img').data('filehash') || slide.opts.$orig.find('img').data('hash');
           if (!hash) {
             toast.error("Could not find media hash");
             return;
@@ -4099,6 +4100,17 @@
               if (vrHash) {
                 let vrFavorited = window.vrFavorites && window.vrFavorites.includes(vrHash);
                 $(".fancybox-button--favorite").text(vrFavorited ? "💔" : "❤️");
+              }
+
+              return;
+            }
+            if (slide.opts.$orig.hasClass("flash-link")) {
+              // Update favorite button for Flash media
+              // Hash is stored in the img element's data-hash attribute
+              let flashHash = slide.opts.$orig.find('img').data('hash');
+              if (flashHash) {
+                let flashFavorited = window.flashFavorites && window.flashFavorites.includes(flashHash);
+                $(".fancybox-button--favorite").text(flashFavorited ? "💔" : "❤️");
               }
 
               return;
