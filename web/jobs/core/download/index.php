@@ -22,39 +22,47 @@ require_once __DIR__ .
 $options = getopt('', ['mode:', 'skip-download::', 'split-albums::']);
 $mode = $options['mode'] ?? 'both'; // 'filtered', 'unfiltered', or 'both'
 $skipDownload = isset($options['skip-download']);
-$splitAlbums = isset($options['split-albums']) || privuma::getEnv("DOWNLOAD_SPLIT_ALBUMS");
+$splitAlbums = isset($options['split-albums']) || privuma::getEnv('DOWNLOAD_SPLIT_ALBUMS');
 
 echo PHP_EOL . "Running in mode: $mode";
 if ($skipDownload) {
-    echo PHP_EOL . "Skipping media download queue";
+    echo PHP_EOL . 'Skipping media download queue';
 }
 if ($splitAlbums) {
-    echo PHP_EOL . "Splitting albums into separate JSON files";
+    echo PHP_EOL . 'Splitting albums into separate JSON files';
 }
 
 // If mode is 'both', run filtered and unfiltered sequentially
 if ($mode === 'both') {
-    echo PHP_EOL . PHP_EOL . "=== Running FILTERED mode ===";
+    echo PHP_EOL . PHP_EOL . '=== Running FILTERED mode ===';
     $filteredArgs = [];
-    if ($skipDownload) $filteredArgs[] = '--skip-download';
-    if ($splitAlbums) $filteredArgs[] = '--split-albums';
+    if ($skipDownload) {
+        $filteredArgs[] = '--skip-download';
+    }
+    if ($splitAlbums) {
+        $filteredArgs[] = '--split-albums';
+    }
     $filteredArgs[] = '--mode=filtered';
 
     $cmd = 'php ' . __FILE__ . ' ' . implode(' ', $filteredArgs);
     echo PHP_EOL . "Executing: $cmd";
     passthru($cmd, $filteredResult);
 
-    echo PHP_EOL . PHP_EOL . "=== Running UNFILTERED mode ===";
+    echo PHP_EOL . PHP_EOL . '=== Running UNFILTERED mode ===';
     $unfilteredArgs = [];
-    if ($skipDownload) $unfilteredArgs[] = '--skip-download';
-    if ($splitAlbums) $unfilteredArgs[] = '--split-albums';
+    if ($skipDownload) {
+        $unfilteredArgs[] = '--skip-download';
+    }
+    if ($splitAlbums) {
+        $unfilteredArgs[] = '--split-albums';
+    }
     $unfilteredArgs[] = '--mode=unfiltered';
 
     $cmd = 'php ' . __FILE__ . ' ' . implode(' ', $unfilteredArgs);
     echo PHP_EOL . "Executing: $cmd";
     passthru($cmd, $unfilteredResult);
 
-    echo PHP_EOL . PHP_EOL . "=== Both modes completed ===";
+    echo PHP_EOL . PHP_EOL . '=== Both modes completed ===';
     echo PHP_EOL . "Filtered result code: $filteredResult";
     echo PHP_EOL . "Unfiltered result code: $unfilteredResult";
     exit(max($filteredResult, $unfilteredResult));

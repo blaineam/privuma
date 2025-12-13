@@ -2,8 +2,6 @@
 
 namespace privuma\helpers;
 
-use PDO;
-
 class databaseBuilder
 {
     /**
