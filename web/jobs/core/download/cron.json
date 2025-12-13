@@ -1,3 +1,4 @@
 {
-  "interval": 3600
+  "interval": 3600,
+  "args": "--split-albums"
 }
