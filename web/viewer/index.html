@@ -2780,7 +2780,59 @@
       $.fancybox.defaults.hash = false;
       $.fancybox.defaults.btnTpl.favorite =
         '<button data-fancybox-favorite class="fancybox-button fancybox-button--favorite">&hearts;</button>';
+      // Initialize VR/Flash favorites arrays
+      window.vrFavorites = [];
+      window.flashFavorites = [];
+
       $("body").on("click", "[data-fancybox-favorite]", function (e) {
+        const instance = $.fancybox.getInstance();
+        const slide = instance.current;
+
+        // Check if this is VR or Flash media
+        const isVR = slide.opts.$orig && slide.opts.$orig.hasClass("vr-link");
+        const isFlash = slide.opts.$orig && slide.opts.$orig.hasClass("flash-link");
+
+        if (isVR || isFlash) {
+          // Handle VR/Flash favorites
+          const hash = slide.opts.$orig.find('img').data('filehash');
+          if (!hash) {
+            toast.error("Could not find media hash");
+            return;
+          }
+
+          const favoritesArray = isVR ? window.vrFavorites : window.flashFavorites;
+          const isFavorited = favoritesArray.includes(hash);
+
+          let tokens = rollingTokens(passphrase);
+          let token = tokens[Math.floor(tokens.length / 2)];
+          const mediaType = isVR ? 'vr' : 'flash';
+          let call = `${window.endpoint}?favorite_${mediaType}=${hash}&token=${token}`;
+
+          $.ajax(call)
+            .then((data) => {
+              toast.info(data);
+              const nowFavorited = data.includes("add");
+              $(".fancybox-button--favorite").text(nowFavorited ? "💔" : "❤️");
+
+              if (nowFavorited) {
+                if (!favoritesArray.includes(hash)) {
+                  favoritesArray.push(hash);
+                }
+              } else {
+                const index = favoritesArray.indexOf(hash);
+                if (index > -1) {
+                  favoritesArray.splice(index, 1);
+                }
+              }
+            })
+            .catch(() => {
+              toast.error("Something went wrong");
+            });
+
+          return;
+        }
+
+        // Regular (non-VR/Flash) favorite handling
         let hash = $.fancybox
           .getInstance()
           .current.$thumb.data("resource")
