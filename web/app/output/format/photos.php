@@ -977,6 +977,35 @@ function run()
         echo json_encode($response);
         die();
 
+    } elseif (isset($_GET['favorite_vr']) || isset($_GET['favorite_flash'])) {
+        // Handle VR/Flash favorites
+        $isVR = isset($_GET['favorite_vr']);
+        $hash = $isVR ? $_GET['favorite_vr'] : $_GET['favorite_flash'];
+        $favoritesFile = privuma::getOutputDirectory() . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . ($isVR ? 'favorites_vr.json' : 'favorites_flash.json');
+
+        // Load existing favorites
+        $favorites = [];
+        if (file_exists($favoritesFile)) {
+            $favorites = json_decode(file_get_contents($favoritesFile), true) ?? [];
+        }
+
+        // Toggle favorite
+        $index = array_search($hash, $favorites);
+        if ($index !== false) {
+            // Remove from favorites
+            array_splice($favorites, $index, 1);
+            $message = 'Item was removed from Favorites';
+        } else {
+            // Add to favorites
+            $favorites[] = $hash;
+            $message = 'Item was added to Favorites';
+        }
+
+        // Save favorites
+        file_put_contents($favoritesFile, json_encode(array_values($favorites)));
+        echo $message;
+        exit();
+
     } elseif (isset($_GET['favorite'])) {
         //if (is_base64_encoded($_GET['favorite'])) {
         $_GET['favorite'] = base64_decode($_GET['favorite']);
