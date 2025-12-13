@@ -1068,7 +1068,20 @@
 
           const inViewport = new Set(viewportImages);
 
+          // Get current video source if player exists - NEVER revoke this!
+          const currentVideoSrc = window.player && window.player.currentSrc ? window.player.currentSrc() : null;
+          const currentVideoResource = window.currentVRVideoResource; // Original resource path
+
           for (const [resource, blobUrl] of this.blobCache.entries()) {
+            // Skip if this is the currently playing video (check both blob URL and resource path)
+            if (currentVideoSrc && blobUrl === currentVideoSrc) {
+              continue;
+            }
+            if (currentVideoResource && resource === currentVideoResource) {
+              continue;
+            }
+
+            // Skip if not in viewport (only for images, not videos)
             if (!inViewport.has(resource)) {
               try {
                 URL.revokeObjectURL(blobUrl);
