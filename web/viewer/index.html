@@ -2404,7 +2404,7 @@
 
         // Try to load album_list.json first, fallback to encrypted_data.js
         medcrypt
-          .getSrc("pr/favorites.json" + tail, "high")
+          .getSrc("pr/album_list.json" + tail, "high")
           .then((album_list_url) => {
             return fetch(album_list_url)
               .then(response => {
