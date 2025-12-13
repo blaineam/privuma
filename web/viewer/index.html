@@ -984,20 +984,39 @@
           }
 
           // Enforce 48 blob limit - remove oldest (first in Map)
+          // But protect currently playing video blob URL
           if (this.blobCache.size >= this.maxBlobs) {
-            const oldestKey = this.blobCache.keys().next().value;
-            const oldBlob = this.blobCache.get(oldestKey);
-            try {
-              URL.revokeObjectURL(oldBlob);
-              console.log(
-                `[Blob Cache] Revoked oldest blob URL: ${oldestKey} (${this.blobCache.size}/${this.maxBlobs})`,
-              );
-            } catch (e) {
-              console.warn(
-                `[Blob Cache] Failed to revoke blob URL: ${e.message}`,
-              );
+            // Get current video source if player exists
+            const currentVideoSrc = window.player && window.player.currentSrc ? window.player.currentSrc() : null;
+
+            // Find oldest blob that's not currently in use by video player
+            let oldestKey = null;
+            for (const key of this.blobCache.keys()) {
+              const blobUrl = this.blobCache.get(key);
+              // Skip if this is the currently playing video
+              if (currentVideoSrc && blobUrl === currentVideoSrc) {
+                continue;
+              }
+              oldestKey = key;
+              break;
             }
-            this.blobCache.delete(oldestKey);
+
+            if (oldestKey) {
+              const oldBlob = this.blobCache.get(oldestKey);
+              try {
+                URL.revokeObjectURL(oldBlob);
+                console.log(
+                  `[Blob Cache] Revoked oldest blob URL: ${oldestKey} (${this.blobCache.size}/${this.maxBlobs})`,
+                );
+              } catch (e) {
+                console.warn(
+                  `[Blob Cache] Failed to revoke blob URL: ${e.message}`,
+                );
+              }
+              this.blobCache.delete(oldestKey);
+            } else {
+              console.warn('[Blob Cache] Cache full but all blobs are protected (video playing)');
+            }
           }
 
           // Fetch and create blob
