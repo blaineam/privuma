@@ -4759,10 +4759,21 @@
                     error.message.includes("All fallbacks exhausted"));
 
                 if (isTemporaryFailure) {
+                if (isTemporaryFailure) {
                   // Temporary failure - reset to waiting so it can be retried later
-                  console.log(
-                    `[Temporary Failure] ${error.message} for: ${lazyImage.dataset.src} - will retry later`,
-                  );
+                  // Rate limit logging to prevent spam
+                  const failureKey = `temp_fail_${lazyImage.dataset.src}`;
+                  const lastLogTime = window.tempFailureLogTimes?.[failureKey] || 0;
+                  const now = Date.now();
+                  
+                  if (now - lastLogTime > 5000) { // Only log once per 5 seconds per resource
+                    console.log(
+                      `[Temporary Failure] ${error.message} for: ${lazyImage.dataset.src} - will retry later`,
+                    );
+                    window.tempFailureLogTimes = window.tempFailureLogTimes || {};
+                    window.tempFailureLogTimes[failureKey] = now;
+                  }
+                  
                   medcrypt.queuedResources.delete(lazyImage.dataset.src);
                   medcrypt.activeImageLoads.delete(lazyImage.dataset.src);
                   lazyImage.classList.remove("lazy-loading");
