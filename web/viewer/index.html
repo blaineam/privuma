@@ -4059,10 +4059,7 @@
               // Hash is stored in the img element's data-filehash attribute
               let vrHash = slide.opts.$orig.find('img').data('filehash');
               if (vrHash) {
-                let vrFavorited =
-                  alldata.filter((item) => {
-                    return item.album === "Favorites" && item.hash === vrHash;
-                  }).length > 0;
+                let vrFavorited = window.vrFavorites && window.vrFavorites.includes(vrHash);
                 $(".fancybox-button--favorite").text(vrFavorited ? "💔" : "❤️");
               }
 
