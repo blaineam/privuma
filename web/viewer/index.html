@@ -3167,6 +3167,33 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
       // Load VR/Flash favorites from server
       function loadVRFlashFavorites() {
+        // Helper to add VR/Flash items to alldata for Favorites album display
+        function addToAllData(items, type) {
+          if (!items || !items.length || !window.alldata) return;
+
+          items.forEach((item) => {
+            // Handle both hash strings and full objects
+            const hash = typeof item === 'string' ? item : item.hash;
+            const filename = typeof item === 'string' ? hash : (item.filename || hash);
+
+            // Check if already in alldata
+            if (window.alldata.some(m => m.hash === hash)) return;
+
+            // Create synthetic media item
+            const mediaItem = {
+              hash: hash,
+              filename: filename,
+              album: "Favorites",
+              vr: type === 'vr' ? 1 : 0,
+              flash: type === 'flash' ? 1 : 0,
+              time: Date.now(),
+              ...(typeof item === 'object' ? item : {})
+            };
+
+            window.alldata.push(mediaItem);
+          });
+        }
+
         // Load VR favorites
         medcrypt
           .getSrc("pr/favorites_vr.json", "high")
@@ -3180,6 +3207,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           .then((data) => {
             window.vrFavorites = Array.isArray(data) ? data : [];
             console.log(`Loaded ${window.vrFavorites.length} VR favorites`);
+            // Add to alldata for Favorites album display
+            addToAllData(window.vrFavorites, 'vr');
           })
           .catch((error) => {
             console.log("VR favorites not available, using empty array");
@@ -3201,6 +3230,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             console.log(
               `Loaded ${window.flashFavorites.length} Flash favorites`,
             );
+            // Add to alldata for Favorites album display
+            addToAllData(window.flashFavorites, 'flash');
           })
           .catch((error) => {
             console.log("Flash favorites not available, using empty array");
@@ -3399,7 +3430,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
         const packs = [
           {
             name: "flash",
-            url: "flash/index.json",
+            url: "pr/flash/index.json",
             type: "text",
             processor: (text) => {
               window.flashdataset = JSON.parse(atob(text));
@@ -3441,7 +3472,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
               // Load ruffle script independently
               medcrypt
-                .getSrc("flash/ruffle/ruffle.js", "high")
+                .getSrc("pr/flash/ruffle/ruffle.js", "high")
                 .then((scriptUrl) => {
                   try {
                     loadScript(scriptUrl);
@@ -3454,7 +3485,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           },
           {
             name: "vr",
-            url: "vr/deovr-fs.json",
+            url: "pr/vr/deovr-fs.json",
             type: "json",
             processor: (data) => {
               window.videos = (data ?? []).filter(
