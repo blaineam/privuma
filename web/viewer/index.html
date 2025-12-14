@@ -4024,24 +4024,30 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             }
 
             // Check if we need to load album data on-demand
+            window.loadedAlbums = window.loadedAlbums || {};
             if (window.albumsIndex && !window.loadedAlbums[album]) {
               // Find album hash from index
               const albumInfo = window.albumsIndex.find(
                 (a) => a.album === album,
               );
               if (albumInfo && albumInfo.hash) {
+                const albumJsonPath = `pr/albums/${albumInfo.hash}.json`;
                 console.log(
-                  `Loading album on-demand: ${album} (hash: ${albumInfo.hash})`,
+                  `Loading album on-demand: ${album} (path: ${albumJsonPath})`,
                 );
                 medcrypt
-                  .getSrc(`pr/albums/${albumInfo.hash}.json`, "high")
-                  .then((albumUrl) => fetch(albumUrl))
+                  .getSrc(albumJsonPath, "high")
+                  .then((albumUrl) => {
+                    console.log(`Fetching album from: ${albumUrl}`);
+                    return fetch(albumUrl);
+                  })
                   .then((response) => {
                     if (!response.ok) throw new Error("Album file not found");
                     return response.json();
                   })
                   .then((albumData) => {
                     // Decompress album items (same format as encrypted_data)
+                    window.alldata = window.alldata || [];
                     albumData.forEach((item) => {
                       if (item.albums) {
                         item.albums.forEach((itemAlbum, albumIndex) => {
