@@ -3471,9 +3471,9 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
               );
 
-              // Load ruffle script independently
+              // Load ruffle script independently (loads from current folder - fa/ or pr/)
               medcrypt
-                .getSrc("pr/flash/ruffle/ruffle.js", "high")
+                .getSrc("flash/ruffle/ruffle.js", "high")
                 .then((scriptUrl) => {
                   try {
                     loadScript(scriptUrl);
