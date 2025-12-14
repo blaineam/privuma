@@ -465,11 +465,11 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         echo PHP_EOL . 'Processing VR favorites: ' . count($vrFavoriteHashes) . ' hashes';
 
         // Helper function to encode path segments with base64 (matches JS encodePath)
-        $encodePathForHash = function($path) {
+        $encodePathForHash = function ($path) {
             $ext = pathinfo($path, PATHINFO_EXTENSION);
             $pathWithoutExt = substr($path, 0, -strlen($ext) - 1);
             $parts = explode('/', $pathWithoutExt);
-            $encodedParts = array_map(function($part) {
+            $encodedParts = array_map(function ($part) {
                 return base64_encode($part);
             }, $parts);
             return implode('/', $encodedParts) . '.' . $ext;
