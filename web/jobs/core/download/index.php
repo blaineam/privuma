@@ -607,15 +607,15 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
                     if (isset($item['hash'])) {
                         $flashHashToData[$item['hash']] = [
                             'hash' => $item['hash'],
-                            'filename' => 'flash/' . base64_encode($album) . '/' . $item['url'],
+                            'filename' => 'flash/' . base64_encode($album) . '/' . ltrim($item['url'], '/'),
                             'album' => 'Flash---' . $album,
                             'time' => date('Y-m-d H:i:s', strtotime("-{$count} days")),
                             'vr' => 0,
                             'flash' => 1,
                             'metadata' => 'Title: ' . ($item['title'] ?? '') . '\n\nTags: ' . implode(',', $item['tags']['general'] ?? []),
                             'title' => $item['title'] ?? '',
-                            'path' => 'flash/' . base64_encode($album) . '/' . $item['url'],
-                            'thumb' => 'flash/' . base64_encode($album) . '/' . str_replace('.swf', '.png', $item['url'])
+                            'path' => 'flash/' . base64_encode($album) . '/' . ltrim($item['url'], '/'),
+                            'thumb' => 'flash/' . base64_encode($album) . '/' . ltrim(str_replace('.swf', '.png', $item['url']), '/')
                         ];
                     }
                 }
