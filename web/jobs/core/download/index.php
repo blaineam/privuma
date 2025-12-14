@@ -478,7 +478,9 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         // Get list of VR files and build hash-to-full-object mapping
         $vrFiles = $opsNoEncodeNoPrefix->scandir('vr', true, true, null, false, true, true, true);
         $vrHashToData = [];
+        echo PHP_EOL . 'VR scandir returned: ' . ($vrFiles === false ? 'false' : count($vrFiles) . ' files');
         if ($vrFiles !== false) {
+            $debugCount = 0;
             foreach ($vrFiles as $vrFile) {
                 if (isset($vrFile['MimeType']) && $vrFile['MimeType'] === 'video/mp4') {
                     // Hash is computed as md5("vr/" + encodedPath) where encodedPath uses base64 segments
@@ -498,9 +500,16 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
                         'score' => $vrFile['score'] ?? 0,
                         'path' => $vrFile['Path']
                     ];
+                    // Debug: show first few computed hashes
+                    if ($debugCount < 3) {
+                        echo PHP_EOL . 'DEBUG VR: Path=' . $vrFile['Path'] . ' Encoded=' . $encodedPath . ' Hash=' . $hash;
+                        $debugCount++;
+                    }
                 }
             }
         }
+        echo PHP_EOL . 'Built ' . count($vrHashToData) . ' VR hash entries';
+        echo PHP_EOL . 'Looking for hashes: ' . implode(', ', array_slice($vrFavoriteHashes, 0, 3)) . '...';
 
         // Build full media objects for favorited VR items
         $vrFavoriteHashesFlipped = array_flip($vrFavoriteHashes);
