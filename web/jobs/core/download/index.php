@@ -477,10 +477,24 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
                     // Hash is md5("vr/" + path) - path is already base64-encoded
                     $hash = md5('vr/' . $vrFile['Path']);
                     $dirname = dirname($vrFile['Path']);
+
+                    // Decode base64 segments in directory name for readable album
+                    $albumName = 'Root';
+                    if ($dirname !== '.') {
+                        $decodedSegments = array_map(function($segment) {
+                            $decoded = base64_decode($segment, true);
+                            return ($decoded !== false) ? $decoded : $segment;
+                        }, explode('/', $dirname));
+                        $albumName = implode('/', $decodedSegments);
+                    }
+
+                    // Thumbnail is same path but with .jpg extension
+                    $thumbPath = preg_replace('/\.mp4$/i', '.jpg', $vrFile['Path']);
+
                     $vrHashToData[$hash] = [
                         'hash' => $hash,
                         'filename' => 'vr/' . $vrFile['Path'],
-                        'album' => 'VR---' . ($dirname === '.' ? 'Root' : $dirname),
+                        'album' => 'VR---' . $albumName,
                         'time' => isset($vrFile['ModTime']) ? explode('.', str_replace('T', ' ', $vrFile['ModTime']))[0] : date('Y-m-d H:i:s'),
                         'vr' => 1,
                         'flash' => 0,
@@ -488,7 +502,8 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
                         'duration' => $vrFile['Duration'] ?? 0,
                         'sound' => $vrFile['Sound'] ?? -91,
                         'score' => $vrFile['score'] ?? 0,
-                        'path' => $vrFile['Path']
+                        'path' => $vrFile['Path'],
+                        'thumb' => $thumbPath
                     ];
                 }
             }
@@ -509,22 +524,31 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         // Build full media objects for favorited VR items
         $vrFavoriteHashesFlipped = array_flip($vrFavoriteHashes);
         $vrFavoritesFullData = [];
-        $copiedCount = 0;
+        $copiedVideoCount = 0;
+        $copiedThumbCount = 0;
         foreach ($vrHashToData as $hash => $data) {
             if (isset($vrFavoriteHashesFlipped[$hash])) {
                 $vrFavoritesFullData[] = $data;
 
-                // Only copy if not already in fa/vr/
+                // Only copy video if not already in fa/vr/
                 if (!isset($existingFaVrFiles[$data['path']])) {
                     $src = 'vr/' . $data['path'];
                     $dst = 'fa/vr/' . $data['path'];
                     echo PHP_EOL . 'Copying VR favorite: ' . $src . ' to ' . $dst;
                     $opsNoEncodeNoPrefix->copy($src, $dst, true, true);
-                    $copiedCount++;
+                    $copiedVideoCount++;
+                }
+
+                // Only copy thumbnail if not already in fa/vr/
+                if (!isset($existingFaVrFiles[$data['thumb']])) {
+                    $thumbSrc = 'vr/' . $data['thumb'];
+                    $thumbDst = 'fa/vr/' . $data['thumb'];
+                    $opsNoEncodeNoPrefix->copy($thumbSrc, $thumbDst, true, true);
+                    $copiedThumbCount++;
                 }
             }
         }
-        echo PHP_EOL . 'Copied ' . $copiedCount . ' new VR favorites (skipped ' . (count($vrFavoritesFullData) - $copiedCount) . ' existing)';
+        echo PHP_EOL . 'Copied ' . $copiedVideoCount . ' new VR favorites + ' . $copiedThumbCount . ' thumbnails (skipped ' . (count($vrFavoritesFullData) - $copiedVideoCount) . ' existing)';
 
         // Save full VR favorites data (not just hashes)
         $vrFavoritesFullJson = json_encode($vrFavoritesFullData);
@@ -681,9 +705,36 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
             }
         }
 
-        // Copy ruffle player to fa/flash/ruffle/ for favorites-only playback
-        echo PHP_EOL . 'Copying ruffle player to fa/flash/ruffle/';
-        $opsNoEncodeNoPrefix->syncDir('flash/ruffle', 'fa/flash/ruffle', 4, 4, false);
+        // Upload local ruffle player files to fa/flash/ruffle/ for favorites-only playback
+        $localRuffleDir = __DIR__ . '/flash/ruffle';
+        if (is_dir($localRuffleDir)) {
+            // Check what ruffle files already exist on remote
+            $existingRuffleFiles = [];
+            $remoteRuffleScan = $opsNoEncodeNoPrefix->scandir('fa/flash/ruffle', true, true, null, false, true, true, true);
+            if ($remoteRuffleScan !== false) {
+                foreach ($remoteRuffleScan as $f) {
+                    if (isset($f['Name'])) {
+                        $existingRuffleFiles[$f['Name']] = true;
+                    }
+                }
+            }
+
+            $ruffleFiles = scandir($localRuffleDir);
+            $uploadedCount = 0;
+            foreach ($ruffleFiles as $ruffleFile) {
+                if ($ruffleFile === '.' || $ruffleFile === '..') continue;
+                $localPath = $localRuffleDir . '/' . $ruffleFile;
+                if (is_file($localPath) && !isset($existingRuffleFiles[$ruffleFile])) {
+                    $remotePath = 'fa/flash/ruffle/' . $ruffleFile;
+                    echo PHP_EOL . 'Uploading ruffle file: ' . $ruffleFile;
+                    $opsNoEncodeNoPrefix->file_put_contents($remotePath, file_get_contents($localPath));
+                    $uploadedCount++;
+                }
+            }
+            echo PHP_EOL . 'Uploaded ' . $uploadedCount . ' ruffle files (skipped ' . (count($ruffleFiles) - 2 - $uploadedCount) . ' existing)';
+        } else {
+            echo PHP_EOL . 'Warning: Local ruffle directory not found at ' . $localRuffleDir;
+        }
     }
 }
 
