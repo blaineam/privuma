@@ -479,10 +479,18 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         $vrFiles = $opsNoEncodeNoPrefix->scandir('vr', true, true, null, false, true, true, true);
         $vrHashToData = [];
         echo PHP_EOL . 'VR scandir returned: ' . ($vrFiles === false ? 'false' : count($vrFiles) . ' files');
-        if ($vrFiles !== false) {
+        if ($vrFiles !== false && count($vrFiles) > 0) {
+            // Debug: show sample of MimeTypes found
+            $mimeTypes = array_unique(array_filter(array_column($vrFiles, 'MimeType')));
+            echo PHP_EOL . 'DEBUG: MimeTypes found: ' . implode(', ', array_slice($mimeTypes, 0, 10));
+            // Debug: show first file structure
+            echo PHP_EOL . 'DEBUG: First file keys: ' . implode(', ', array_keys($vrFiles[0]));
             $debugCount = 0;
             foreach ($vrFiles as $vrFile) {
-                if (isset($vrFile['MimeType']) && $vrFile['MimeType'] === 'video/mp4') {
+                // Check for video files - accept video/mp4 or .mp4 extension
+                $isVideo = (isset($vrFile['MimeType']) && $vrFile['MimeType'] === 'video/mp4')
+                    || (isset($vrFile['Path']) && strtolower(pathinfo($vrFile['Path'], PATHINFO_EXTENSION)) === 'mp4');
+                if ($isVideo) {
                     // Hash is computed as md5("vr/" + encodedPath) where encodedPath uses base64 segments
                     $encodedPath = $encodePathForHash($vrFile['Path']);
                     $hash = md5('vr/' . $encodedPath);
