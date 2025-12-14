@@ -4438,13 +4438,21 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             if (window.albumsIndex) {
               // Get VR and Flash albums from allAlbums (built from vrmedia/flashmedia)
               const vrFlashAlbums = (window.allAlbums || []).filter(
-                (a) => a.vr === 1 || a.flash === 1
+                (a) => a.vr === 1 || a.flash === 1,
               );
               // Combine: albumsIndex + VR/Flash albums, avoiding duplicates by album name
-              const existingAlbumNames = new Set(window.albumsIndex.map(a => a.album));
-              const uniqueVrFlash = vrFlashAlbums.filter(a => !existingAlbumNames.has(a.album));
+              const existingAlbumNames = new Set(
+                window.albumsIndex.map((a) => a.album),
+              );
+              const uniqueVrFlash = vrFlashAlbums.filter(
+                (a) => !existingAlbumNames.has(a.album),
+              );
               res = [...window.albumsIndex, ...uniqueVrFlash].sort((a, b) =>
-                (a.time || '') < (b.time || '') ? 1 : (b.time || '') < (a.time || '') ? -1 : 0
+                (a.time || "") < (b.time || "")
+                  ? 1
+                  : (b.time || "") < (a.time || "")
+                    ? -1
+                    : 0,
               );
             } else {
               res = window.allAlbums;
@@ -4596,10 +4604,14 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               let albumsList;
               if (window.albumsIndex) {
                 const vrFlashAlbums = (window.allAlbums || []).filter(
-                  (a) => a.vr === 1 || a.flash === 1
+                  (a) => a.vr === 1 || a.flash === 1,
                 );
-                const existingAlbumNames = new Set(window.albumsIndex.map(a => a.album));
-                const uniqueVrFlash = vrFlashAlbums.filter(a => !existingAlbumNames.has(a.album));
+                const existingAlbumNames = new Set(
+                  window.albumsIndex.map((a) => a.album),
+                );
+                const uniqueVrFlash = vrFlashAlbums.filter(
+                  (a) => !existingAlbumNames.has(a.album),
+                );
                 albumsList = [...window.albumsIndex, ...uniqueVrFlash];
               } else {
                 albumsList = window.allAlbums;
