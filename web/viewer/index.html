@@ -3431,7 +3431,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
         const packs = [
           {
             name: "flash",
-            url: "pr/flash/index.json",
+            url: "flash/index.json",
             type: "text",
             processor: (text) => {
               window.flashdataset = JSON.parse(atob(text));
@@ -3486,7 +3486,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           },
           {
             name: "vr",
-            url: "pr/vr/deovr-fs.json",
+            url: "vr/deovr-fs.json",
             type: "json",
             processor: (data) => {
               window.videos = (data ?? []).filter(
