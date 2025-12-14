@@ -4584,8 +4584,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               let targetAlbum = shouldOpenAlbum(albumsList, album);
               if (targetAlbum) {
                 var id =
-                  albumsList?.find((item) => item?.album == targetAlbum)
-                    ?.id ?? 0;
+                  albumsList?.find((item) => item?.album == targetAlbum)?.id ??
+                  0;
                 if (localStorage.getItem("LastRequestedAlbum") === id) {
                   const backHash = targetAlbum.split("---");
                   backHash.pop();
