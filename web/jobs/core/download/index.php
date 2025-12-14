@@ -166,6 +166,41 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         return in_array('Favorites', $item['albums']);
     });
 
+    // Get ALL albums for each favorited hash (the current query may miss some albums)
+    echo PHP_EOL . 'Fetching all albums for favorited items';
+    $favoritedHashes = array_column($favoritedItems, 'hash');
+    if (count($favoritedHashes) > 0) {
+        $placeholders = implode(',', array_fill(0, count($favoritedHashes), '?'));
+        $allAlbumsStmt = $conn->prepare(
+            "SELECT hash, album FROM media WHERE hash IN ($placeholders) AND hash IS NOT NULL AND hash != '' GROUP BY hash, album"
+        );
+        $allAlbumsStmt->execute($favoritedHashes);
+        $allAlbumsData = $allAlbumsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Build hash -> albums mapping
+        $hashToAllAlbums = [];
+        foreach ($allAlbumsData as $row) {
+            if (!isset($hashToAllAlbums[$row['hash']])) {
+                $hashToAllAlbums[$row['hash']] = [];
+            }
+            $hashToAllAlbums[$row['hash']][] = databaseBuilder::sanitizeLine($row['album']);
+        }
+
+        // Merge all albums into favorited items
+        foreach ($favoritedItems as &$item) {
+            if (isset($hashToAllAlbums[$item['hash']])) {
+                $item['albums'] = array_values(array_unique(array_merge($item['albums'], $hashToAllAlbums[$item['hash']])));
+                // Also update times array to match albums count
+                while (count($item['times']) < count($item['albums'])) {
+                    $item['times'][] = $item['times'][0] ?? date('Y-m-d H:i:s');
+                }
+            }
+        }
+        unset($item); // Break reference
+
+        echo PHP_EOL . 'Updated albums for ' . count($favoritedItems) . ' favorited items';
+    }
+
     // Find all comic albums that have at least one favorited page
     $favoritedComicAlbums = [];
     foreach ($favoritedItems as $item) {
