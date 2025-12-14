@@ -464,40 +464,22 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         $vrFavoriteHashes = json_decode(file_get_contents($vrFavoritesFile), true) ?? [];
         echo PHP_EOL . 'Processing VR favorites: ' . count($vrFavoriteHashes) . ' hashes';
 
-        // Helper function to encode path segments with base64 (matches JS encodePath)
-        $encodePathForHash = function ($path) {
-            $ext = pathinfo($path, PATHINFO_EXTENSION);
-            $pathWithoutExt = substr($path, 0, -strlen($ext) - 1);
-            $parts = explode('/', $pathWithoutExt);
-            $encodedParts = array_map(function ($part) {
-                return base64_encode($part);
-            }, $parts);
-            return implode('/', $encodedParts) . '.' . $ext;
-        };
-
         // Get list of VR files and build hash-to-full-object mapping
+        // Note: Paths from scandir are already base64-encoded per segment
         $vrFiles = $opsNoEncodeNoPrefix->scandir('vr', true, true, null, false, true, true, true);
         $vrHashToData = [];
-        echo PHP_EOL . 'VR scandir returned: ' . ($vrFiles === false ? 'false' : count($vrFiles) . ' files');
         if ($vrFiles !== false && count($vrFiles) > 0) {
-            // Debug: show sample of MimeTypes found
-            $mimeTypes = array_unique(array_filter(array_column($vrFiles, 'MimeType')));
-            echo PHP_EOL . 'DEBUG: MimeTypes found: ' . implode(', ', array_slice($mimeTypes, 0, 10));
-            // Debug: show first file structure
-            echo PHP_EOL . 'DEBUG: First file keys: ' . implode(', ', array_keys($vrFiles[0]));
-            $debugCount = 0;
             foreach ($vrFiles as $vrFile) {
                 // Check for video files - accept video/mp4 or .mp4 extension
                 $isVideo = (isset($vrFile['MimeType']) && $vrFile['MimeType'] === 'video/mp4')
                     || (isset($vrFile['Path']) && strtolower(pathinfo($vrFile['Path'], PATHINFO_EXTENSION)) === 'mp4');
                 if ($isVideo) {
-                    // Hash is computed as md5("vr/" + encodedPath) where encodedPath uses base64 segments
-                    $encodedPath = $encodePathForHash($vrFile['Path']);
-                    $hash = md5('vr/' . $encodedPath);
+                    // Hash is md5("vr/" + path) - path is already base64-encoded
+                    $hash = md5('vr/' . $vrFile['Path']);
                     $dirname = dirname($vrFile['Path']);
                     $vrHashToData[$hash] = [
                         'hash' => $hash,
-                        'filename' => 'vr/' . $encodedPath,
+                        'filename' => 'vr/' . $vrFile['Path'],
                         'album' => 'VR---' . ($dirname === '.' ? 'Root' : $dirname),
                         'time' => isset($vrFile['ModTime']) ? explode('.', str_replace('T', ' ', $vrFile['ModTime']))[0] : date('Y-m-d H:i:s'),
                         'vr' => 1,
@@ -508,16 +490,10 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
                         'score' => $vrFile['score'] ?? 0,
                         'path' => $vrFile['Path']
                     ];
-                    // Debug: show first few computed hashes
-                    if ($debugCount < 3) {
-                        echo PHP_EOL . 'DEBUG VR: Path=' . $vrFile['Path'] . ' Encoded=' . $encodedPath . ' Hash=' . $hash;
-                        $debugCount++;
-                    }
                 }
             }
         }
-        echo PHP_EOL . 'Built ' . count($vrHashToData) . ' VR hash entries';
-        echo PHP_EOL . 'Looking for hashes: ' . implode(', ', array_slice($vrFavoriteHashes, 0, 3)) . '...';
+        echo PHP_EOL . 'Found ' . count($vrHashToData) . ' VR videos, matching against ' . count($vrFavoriteHashes) . ' favorites';
 
         // Build full media objects for favorited VR items
         $vrFavoriteHashesFlipped = array_flip($vrFavoriteHashes);
@@ -545,10 +521,11 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         $faVrFiles = $opsNoEncodeNoPrefix->scandir('fa/vr', true, true, null, false, true, true, true);
         if ($faVrFiles !== false) {
             foreach ($faVrFiles as $faVrFile) {
-                if (isset($faVrFile['MimeType']) && $faVrFile['MimeType'] === 'video/mp4') {
-                    // Compute hash the same way as originals (base64 encoded path segments)
-                    $encodedPath = $encodePathForHash($faVrFile['Path']);
-                    $hash = md5('vr/' . $encodedPath);
+                $isVideo = (isset($faVrFile['MimeType']) && $faVrFile['MimeType'] === 'video/mp4')
+                    || (isset($faVrFile['Path']) && strtolower(pathinfo($faVrFile['Path'], PATHINFO_EXTENSION)) === 'mp4');
+                if ($isVideo) {
+                    // Path is already base64-encoded, use directly for hash
+                    $hash = md5('vr/' . $faVrFile['Path']);
 
                     // If not in current favorites, delete from fa/vr/ only
                     if (!isset($vrFavoriteHashesFlipped[$hash])) {
