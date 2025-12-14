@@ -4031,7 +4031,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 (a) => a.album === album,
               );
               if (albumInfo && albumInfo.hash) {
-                const albumJsonPath = `pr/albums/${albumInfo.hash}.json`;
+                const albumJsonPath = `pr/albums/album_${albumInfo.hash}.json`;
                 console.log(
                   `Loading album on-demand: ${album} (path: ${albumJsonPath})`,
                 );
@@ -4434,8 +4434,21 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
           function showAllAlbums() {
             allowSleep();
-            // Prefer albumsIndex (from albums.json) over allAlbums (built from loaded data)
-            res = window.albumsIndex || window.allAlbums;
+            // Merge albumsIndex with VR/Flash albums from allAlbums
+            if (window.albumsIndex) {
+              // Get VR and Flash albums from allAlbums (built from vrmedia/flashmedia)
+              const vrFlashAlbums = (window.allAlbums || []).filter(
+                (a) => a.vr === 1 || a.flash === 1
+              );
+              // Combine: albumsIndex + VR/Flash albums, avoiding duplicates by album name
+              const existingAlbumNames = new Set(window.albumsIndex.map(a => a.album));
+              const uniqueVrFlash = vrFlashAlbums.filter(a => !existingAlbumNames.has(a.album));
+              res = [...window.albumsIndex, ...uniqueVrFlash].sort((a, b) =>
+                (a.time || '') < (b.time || '') ? 1 : (b.time || '') < (a.time || '') ? -1 : 0
+              );
+            } else {
+              res = window.allAlbums;
+            }
             if (!res || res.length === 0) {
               alert(
                 "This album contains no content please add content to this album via the privuma web service",
@@ -4579,8 +4592,18 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               var kind = parts[1];
               var photoskind = kind == "all" || kind == "photo" ? "1" : "0";
               var videoskind = kind == "all" || kind == "video" ? "1" : "0";
-              // Use albumsIndex if available (on-demand loading), fallback to allAlbums
-              const albumsList = window.albumsIndex || window.allAlbums;
+              // Merge albumsIndex with VR/Flash albums from allAlbums
+              let albumsList;
+              if (window.albumsIndex) {
+                const vrFlashAlbums = (window.allAlbums || []).filter(
+                  (a) => a.vr === 1 || a.flash === 1
+                );
+                const existingAlbumNames = new Set(window.albumsIndex.map(a => a.album));
+                const uniqueVrFlash = vrFlashAlbums.filter(a => !existingAlbumNames.has(a.album));
+                albumsList = [...window.albumsIndex, ...uniqueVrFlash];
+              } else {
+                albumsList = window.allAlbums;
+              }
               let targetAlbum = shouldOpenAlbum(albumsList, album);
               if (targetAlbum) {
                 var id =
