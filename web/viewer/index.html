@@ -3733,6 +3733,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             $("body").addClass("album");
             let mediaFilters = loadMediaTypeSelections();
             res.sort((a, b) => {
+              // Defensive check for missing filename
+              if (!a["filename"] || !b["filename"]) {
+                return (!a["filename"] ? 1 : 0) - (!b["filename"] ? 1 : 0);
+              }
               let aext = a["filename"].split(".").pop();
               let bext = b["filename"].split(".").pop();
               let atime = a["time"];
@@ -3846,7 +3850,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 let filename = item.filename ?? "";
                 let dbAlbum = item.album;
                 let filenameParts = filename.split(".");
-                let extension = filenameParts.pop();
+                let extension = filenameParts.pop() || "jpg";
                 let isVideo = [
                   ".mpg",
                   ".mod",
@@ -4091,7 +4095,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 }
 
                 let filenameParts = filename.split(".");
-                let extension = filenameParts.pop();
+                let extension = filenameParts.pop() || "jpg";
                 let photo = item["filename"];
                 let isVideo = [
                   ".mpg",
