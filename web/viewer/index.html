@@ -3678,9 +3678,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           if (!desiredPath) {
             return results
               .filter((value, index, self) => {
+                if (!value.album) return false;
                 return (
                   self
-                    .map(({ album }) => album.split("---")[0])
+                    .map(({ album }) => (album || "").split("---")[0])
                     .indexOf(value.album.split("---")[0]) === index
                 );
               })
@@ -3698,6 +3699,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           return Object.values(
             results
               .filter((value, index, self) => {
+                if (!value.album) return false;
                 let match = true;
                 desiredPath.split("---").forEach((part, ind) => {
                   if (!match) {
@@ -3711,6 +3713,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 return match;
               })
               .reduce((acc, current) => {
+                if (!current["album"]) return acc;
                 const targetCount = desiredPath.split("---").length;
                 const currentKey = current["album"]
                   .split("---")
@@ -3739,6 +3742,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
         }
 
         function getItemDisplayName(album, desiredPath, search = "") {
+          if (!album) return "";
           if (search) {
             return album.split("---").pop();
           }
@@ -4233,7 +4237,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                   album = currentFolder + "---" + album;
                 }
 
-                if (search) {
+                if (search && item["album"]) {
                   album =
                     item["album"] + "---" + item["album"].split("---").pop();
                 }
