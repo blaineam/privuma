@@ -506,6 +506,10 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
                 }
             }
         }
+
+        // Copy ruffle player to fa/flash/ruffle/ for favorites-only playback
+        echo PHP_EOL . 'Copying ruffle player to fa/flash/ruffle/';
+        $opsNoEncodeNoPrefix->syncDir('flash/ruffle', 'fa/flash/ruffle', 4, 4, false);
     }
 }
 
