@@ -4579,10 +4579,12 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               var kind = parts[1];
               var photoskind = kind == "all" || kind == "photo" ? "1" : "0";
               var videoskind = kind == "all" || kind == "video" ? "1" : "0";
-              let targetAlbum = shouldOpenAlbum(window.allAlbums, album);
+              // Use albumsIndex if available (on-demand loading), fallback to allAlbums
+              const albumsList = window.albumsIndex || window.allAlbums;
+              let targetAlbum = shouldOpenAlbum(albumsList, album);
               if (targetAlbum) {
                 var id =
-                  window.allAlbums?.find((item) => item?.album == targetAlbum)
+                  albumsList?.find((item) => item?.album == targetAlbum)
                     ?.id ?? 0;
                 if (localStorage.getItem("LastRequestedAlbum") === id) {
                   const backHash = targetAlbum.split("---");
