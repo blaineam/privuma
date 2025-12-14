@@ -807,7 +807,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
                   // Check viewport before each network request (media only)
-                  if (isMedia) {
+                  // Skip this check for VR resources - they're in 3D WebXR, not browser viewport
+                  if (isMedia && !isFlashOrVr) {
                     const element = document.querySelector(
                       `[data-src="${resource}"], [data-src="${baseResource}"]`,
                     );
