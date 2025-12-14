@@ -581,7 +581,7 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
                             'metadata' => 'Title: ' . ($item['title'] ?? '') . '\n\nTags: ' . implode(',', $item['tags']['general'] ?? []),
                             'title' => $item['title'] ?? '',
                             'path' => 'flash/' . base64_encode($album) . '/' . $item['url'],
-                            'thumb' => 'flash/' . base64_encode($album) . '/' . str_replace('.swf', '.jpg', $item['url'])
+                            'thumb' => 'flash/' . base64_encode($album) . '/' . str_replace('.swf', '.png', $item['url'])
                         ];
                     }
                 }
@@ -625,7 +625,7 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
                 }
 
                 $ext = strtolower(pathinfo($faFlashFile['Path'], PATHINFO_EXTENSION));
-                if ($ext === 'swf' || $ext === 'jpg') {
+                if ($ext === 'swf' || $ext === 'png') {
                     // Find hash for this file by checking against flashHashToData
                     $faPath = 'fa/flash/' . $faFlashFile['Path'];
                     $originalPath = 'flash/' . $faFlashFile['Path'];
