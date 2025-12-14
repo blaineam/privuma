@@ -3930,7 +3930,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             function drawTags() {
               jQuery("#tags").empty();
               var uniqueTags = res.reduce((acc, item) => {
-                item["metadata"]
+                const metadata = item["metadata"] || "";
+                metadata
                   .split("Tags: ")
                   .slice(-1)
                   .pop()
