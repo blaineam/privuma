@@ -3165,52 +3165,78 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
       window.vrFavorites = [];
       window.flashFavorites = [];
 
-      // Load VR/Flash favorites from server
-      function loadVRFlashFavorites() {
-        // Helper to add VR/Flash items to alldata and rebuild allAlbums
-        function addToAllData(items, type) {
-          if (!items || !items.length || !window.alldata) return;
+      // Global function to add VR/Flash items to alldata - can be called after alldata is populated
+      window.addVRFlashItemsToAlldata = function (items, type) {
+        if (!items || !items.length || !window.alldata) return 0;
 
-          let added = 0;
-          items.forEach((item) => {
-            // Handle both hash strings and full objects
-            const hash = typeof item === "string" ? item : item.hash;
-            const filename =
-              typeof item === "string" ? hash : item.filename || hash;
+        let added = 0;
+        items.forEach((item) => {
+          // Handle both hash strings and full objects
+          const hash = typeof item === "string" ? item : item.hash;
+          const filename =
+            typeof item === "string" ? hash : item.filename || hash;
 
-            // Check if already in alldata
-            if (window.alldata.some((m) => m.hash === hash)) return;
+          // Check if already in alldata
+          if (window.alldata.some((m) => m.hash === hash)) return;
 
-            // Create synthetic media item for VR/Flash favorites
-            const albumName =
-              type === "vr" ? "VR---Favorites" : "Flash---Favorites";
-            const mediaItem = {
-              hash: hash,
-              filename: filename,
-              album: albumName,
-              vr: type === "vr" ? 1 : 0,
-              flash: type === "flash" ? 1 : 0,
-              time: new Date().toISOString().replace("T", " ").split(".")[0],
-              metadata: "",
-              ...(typeof item === "object" ? item : {}),
-            };
+          // Use album from item if present, otherwise default
+          const albumName =
+            typeof item === "object" && item.album
+              ? item.album
+              : type === "vr"
+                ? "VR---Favorites"
+                : "Flash---Favorites";
+          const mediaItem = {
+            hash: hash,
+            filename: filename,
+            album: albumName,
+            vr: type === "vr" ? 1 : 0,
+            flash: type === "flash" ? 1 : 0,
+            time: new Date().toISOString().replace("T", " ").split(".")[0],
+            metadata: "",
+            ...(typeof item === "object" ? item : {}),
+          };
 
-            window.alldata.push(mediaItem);
-            added++;
-          });
+          window.alldata.push(mediaItem);
+          added++;
+        });
 
-          // Rebuild allAlbums if we added items
-          if (added > 0 && window.groupByKey) {
-            window.allAlbums = window.groupByKey(window.alldata, "album");
-            window.allAlbums = Object.values(window.allAlbums).map(
-              (album) => album[0],
-            );
-            console.log(
-              `Added ${added} ${type} favorites to alldata, rebuilt allAlbums`,
-            );
-          }
+        return added;
+      };
+
+      // Function to process all pending VR/Flash favorites after alldata is loaded
+      window.addPendingVRFlashFavorites = function () {
+        if (!window.alldata) return;
+
+        let totalAdded = 0;
+        if (window.vrFavorites && window.vrFavorites.length > 0) {
+          totalAdded += window.addVRFlashItemsToAlldata(
+            window.vrFavorites,
+            "vr",
+          );
+        }
+        if (window.flashFavorites && window.flashFavorites.length > 0) {
+          totalAdded += window.addVRFlashItemsToAlldata(
+            window.flashFavorites,
+            "flash",
+          );
         }
 
+        // Rebuild allAlbums if we added items
+        if (totalAdded > 0 && window.groupByKey) {
+          window.allAlbums = window.groupByKey(window.alldata, "album");
+          window.allAlbums = Object.values(window.allAlbums).map(
+            (album) => album[0],
+          );
+          window.allAlbums = window.allAlbums.sort((a, b) => a.time - b.time);
+          console.log(
+            `Added ${totalAdded} VR/Flash favorites to alldata, rebuilt allAlbums`,
+          );
+        }
+      };
+
+      // Load VR/Flash favorites from server
+      function loadVRFlashFavorites() {
         // Load VR favorites (relative path works for both pr/ and fa/)
         medcrypt
           .getSrc("favorites_vr.json", "high")
@@ -3224,8 +3250,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           .then((data) => {
             window.vrFavorites = Array.isArray(data) ? data : [];
             console.log(`Loaded ${window.vrFavorites.length} VR favorites`);
-            // Add to alldata for Favorites album display
-            addToAllData(window.vrFavorites, "vr");
+            // Try to add to alldata now if it exists, otherwise they'll be added later
+            if (window.addPendingVRFlashFavorites) {
+              window.addPendingVRFlashFavorites();
+            }
           })
           .catch((error) => {
             console.log("VR favorites not available, using empty array");
@@ -3247,8 +3275,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             console.log(
               `Loaded ${window.flashFavorites.length} Flash favorites`,
             );
-            // Add to alldata for Favorites album display
-            addToAllData(window.flashFavorites, "flash");
+            // Try to add to alldata now if it exists, otherwise they'll be added later
+            if (window.addPendingVRFlashFavorites) {
+              window.addPendingVRFlashFavorites();
+            }
           })
           .catch((error) => {
             console.log("Flash favorites not available, using empty array");
@@ -3645,6 +3675,12 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           (album) => album[0],
         );
         window.allAlbums = window.allAlbums.sort((a, b) => a.time - b.time);
+
+        // Add any pending VR/Flash favorites that loaded before alldata was ready
+        if (window.addPendingVRFlashFavorites) {
+          window.addPendingVRFlashFavorites();
+        }
+
         function findSearch(searchText, res) {
           return searchifica(res, searchText, [
             "album",
