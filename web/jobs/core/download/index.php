@@ -481,7 +481,7 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
                     // Decode base64 segments in directory name for readable album
                     $albumName = 'Root';
                     if ($dirname !== '.') {
-                        $decodedSegments = array_map(function($segment) {
+                        $decodedSegments = array_map(function ($segment) {
                             $decoded = base64_decode($segment, true);
                             return ($decoded !== false) ? $decoded : $segment;
                         }, explode('/', $dirname));
@@ -722,7 +722,9 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
             $ruffleFiles = scandir($localRuffleDir);
             $uploadedCount = 0;
             foreach ($ruffleFiles as $ruffleFile) {
-                if ($ruffleFile === '.' || $ruffleFile === '..') continue;
+                if ($ruffleFile === '.' || $ruffleFile === '..') {
+                    continue;
+                }
                 $localPath = $localRuffleDir . '/' . $ruffleFile;
                 if (is_file($localPath) && !isset($existingRuffleFiles[$ruffleFile])) {
                     $remotePath = 'fa/flash/ruffle/' . $ruffleFile;
