@@ -464,14 +464,25 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         $vrFavoriteHashes = json_decode(file_get_contents($vrFavoritesFile), true) ?? [];
         echo PHP_EOL . 'Processing VR favorites: ' . count($vrFavoriteHashes) . ' hashes';
 
+        // Helper function to encode path segments with base64 (matches JS encodePath)
+        $encodePathForHash = function($path) {
+            $ext = pathinfo($path, PATHINFO_EXTENSION);
+            $pathWithoutExt = substr($path, 0, -strlen($ext) - 1);
+            $parts = explode('/', $pathWithoutExt);
+            $encodedParts = array_map(function($part) {
+                return base64_encode($part);
+            }, $parts);
+            return implode('/', $encodedParts) . '.' . $ext;
+        };
+
         // Get list of VR files and build hash-to-full-object mapping
         $vrFiles = $opsNoEncodeNoPrefix->scandir('vr', true, true, null, false, true, true, true);
         $vrHashToData = [];
         if ($vrFiles !== false) {
             foreach ($vrFiles as $vrFile) {
                 if (isset($vrFile['MimeType']) && $vrFile['MimeType'] === 'video/mp4') {
-                    // Hash is computed as md5("vr/" + encodedPath)
-                    $encodedPath = rawurlencode($vrFile['Path']);
+                    // Hash is computed as md5("vr/" + encodedPath) where encodedPath uses base64 segments
+                    $encodedPath = $encodePathForHash($vrFile['Path']);
                     $hash = md5('vr/' . $encodedPath);
                     $dirname = dirname($vrFile['Path']);
                     $vrHashToData[$hash] = [
@@ -518,8 +529,8 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         if ($faVrFiles !== false) {
             foreach ($faVrFiles as $faVrFile) {
                 if (isset($faVrFile['MimeType']) && $faVrFile['MimeType'] === 'video/mp4') {
-                    // Compute hash the same way as originals
-                    $encodedPath = rawurlencode($faVrFile['Path']);
+                    // Compute hash the same way as originals (base64 encoded path segments)
+                    $encodedPath = $encodePathForHash($faVrFile['Path']);
                     $hash = md5('vr/' . $encodedPath);
 
                     // If not in current favorites, delete from fa/vr/ only
