@@ -4434,20 +4434,20 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
           function showAllAlbums() {
             allowSleep();
-            // Merge albumsIndex with VR/Flash albums from allAlbums
+            // Merge albumsIndex with VR/Flash/Favorites albums from allAlbums
             if (window.albumsIndex) {
-              // Get VR and Flash albums from allAlbums (built from vrmedia/flashmedia)
-              const vrFlashAlbums = (window.allAlbums || []).filter(
-                (a) => a.vr === 1 || a.flash === 1,
+              // Get VR, Flash, and Favorites albums from allAlbums
+              const dynamicAlbums = (window.allAlbums || []).filter(
+                (a) => a.vr === 1 || a.flash === 1 || a.album === "Favorites",
               );
-              // Combine: albumsIndex + VR/Flash albums, avoiding duplicates by album name
+              // Combine: albumsIndex + dynamic albums, avoiding duplicates by album name
               const existingAlbumNames = new Set(
                 window.albumsIndex.map((a) => a.album),
               );
-              const uniqueVrFlash = vrFlashAlbums.filter(
+              const uniqueDynamic = dynamicAlbums.filter(
                 (a) => !existingAlbumNames.has(a.album),
               );
-              res = [...window.albumsIndex, ...uniqueVrFlash].sort((a, b) =>
+              res = [...window.albumsIndex, ...uniqueDynamic].sort((a, b) =>
                 (a.time || "") < (b.time || "")
                   ? 1
                   : (b.time || "") < (a.time || "")
@@ -4600,19 +4600,19 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               var kind = parts[1];
               var photoskind = kind == "all" || kind == "photo" ? "1" : "0";
               var videoskind = kind == "all" || kind == "video" ? "1" : "0";
-              // Merge albumsIndex with VR/Flash albums from allAlbums
+              // Merge albumsIndex with VR/Flash/Favorites albums from allAlbums
               let albumsList;
               if (window.albumsIndex) {
-                const vrFlashAlbums = (window.allAlbums || []).filter(
-                  (a) => a.vr === 1 || a.flash === 1,
+                const dynamicAlbums = (window.allAlbums || []).filter(
+                  (a) => a.vr === 1 || a.flash === 1 || a.album === "Favorites",
                 );
                 const existingAlbumNames = new Set(
                   window.albumsIndex.map((a) => a.album),
                 );
-                const uniqueVrFlash = vrFlashAlbums.filter(
+                const uniqueDynamic = dynamicAlbums.filter(
                   (a) => !existingAlbumNames.has(a.album),
                 );
-                albumsList = [...window.albumsIndex, ...uniqueVrFlash];
+                albumsList = [...window.albumsIndex, ...uniqueDynamic];
               } else {
                 albumsList = window.allAlbums;
               }
