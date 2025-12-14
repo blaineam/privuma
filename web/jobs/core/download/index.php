@@ -495,20 +495,36 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         }
         echo PHP_EOL . 'Found ' . count($vrHashToData) . ' VR videos, matching against ' . count($vrFavoriteHashes) . ' favorites';
 
+        // Get existing files in fa/vr/ to avoid redundant copies
+        $existingFaVrFiles = [];
+        $faVrScan = $opsNoEncodeNoPrefix->scandir('fa/vr', true, true, null, false, true, true, true);
+        if ($faVrScan !== false) {
+            foreach ($faVrScan as $f) {
+                if (isset($f['Path'])) {
+                    $existingFaVrFiles[$f['Path']] = true;
+                }
+            }
+        }
+
         // Build full media objects for favorited VR items
         $vrFavoriteHashesFlipped = array_flip($vrFavoriteHashes);
         $vrFavoritesFullData = [];
+        $copiedCount = 0;
         foreach ($vrHashToData as $hash => $data) {
             if (isset($vrFavoriteHashesFlipped[$hash])) {
                 $vrFavoritesFullData[] = $data;
 
-                // Copy to fa/vr/
-                $src = 'vr/' . $data['path'];
-                $dst = 'fa/vr/' . $data['path'];
-                echo PHP_EOL . 'Copying VR favorite: ' . $src . ' to ' . $dst;
-                $opsNoEncodeNoPrefix->copy($src, $dst, true, true);
+                // Only copy if not already in fa/vr/
+                if (!isset($existingFaVrFiles[$data['path']])) {
+                    $src = 'vr/' . $data['path'];
+                    $dst = 'fa/vr/' . $data['path'];
+                    echo PHP_EOL . 'Copying VR favorite: ' . $src . ' to ' . $dst;
+                    $opsNoEncodeNoPrefix->copy($src, $dst, true, true);
+                    $copiedCount++;
+                }
             }
         }
+        echo PHP_EOL . 'Copied ' . $copiedCount . ' new VR favorites (skipped ' . (count($vrFavoritesFullData) - $copiedCount) . ' existing)';
 
         // Save full VR favorites data (not just hashes)
         $vrFavoritesFullJson = json_encode($vrFavoritesFullData);
@@ -582,25 +598,49 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
             }
         }
 
+        // Get existing files in fa/flash/ to avoid redundant copies
+        $existingFaFlashFiles = [];
+        $faFlashScan = $opsNoEncodeNoPrefix->scandir('fa/flash', true, true, null, false, true, true, true);
+        if ($faFlashScan !== false) {
+            foreach ($faFlashScan as $f) {
+                if (isset($f['Path']) && strpos($f['Path'], 'ruffle') === false) {
+                    $existingFaFlashFiles[$f['Path']] = true;
+                }
+            }
+        }
+
         // Build full media objects for favorited Flash items
         $flashFavoriteHashesFlipped = array_flip($flashFavoriteHashes);
         $flashFavoritesFullData = [];
+        $copiedSwfCount = 0;
+        $copiedThumbCount = 0;
         foreach ($flashHashToData as $hash => $data) {
             if (isset($flashFavoriteHashesFlipped[$hash])) {
                 $flashFavoritesFullData[] = $data;
 
-                // Copy to fa/flash/
-                $src = $data['path'];
-                $dst = str_replace('flash/', 'fa/flash/', $data['path']);
-                echo PHP_EOL . 'Copying Flash favorite: ' . $src . ' to ' . $dst;
-                $opsNoEncodeNoPrefix->copy($src, $dst, true, true);
+                // Get relative path within fa/flash/
+                $relPath = str_replace('flash/', '', $data['path']);
+                $relThumbPath = str_replace('flash/', '', $data['thumb']);
 
-                // Also copy thumbnail if exists
-                $thumbSrc = $data['thumb'];
-                $thumbDst = str_replace('flash/', 'fa/flash/', $data['thumb']);
-                $opsNoEncodeNoPrefix->copy($thumbSrc, $thumbDst, true, true);
+                // Only copy swf if not already in fa/flash/
+                if (!isset($existingFaFlashFiles[$relPath])) {
+                    $src = $data['path'];
+                    $dst = 'fa/flash/' . $relPath;
+                    echo PHP_EOL . 'Copying Flash favorite: ' . $src . ' to ' . $dst;
+                    $opsNoEncodeNoPrefix->copy($src, $dst, true, true);
+                    $copiedSwfCount++;
+                }
+
+                // Only copy thumbnail if not already in fa/flash/
+                if (!isset($existingFaFlashFiles[$relThumbPath])) {
+                    $thumbSrc = $data['thumb'];
+                    $thumbDst = 'fa/flash/' . $relThumbPath;
+                    $opsNoEncodeNoPrefix->copy($thumbSrc, $thumbDst, true, true);
+                    $copiedThumbCount++;
+                }
             }
         }
+        echo PHP_EOL . 'Copied ' . $copiedSwfCount . ' new Flash favorites + ' . $copiedThumbCount . ' thumbnails (skipped ' . (count($flashFavoritesFullData) - $copiedSwfCount) . ' existing)';
 
         // Save full Flash favorites data (not just hashes)
         $flashFavoritesFullJson = json_encode($flashFavoritesFullData);
