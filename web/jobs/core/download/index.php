@@ -434,27 +434,45 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         echo PHP_EOL . 'Synced VR favorites JSON: ' . count($vrFavoriteHashes) . ' items';
 
         // Get list of VR files and build hash-to-path mapping
-        if (count($vrFavoriteHashes) > 0) {
-            $vrFiles = $opsNoEncodeNoPrefix->scandir('vr', true, true, null, false, true, true, true);
-            if ($vrFiles !== false) {
-                $vrHashToPath = [];
-                foreach ($vrFiles as $vrFile) {
-                    if (isset($vrFile['MimeType']) && $vrFile['MimeType'] === 'video/mp4') {
-                        // Hash is computed as md5("vr/" + encodedPath)
-                        $encodedPath = rawurlencode($vrFile['Path']);
-                        $hash = md5('vr/' . $encodedPath);
-                        $vrHashToPath[$hash] = $vrFile['Path'];
-                    }
+        $vrFiles = $opsNoEncodeNoPrefix->scandir('vr', true, true, null, false, true, true, true);
+        $vrHashToPath = [];
+        if ($vrFiles !== false) {
+            foreach ($vrFiles as $vrFile) {
+                if (isset($vrFile['MimeType']) && $vrFile['MimeType'] === 'video/mp4') {
+                    // Hash is computed as md5("vr/" + encodedPath)
+                    $encodedPath = rawurlencode($vrFile['Path']);
+                    $hash = md5('vr/' . $encodedPath);
+                    $vrHashToPath[$hash] = $vrFile['Path'];
                 }
+            }
+        }
 
-                // Copy favorited VR files to fa/vr/
-                $vrFavoriteHashes = array_flip($vrFavoriteHashes);
-                foreach ($vrHashToPath as $hash => $path) {
-                    if (isset($vrFavoriteHashes[$hash])) {
-                        $src = 'vr/' . $path;
-                        $dst = 'fa/vr/' . $path;
-                        echo PHP_EOL . 'Copying VR favorite: ' . $src . ' to ' . $dst;
-                        $opsNoEncodeNoPrefix->copy($src, $dst, true, true);
+        // Copy favorited VR files to fa/vr/
+        $vrFavoriteHashesFlipped = array_flip($vrFavoriteHashes);
+        foreach ($vrHashToPath as $hash => $path) {
+            if (isset($vrFavoriteHashesFlipped[$hash])) {
+                $src = 'vr/' . $path;
+                $dst = 'fa/vr/' . $path;
+                echo PHP_EOL . 'Copying VR favorite: ' . $src . ' to ' . $dst;
+                $opsNoEncodeNoPrefix->copy($src, $dst, true, true);
+            }
+        }
+
+        // Clean up removed VR favorites from fa/vr/ (keep originals in vr/ intact)
+        echo PHP_EOL . 'Checking for removed VR favorites to clean up from fa/vr/';
+        $faVrFiles = $opsNoEncodeNoPrefix->scandir('fa/vr', true, true, null, false, true, true, true);
+        if ($faVrFiles !== false) {
+            foreach ($faVrFiles as $faVrFile) {
+                if (isset($faVrFile['MimeType']) && $faVrFile['MimeType'] === 'video/mp4') {
+                    // Compute hash the same way as originals
+                    $encodedPath = rawurlencode($faVrFile['Path']);
+                    $hash = md5('vr/' . $encodedPath);
+
+                    // If not in current favorites, delete from fa/vr/ only
+                    if (!isset($vrFavoriteHashesFlipped[$hash])) {
+                        $fileToDelete = 'fa/vr/' . $faVrFile['Path'];
+                        echo PHP_EOL . 'Removing de-favorited VR file: ' . $fileToDelete;
+                        $opsNoEncodeNoPrefix->unlink($fileToDelete);
                     }
                 }
             }
@@ -472,36 +490,77 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         echo PHP_EOL . 'Synced Flash favorites JSON: ' . count($flashFavoriteHashes) . ' items';
 
         // Get flash index to map hashes to paths
-        if (count($flashFavoriteHashes) > 0) {
-            $flashIndexPath = $cacheDir . DIRECTORY_SEPARATOR . 'flash_index.json';
-            if (!file_exists($flashIndexPath)) {
-                // Try to fetch from remote
-                $flashIndex = $opsNoEncodeNoPrefix->file_get_contents('flash/index.json');
-                if ($flashIndex) {
-                    $flashIndex = base64_decode($flashIndex);
-                }
-            } else {
-                $flashIndex = file_get_contents($flashIndexPath);
-            }
-
+        $flashIndexPath = $cacheDir . DIRECTORY_SEPARATOR . 'flash_index.json';
+        if (!file_exists($flashIndexPath)) {
+            // Try to fetch from remote
+            $flashIndex = $opsNoEncodeNoPrefix->file_get_contents('flash/index.json');
             if ($flashIndex) {
-                $flashData = json_decode($flashIndex, true) ?? [];
-                $flashFavoriteHashes = array_flip($flashFavoriteHashes);
+                $flashIndex = base64_decode($flashIndex);
+            }
+        } else {
+            $flashIndex = file_get_contents($flashIndexPath);
+        }
 
-                foreach ($flashData as $album => $items) {
-                    foreach ($items as $item) {
-                        if (isset($item['hash']) && isset($flashFavoriteHashes[$item['hash']])) {
-                            $src = 'flash/' . base64_encode($album) . '/' . $item['url'];
-                            $dst = 'fa/flash/' . base64_encode($album) . '/' . $item['url'];
-                            echo PHP_EOL . 'Copying Flash favorite: ' . $src . ' to ' . $dst;
-                            $opsNoEncodeNoPrefix->copy($src, $dst, true, true);
+        // Build hash-to-path mapping for flash files
+        $flashHashToPath = [];
+        if ($flashIndex) {
+            $flashData = json_decode($flashIndex, true) ?? [];
+            foreach ($flashData as $album => $items) {
+                foreach ($items as $item) {
+                    if (isset($item['hash'])) {
+                        $flashHashToPath[$item['hash']] = [
+                            'path' => 'flash/' . base64_encode($album) . '/' . $item['url'],
+                            'thumb' => 'flash/' . base64_encode($album) . '/' . str_replace('.swf', '.jpg', $item['url'])
+                        ];
+                    }
+                }
+            }
+        }
 
-                            // Also copy thumbnail if exists
-                            $thumbUrl = str_replace('.swf', '.jpg', $item['url']);
-                            $thumbSrc = 'flash/' . base64_encode($album) . '/' . $thumbUrl;
-                            $thumbDst = 'fa/flash/' . base64_encode($album) . '/' . $thumbUrl;
-                            $opsNoEncodeNoPrefix->copy($thumbSrc, $thumbDst, true, true);
+        // Copy favorited Flash files to fa/flash/
+        $flashFavoriteHashesFlipped = array_flip($flashFavoriteHashes);
+        foreach ($flashHashToPath as $hash => $paths) {
+            if (isset($flashFavoriteHashesFlipped[$hash])) {
+                $src = $paths['path'];
+                $dst = str_replace('flash/', 'fa/flash/', $paths['path']);
+                echo PHP_EOL . 'Copying Flash favorite: ' . $src . ' to ' . $dst;
+                $opsNoEncodeNoPrefix->copy($src, $dst, true, true);
+
+                // Also copy thumbnail if exists
+                $thumbSrc = $paths['thumb'];
+                $thumbDst = str_replace('flash/', 'fa/flash/', $paths['thumb']);
+                $opsNoEncodeNoPrefix->copy($thumbSrc, $thumbDst, true, true);
+            }
+        }
+
+        // Clean up removed Flash favorites from fa/flash/ (keep originals in flash/ intact)
+        echo PHP_EOL . 'Checking for removed Flash favorites to clean up from fa/flash/';
+        $faFlashFiles = $opsNoEncodeNoPrefix->scandir('fa/flash', true, true, null, false, true, true, true);
+        if ($faFlashFiles !== false) {
+            foreach ($faFlashFiles as $faFlashFile) {
+                // Skip ruffle directory
+                if (strpos($faFlashFile['Path'], 'ruffle') !== false) {
+                    continue;
+                }
+
+                $ext = strtolower(pathinfo($faFlashFile['Path'], PATHINFO_EXTENSION));
+                if ($ext === 'swf' || $ext === 'jpg') {
+                    // Find hash for this file by checking against flashHashToPath
+                    $faPath = 'fa/flash/' . $faFlashFile['Path'];
+                    $originalPath = 'flash/' . $faFlashFile['Path'];
+                    $foundHash = null;
+
+                    foreach ($flashHashToPath as $hash => $paths) {
+                        if ($paths['path'] === $originalPath || $paths['thumb'] === $originalPath) {
+                            $foundHash = $hash;
+                            break;
                         }
+                    }
+
+                    // If hash found and not in current favorites, delete from fa/flash/ only
+                    if ($foundHash && !isset($flashFavoriteHashesFlipped[$foundHash])) {
+                        echo PHP_EOL . 'Removing de-favorited Flash file: ' . $faPath;
+                        $opsNoEncodeNoPrefix->unlink($faPath);
                     }
                 }
             }
