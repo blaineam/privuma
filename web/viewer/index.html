@@ -694,15 +694,16 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               return;
             }
 
-            // CRITICAL: Stop processing media files when fancybox/VR is open (except VR resources and vr-gallery)
+            // CRITICAL: Stop processing media files when fancybox/VR is open (except VR resources, vr-gallery, and high priority)
             if (this.isVideoPlayerActive()) {
-              // Purge all queued media files to prevent them from loading, EXCEPT VR resources and vr-gallery priority
+              // Purge all queued media files to prevent them from loading, EXCEPT VR resources, vr-gallery priority, and high priority
               const mediaQueue = this.queue.filter((t) => {
                 const isVR =
                   t.resource &&
                   (t.resource.startsWith("vr/") || t.resource.includes("/vr/"));
                 const isVRGallery = t.priority === "vr-gallery";
-                return this.isMediaFile(t.resource) && !isVR && !isVRGallery;
+                const isHighPriority = t.priority === "high";
+                return this.isMediaFile(t.resource) && !isVR && !isVRGallery && !isHighPriority;
               });
               if (mediaQueue.length > 0) {
                 console.log(
@@ -714,7 +715,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                     (t.resource.startsWith("vr/") ||
                       t.resource.includes("/vr/"));
                   const isVRGallery = t.priority === "vr-gallery";
-                  return !this.isMediaFile(t.resource) || isVR || isVRGallery;
+                  const isHighPriority = t.priority === "high";
+                  return !this.isMediaFile(t.resource) || isVR || isVRGallery || isHighPriority;
                 });
                 mediaQueue.forEach((t) =>
                   t.reject(new Error("Purged: video player active")),
@@ -732,17 +734,19 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
             const task = this.queue.shift();
 
-            // Skip media files when video player is active, EXCEPT for VR resources or vr-gallery priority
+            // Skip media files when video player is active, EXCEPT for VR resources, vr-gallery priority, or high priority
             const isVRResource =
               task.resource &&
               (task.resource.startsWith("vr/") ||
                 task.resource.includes("/vr/"));
             const isVRGalleryPriority = task.priority === "vr-gallery";
+            const isHighPriority = task.priority === "high";
             if (
               this.isVideoPlayerActive() &&
               this.isMediaFile(task.resource) &&
               !isVRResource &&
-              !isVRGalleryPriority
+              !isVRGalleryPriority &&
+              !isHighPriority
             ) {
               task.reject(new Error("Skipped: video player active"));
               processNext();
