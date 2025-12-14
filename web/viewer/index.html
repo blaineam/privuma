@@ -1293,16 +1293,36 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
         medcrypt.cleanupBlobCache();
       }, 60 * 1000); // Every minute
 
+      // Cache to track loaded scripts (clears on page refresh)
+      var loadedScripts = {};
+      
       function loadScript(url, callback) {
+        // Normalize callback - use empty function if undefined
+        callback = callback || function() {};
+        
+        // If already loaded, call callback immediately
+        if (loadedScripts[url]) {
+          callback();
+          return;
+        }
+        
         var head = document.head;
         var script = document.createElement("script");
         script.type = "text/javascript";
         script.src = url;
-        script.onload = callback;
-        script.onerror = callback;
+        script.onload = function() {
+          // Mark as loaded
+          loadedScripts[url] = true;
+          callback();
+        };
+        script.onerror = function() {
+          // Mark as failed but still call callback
+          loadedScripts[url] = true;
+          callback();
+        };
         head.appendChild(script);
       }
-
+      
       window.mobileCheck = function () {
         if (window.location.hash.includes("desktop")) {
           return false;
@@ -2788,13 +2808,16 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             return fetch(albums_url)
               .then((response) => {
                 if (response.ok) {
-                  console.log("Using albums.json");
+                  console.log("Using albums.json (on-demand album loading)");
                   return response.json();
                 }
                 throw new Error("albums.json not available");
               })
               .then((data) => {
-                window.encrypted_data = JSON.stringify(data);
+                // Store albums index for on-demand loading (not as encrypted_data)
+                window.albumsIndex = data;
+                window.loadedAlbums = {}; // Track which albums have been loaded
+                window.encrypted_data = "[]"; // Empty - albums loaded on demand
                 loadPacks();
               });
           })
@@ -3279,6 +3302,17 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             if (window.addPendingVRFlashFavorites) {
               window.addPendingVRFlashFavorites();
             }
+            
+            medcrypt
+            .getSrc("flash/ruffle/ruffle.js", "high")
+            .then((scriptUrl) => {
+              try {
+                loadScript(scriptUrl);
+              } catch (e) {
+                console.warn("Failed to load ruffle script:", e);
+              }
+            })
+            .catch((e) => console.warn("Failed to get ruffle script:", e));
           })
           .catch((error) => {
             console.log("Flash favorites not available, using empty array");
@@ -3517,7 +3551,13 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 a.time < b.time ? 1 : b.time < a.time ? -1 : 0,
               );
 
-              // Load ruffle script independently (loads from current folder - fa/ or pr/)
+              // Load ruffle script - configure publicPath first so ruffle knows where to load dependencies
+              // Determine the correct ruffle path based on base path (works for both fa/ and pr/)
+              const ruffleBasePath = (usingRapiServe.length ? usingRapiServe + "/" : getBasePath()) + "flash/ruffle/";
+              window.RufflePlayer = window.RufflePlayer || {};
+              window.RufflePlayer.config = { publicPath: ruffleBasePath };
+              console.log("Ruffle publicPath set to:", ruffleBasePath);
+
               medcrypt
                 .getSrc("flash/ruffle/ruffle.js", "high")
                 .then((scriptUrl) => {
@@ -3897,33 +3937,6 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
             window.currentAlbum = album;
             delete window.currentAlbumPosition;
-            syncPlayBackPositionsReal(false, () => {
-              if (!window.albumLinkClicked) {
-                return;
-              }
-              window.albumLinkClicked = false;
-              window.currentAlbumPosition = loadAlbumPosition(album);
-              if (
-                window.currentAlbumPosition &&
-                window.currentAlbumPosition.src
-              ) {
-                let mediaLink = $(
-                  'a[data-filehash="' + window.currentAlbumPosition.src + '"',
-                );
-                if (
-                  typeof mediaLink !== "undefined" &&
-                  typeof mediaLink.get(0) !== "undefined"
-                ) {
-                  mediaLink.get(0).scrollIntoView();
-                  mediaLink.click();
-                }
-                let videoElement = document.getElementsByTagName("video")[0];
-                if (videoElement) {
-                  videoElement.currentTime =
-                    window.currentAlbumPosition?.currentTime ?? 0;
-                }
-              }
-            });
 
             function dedupeByKey(array, key) {
               return Array.from(
@@ -3936,43 +3949,129 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               );
             }
 
-            res = dedupeByKey(
-              alldata.filter((media) => {
-                // Include items from the album
-                if (media.album === album) {
-                  return true;
+            // Function to render album after data is loaded
+            function renderAlbumContent() {
+              syncPlayBackPositionsReal(false, () => {
+                if (!window.albumLinkClicked) {
+                  return;
                 }
-                // For Favorites album, also include VR/Flash favorites
-                if (album === "Favorites") {
+                window.albumLinkClicked = false;
+                window.currentAlbumPosition = loadAlbumPosition(album);
+                if (
+                  window.currentAlbumPosition &&
+                  window.currentAlbumPosition.src
+                ) {
+                  let mediaLink = $(
+                    'a[data-filehash="' + window.currentAlbumPosition.src + '"',
+                  );
                   if (
-                    media.vr === 1 &&
-                    window.vrFavorites &&
-                    window.vrFavorites.includes(media.hash)
+                    typeof mediaLink !== "undefined" &&
+                    typeof mediaLink.get(0) !== "undefined"
                   ) {
+                    mediaLink.get(0).scrollIntoView();
+                    mediaLink.click();
+                  }
+                  let videoElement = document.getElementsByTagName("video")[0];
+                  if (videoElement) {
+                    videoElement.currentTime =
+                      window.currentAlbumPosition?.currentTime ?? 0;
+                  }
+                }
+              });
+
+              res = dedupeByKey(
+                alldata.filter((media) => {
+                  // Include items from the album
+                  if (media.album === album) {
                     return true;
                   }
-                  if (
-                    media.flash === 1 &&
-                    window.flashFavorites &&
-                    window.flashFavorites.includes(media.hash)
-                  ) {
-                    return true;
+                  // For Favorites album, also include VR/Flash favorites
+                  if (album === "Favorites") {
+                    if (
+                      media.vr === 1 &&
+                      window.vrFavorites &&
+                      window.vrFavorites.includes(media.hash)
+                    ) {
+                      return true;
+                    }
+                    if (
+                      media.flash === 1 &&
+                      window.flashFavorites &&
+                      window.flashFavorites.includes(media.hash)
+                    ) {
+                      return true;
+                    }
                   }
-                }
-                return false;
-              }),
-              "hash",
-            );
-            let testRes = findSearch(search, res);
-            if (testRes.length > 0) {
-              res = testRes;
-            }
-            if (!res) {
-              alert(
-                "This album contains no content please add content to this album via the privuma web service",
+                  return false;
+                }),
+                "hash",
               );
-              window.history.back();
+              let testRes = findSearch(search, res);
+              if (testRes.length > 0) {
+                res = testRes;
+              }
+              if (!res || res.length === 0) {
+                alert(
+                  "This album contains no content please add content to this album via the privuma web service",
+                );
+                window.history.back();
+                return;
+              }
+              // Continue with rest of showAlbum rendering (defined below)
+              continueShowAlbum();
             }
+
+            // Check if we need to load album data on-demand
+            if (window.albumsIndex && !window.loadedAlbums[album]) {
+              // Find album hash from index
+              const albumInfo = window.albumsIndex.find(a => a.album === album);
+              if (albumInfo && albumInfo.hash) {
+                console.log(`Loading album on-demand: ${album} (hash: ${albumInfo.hash})`);
+                medcrypt.getSrc(`pr/albums/${albumInfo.hash}.json`, "high")
+                  .then(albumUrl => fetch(albumUrl))
+                  .then(response => {
+                    if (!response.ok) throw new Error("Album file not found");
+                    return response.json();
+                  })
+                  .then(albumData => {
+                    // Decompress album items (same format as encrypted_data)
+                    albumData.forEach(item => {
+                      if (item.albums) {
+                        item.albums.forEach((itemAlbum, albumIndex) => {
+                          window.alldata.push({
+                            album: itemAlbum,
+                            filename: item.filename,
+                            hash: item.hash,
+                            time: item.times?.[albumIndex] ?? item.times?.[0],
+                            metadata: item.metadata,
+                            duration: item.duration,
+                            sound: item.sound,
+                            score: item.score,
+                          });
+                        });
+                      } else {
+                        window.alldata.push(item);
+                      }
+                    });
+                    window.loadedAlbums[album] = true;
+                    console.log(`Loaded ${albumData.length} items for album: ${album}`);
+                    renderAlbumContent();
+                  })
+                  .catch(error => {
+                    console.warn(`Failed to load album ${album}:`, error);
+                    // Try to render with existing data anyway
+                    renderAlbumContent();
+                  });
+                return; // Wait for async load
+              }
+            }
+
+            // Album already loaded or not using on-demand loading
+            renderAlbumContent();
+            return;
+
+            // The rest of showAlbum continues here
+            function continueShowAlbum() {
 
             $("body").addClass("album");
             let mediaFilters = loadMediaTypeSelections();
@@ -4072,16 +4171,11 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               $.fancybox.defaults.touch = false;
               $.fancybox.defaults.keyboard = false;
               $("body").addClass("flash");
-              window.ruffle = window.RufflePlayer.newest();
-              let rufflePath = "flash/ruffle/";
-              if (
-                usingRapiServe.length &&
-                !rufflePath.startsWith(usingRapiServe + "/")
-              ) {
-                rufflePath = usingRapiServe + "/" + rufflePath;
-                window.RufflePlayer.config = {
-                  publicPath: rufflePath,
-                };
+              // RufflePlayer.config.publicPath is already set during flash pack loading
+              if (window.RufflePlayer && window.RufflePlayer.newest) {
+                window.ruffle = window.RufflePlayer.newest();
+              } else {
+                console.warn("RufflePlayer not loaded - Flash content may not work");
               }
 
               $("a[data-fancybox] img").each(function (el) {
@@ -4308,15 +4402,17 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 }
                 jQuery("#content").append(`<div style="height: 63px"></div>`);
               });
-          }
+            } // End of continueShowAlbum
+          } // End of showAlbum
 
           let currentFolder = "";
           let search = "";
 
           function showAllAlbums() {
             allowSleep();
-            res = window.allAlbums;
-            if (!res) {
+            // Prefer albumsIndex (from albums.json) over allAlbums (built from loaded data)
+            res = window.albumsIndex || window.allAlbums;
+            if (!res || res.length === 0) {
               alert(
                 "This album contains no content please add content to this album via the privuma web service",
               );
