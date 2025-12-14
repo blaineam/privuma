@@ -1295,34 +1295,34 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
       // Cache to track loaded scripts (clears on page refresh)
       var loadedScripts = {};
-      
+
       function loadScript(url, callback) {
         // Normalize callback - use empty function if undefined
-        callback = callback || function() {};
-        
+        callback = callback || function () {};
+
         // If already loaded, call callback immediately
         if (loadedScripts[url]) {
           callback();
           return;
         }
-        
+
         var head = document.head;
         var script = document.createElement("script");
         script.type = "text/javascript";
         script.src = url;
-        script.onload = function() {
+        script.onload = function () {
           // Mark as loaded
           loadedScripts[url] = true;
           callback();
         };
-        script.onerror = function() {
+        script.onerror = function () {
           // Mark as failed but still call callback
           loadedScripts[url] = true;
           callback();
         };
         head.appendChild(script);
       }
-      
+
       window.mobileCheck = function () {
         if (window.location.hash.includes("desktop")) {
           return false;
@@ -3302,17 +3302,17 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             if (window.addPendingVRFlashFavorites) {
               window.addPendingVRFlashFavorites();
             }
-            
+
             medcrypt
-            .getSrc("flash/ruffle/ruffle.js", "high")
-            .then((scriptUrl) => {
-              try {
-                loadScript(scriptUrl);
-              } catch (e) {
-                console.warn("Failed to load ruffle script:", e);
-              }
-            })
-            .catch((e) => console.warn("Failed to get ruffle script:", e));
+              .getSrc("flash/ruffle/ruffle.js", "high")
+              .then((scriptUrl) => {
+                try {
+                  loadScript(scriptUrl);
+                } catch (e) {
+                  console.warn("Failed to load ruffle script:", e);
+                }
+              })
+              .catch((e) => console.warn("Failed to get ruffle script:", e));
           })
           .catch((error) => {
             console.log("Flash favorites not available, using empty array");
@@ -3553,7 +3553,9 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
               // Load ruffle script - configure publicPath first so ruffle knows where to load dependencies
               // Determine the correct ruffle path based on base path (works for both fa/ and pr/)
-              const ruffleBasePath = (usingRapiServe.length ? usingRapiServe + "/" : getBasePath()) + "flash/ruffle/";
+              const ruffleBasePath =
+                (usingRapiServe.length ? usingRapiServe + "/" : getBasePath()) +
+                "flash/ruffle/";
               window.RufflePlayer = window.RufflePlayer || {};
               window.RufflePlayer.config = { publicPath: ruffleBasePath };
               console.log("Ruffle publicPath set to:", ruffleBasePath);
@@ -4024,18 +4026,23 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             // Check if we need to load album data on-demand
             if (window.albumsIndex && !window.loadedAlbums[album]) {
               // Find album hash from index
-              const albumInfo = window.albumsIndex.find(a => a.album === album);
+              const albumInfo = window.albumsIndex.find(
+                (a) => a.album === album,
+              );
               if (albumInfo && albumInfo.hash) {
-                console.log(`Loading album on-demand: ${album} (hash: ${albumInfo.hash})`);
-                medcrypt.getSrc(`pr/albums/${albumInfo.hash}.json`, "high")
-                  .then(albumUrl => fetch(albumUrl))
-                  .then(response => {
+                console.log(
+                  `Loading album on-demand: ${album} (hash: ${albumInfo.hash})`,
+                );
+                medcrypt
+                  .getSrc(`pr/albums/${albumInfo.hash}.json`, "high")
+                  .then((albumUrl) => fetch(albumUrl))
+                  .then((response) => {
                     if (!response.ok) throw new Error("Album file not found");
                     return response.json();
                   })
-                  .then(albumData => {
+                  .then((albumData) => {
                     // Decompress album items (same format as encrypted_data)
-                    albumData.forEach(item => {
+                    albumData.forEach((item) => {
                       if (item.albums) {
                         item.albums.forEach((itemAlbum, albumIndex) => {
                           window.alldata.push({
@@ -4054,10 +4061,12 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                       }
                     });
                     window.loadedAlbums[album] = true;
-                    console.log(`Loaded ${albumData.length} items for album: ${album}`);
+                    console.log(
+                      `Loaded ${albumData.length} items for album: ${album}`,
+                    );
                     renderAlbumContent();
                   })
-                  .catch(error => {
+                  .catch((error) => {
                     console.warn(`Failed to load album ${album}:`, error);
                     // Try to render with existing data anyway
                     renderAlbumContent();
@@ -4072,336 +4081,345 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
             // The rest of showAlbum continues here
             function continueShowAlbum() {
+              $("body").addClass("album");
+              let mediaFilters = loadMediaTypeSelections();
+              res.sort((a, b) => {
+                // Defensive check for missing filename
+                if (!a["filename"] || !b["filename"]) {
+                  return (!a["filename"] ? 1 : 0) - (!b["filename"] ? 1 : 0);
+                }
+                let aext = a["filename"].split(".").pop();
+                let bext = b["filename"].split(".").pop();
+                let atime = a["time"];
+                let btime = b["time"];
+                if (
+                  album.toLowerCase().includes("comic") &&
+                  !album.toLowerCase().includes("-comic")
+                ) {
+                  return a["filename"].localeCompare(b["filename"], undefined, {
+                    numeric: true,
+                    sensitivity: "base",
+                  });
+                }
 
-            $("body").addClass("album");
-            let mediaFilters = loadMediaTypeSelections();
-            res.sort((a, b) => {
-              // Defensive check for missing filename
-              if (!a["filename"] || !b["filename"]) {
-                return (!a["filename"] ? 1 : 0) - (!b["filename"] ? 1 : 0);
-              }
-              let aext = a["filename"].split(".").pop();
-              let bext = b["filename"].split(".").pop();
-              let atime = a["time"];
-              let btime = b["time"];
-              if (
-                album.toLowerCase().includes("comic") &&
-                !album.toLowerCase().includes("-comic")
-              ) {
-                return a["filename"].localeCompare(b["filename"], undefined, {
-                  numeric: true,
-                  sensitivity: "base",
+                if (aext == "gif" && bext != "gif") {
+                  return -1;
+                }
+
+                if (bext == "gif" && aext != "gif") {
+                  return 1;
+                }
+
+                if (
+                  ["webm", "mp4"].includes(aext) &&
+                  !["webm", "mp4"].includes(bext)
+                ) {
+                  return -1;
+                }
+
+                if (
+                  ["webm", "mp4"].includes(bext) &&
+                  !["webm", "mp4"].includes(aext)
+                ) {
+                  return 1;
+                }
+
+                if (mediaFilters["sortbyduration"]) {
+                  return b["duration"] - a["duration"];
+                }
+
+                if (mediaFilters["sortbyscore"]) {
+                  return b["score"] - a["score"];
+                }
+
+                return b["time"] - a["time"];
+              });
+
+              function drawTags() {
+                jQuery("#tags").empty();
+                var uniqueTags = res.reduce((acc, item) => {
+                  const metadata = item["metadata"] || "";
+                  metadata
+                    .split("Tags: ")
+                    .slice(-1)
+                    .pop()
+                    .split(/\r?\n/)
+                    .at(0)
+                    .split(",")
+                    .forEach((tag) => {
+                      if (!acc.includes(tag)) {
+                        acc.push(tag);
+                      }
+                    });
+                  return acc;
+                }, []);
+                uniqueTags
+                  .sort()
+                  .forEach((utag) =>
+                    jQuery("#tags").append(`<li>${utag}</li>`),
+                  );
+                jQuery("#tags li").on("click", (e) => {
+                  jQuery("#searchInput").val(
+                    jQuery("#searchInput").val() +
+                      " " +
+                      jQuery(e.target).text(),
+                  );
+                  jQuery("#searchInput").blur();
+                  drawTags();
                 });
               }
 
-              if (aext == "gif" && bext != "gif") {
-                return -1;
+              drawTags();
+
+              $.fancybox.defaults.touch = true;
+              $.fancybox.defaults.keyboard = true;
+              if (album.toLowerCase().includes("vr")) {
+                $.fancybox.defaults.touch = false;
+                $.fancybox.defaults.keyboard = false;
+                $("body").addClass("vr");
               }
 
-              if (bext == "gif" && aext != "gif") {
-                return 1;
-              }
-
-              if (
-                ["webm", "mp4"].includes(aext) &&
-                !["webm", "mp4"].includes(bext)
-              ) {
-                return -1;
-              }
-
-              if (
-                ["webm", "mp4"].includes(bext) &&
-                !["webm", "mp4"].includes(aext)
-              ) {
-                return 1;
-              }
-
-              if (mediaFilters["sortbyduration"]) {
-                return b["duration"] - a["duration"];
-              }
-
-              if (mediaFilters["sortbyscore"]) {
-                return b["score"] - a["score"];
-              }
-
-              return b["time"] - a["time"];
-            });
-
-            function drawTags() {
-              jQuery("#tags").empty();
-              var uniqueTags = res.reduce((acc, item) => {
-                const metadata = item["metadata"] || "";
-                metadata
-                  .split("Tags: ")
-                  .slice(-1)
-                  .pop()
-                  .split(/\r?\n/)
-                  .at(0)
-                  .split(",")
-                  .forEach((tag) => {
-                    if (!acc.includes(tag)) {
-                      acc.push(tag);
-                    }
-                  });
-                return acc;
-              }, []);
-              uniqueTags
-                .sort()
-                .forEach((utag) => jQuery("#tags").append(`<li>${utag}</li>`));
-              jQuery("#tags li").on("click", (e) => {
-                jQuery("#searchInput").val(
-                  jQuery("#searchInput").val() + " " + jQuery(e.target).text(),
-                );
-                jQuery("#searchInput").blur();
-                drawTags();
-              });
-            }
-
-            drawTags();
-
-            $.fancybox.defaults.touch = true;
-            $.fancybox.defaults.keyboard = true;
-            if (album.toLowerCase().includes("vr")) {
-              $.fancybox.defaults.touch = false;
-              $.fancybox.defaults.keyboard = false;
-              $("body").addClass("vr");
-            }
-
-            if (album.toLowerCase().includes("flash")) {
-              $.fancybox.defaults.touch = false;
-              $.fancybox.defaults.keyboard = false;
-              $("body").addClass("flash");
-              // RufflePlayer.config.publicPath is already set during flash pack loading
-              if (window.RufflePlayer && window.RufflePlayer.newest) {
-                window.ruffle = window.RufflePlayer.newest();
-              } else {
-                console.warn("RufflePlayer not loaded - Flash content may not work");
-              }
-
-              $("a[data-fancybox] img").each(function (el) {
-                $(this).attr(`retro`, md5ToImage($(this).data(`hash`)));
-              });
-            }
-
-            preventSleep();
-            Promise.allSettled(
-              res.map(function (item) {
-                let filename = item.filename ?? "";
-                let dbAlbum = item.album;
-                let filenameParts = filename.split(".");
-                let extension = filenameParts.pop() || "jpg";
-                let isVideo = [
-                  ".mpg",
-                  ".mod",
-                  ".mmv",
-                  ".tod",
-                  ".wmv",
-                  ".asf",
-                  ".avi",
-                  ".divx",
-                  ".mov",
-                  ".mp4",
-                  ".m4v",
-                  ".3gp",
-                  ".3g2",
-                  ".m2t",
-                  ".m2ts",
-                  ".mts",
-                  ".mkv",
-                  ".webm",
-                  ".gif",
-                  ".swf",
-                ].includes("." + extension.toLowerCase());
-                if (("video" == kind || "all" == kind) && isVideo) {
-                  let resource = item.filename
-                    .replace(".mp4", ".jpg")
-                    .replace(".webm", ".jpg");
-                  let videoResource = item.filename;
-                  let video;
-                  let vr = item.vr === 1;
-                  let flash = item.flash === 1;
-
-                  if (flash) {
-                    resource = item.filename.replace(".swf", ".png");
-                    videoResource = item.filename;
-                  }
-
-                  if (!vr && !flash) {
-                    let thumbnailFilename = filenameParts.join(".") + ".jpg";
-                    video = btoa(item.hash) + "." + extension;
-                    let thumbnail = btoa(item.hash) + ".jpg";
-                    resource = `pr/${thumbnail.substring(0, 2)}/${thumbnail}`;
-                    videoResource = `pr/${video.substring(0, 2)}/${video}`;
-                  }
-                  return Promise.resolve([
-                    resource,
-                    true,
-                    filename,
-                    video,
-                    item.metadata,
-                    extension.toLowerCase() == "gif" ? "image" : "video",
-                    videoResource,
-                    item.hash,
-                    vr,
-                    flash,
-                    item.duration > 0 ? item.duration : 0,
-                    item.sound > -40 ? 1 : 0,
-                    item.score ?? 0,
-                  ]);
+              if (album.toLowerCase().includes("flash")) {
+                $.fancybox.defaults.touch = false;
+                $.fancybox.defaults.keyboard = false;
+                $("body").addClass("flash");
+                // RufflePlayer.config.publicPath is already set during flash pack loading
+                if (window.RufflePlayer && window.RufflePlayer.newest) {
+                  window.ruffle = window.RufflePlayer.newest();
+                } else {
+                  console.warn(
+                    "RufflePlayer not loaded - Flash content may not work",
+                  );
                 }
-                if (("photo" == kind || "all" == kind) && !isVideo) {
-                  let photo = btoa(item.hash) + "." + extension;
-                  let resource = `pr/${photo.substring(0, 2)}/${photo}`;
-                  return Promise.resolve([
-                    resource,
-                    false,
-                    filename,
-                    "",
-                    item.metadata,
-                    "",
-                    "",
-                    item.hash,
-                    item.vr === 1,
-                    item.flash === 1,
-                    0,
-                    0,
-                  ]);
-                }
-              }),
-            )
-              .then((results) => {
-                // Initialize VR gallery items array
-                window.vrGalleryItems = [];
 
-                results
-                  .filter((result) => typeof result.value !== "undefined")
-                  .map((result) => result.value)
-                  .reduce((acc, d) => {
-                    const found = acc.find((a) => a[7] === d[7]);
-                    if (!found) {
-                      acc.push(d);
+                $("a[data-fancybox] img").each(function (el) {
+                  $(this).attr(`retro`, md5ToImage($(this).data(`hash`)));
+                });
+              }
+
+              preventSleep();
+              Promise.allSettled(
+                res.map(function (item) {
+                  let filename = item.filename ?? "";
+                  let dbAlbum = item.album;
+                  let filenameParts = filename.split(".");
+                  let extension = filenameParts.pop() || "jpg";
+                  let isVideo = [
+                    ".mpg",
+                    ".mod",
+                    ".mmv",
+                    ".tod",
+                    ".wmv",
+                    ".asf",
+                    ".avi",
+                    ".divx",
+                    ".mov",
+                    ".mp4",
+                    ".m4v",
+                    ".3gp",
+                    ".3g2",
+                    ".m2t",
+                    ".m2ts",
+                    ".mts",
+                    ".mkv",
+                    ".webm",
+                    ".gif",
+                    ".swf",
+                  ].includes("." + extension.toLowerCase());
+                  if (("video" == kind || "all" == kind) && isVideo) {
+                    let resource = item.filename
+                      .replace(".mp4", ".jpg")
+                      .replace(".webm", ".jpg");
+                    let videoResource = item.filename;
+                    let video;
+                    let vr = item.vr === 1;
+                    let flash = item.flash === 1;
+
+                    if (flash) {
+                      resource = item.filename.replace(".swf", ".png");
+                      videoResource = item.filename;
                     }
-                    return acc;
-                  }, [])
-                  .forEach(
-                    ([
-                      uri,
-                      isVideo,
+
+                    if (!vr && !flash) {
+                      let thumbnailFilename = filenameParts.join(".") + ".jpg";
+                      video = btoa(item.hash) + "." + extension;
+                      let thumbnail = btoa(item.hash) + ".jpg";
+                      resource = `pr/${thumbnail.substring(0, 2)}/${thumbnail}`;
+                      videoResource = `pr/${video.substring(0, 2)}/${video}`;
+                    }
+                    return Promise.resolve([
+                      resource,
+                      true,
                       filename,
                       video,
-                      meta,
-                      datatype,
+                      item.metadata,
+                      extension.toLowerCase() == "gif" ? "image" : "video",
                       videoResource,
-                      hash,
+                      item.hash,
                       vr,
                       flash,
-                      duration,
-                      sound,
-                      score,
-                    ]) =>
-                      flash
-                        ? jQuery("#content").append(
-                            `<a class="gallerypicture flash-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-hash="${hash}" data-src="${uri}" data-resource="${uri}" loading="lazy" alt="" /></div></a>`,
-                          )
-                        : vr
-                          ? (window.vrGalleryItems.push({
-                              title: filename,
-                              thumbnail: uri,
-                              duration: duration || 0,
-                              url: videoResource,
-                              hash: hash,
-                            }),
-                            jQuery("#content").append(
-                              `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}" ` +
-                                (duration
-                                  ? `data-duration="${duration}"`
-                                  : "") +
-                                `  ` +
-                                (sound ? `data-sound="true"` : "") +
-                                ` ><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-resource="${uri}" data-filehash="${hash}" loading="lazy" alt="" /></div>` +
-                                (duration
-                                  ? `<span class="thumb-duration">${formatSeconds(duration)}</span>`
-                                  : "") +
-                                (!sound
-                                  ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="0" fill="none" width="24" height="24"/>
-                                <g>
-                                  <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
-                                </g>
-                                </svg>`
-                                  : `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" style="fill:#fff;"/><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg>`) +
-                                `</a>`,
-                            ))
-                          : isVideo
-                            ? jQuery("#content").append(
-                                `<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery"  data-filehash="${hash}"  href="${videoResource}" ` +
+                      item.duration > 0 ? item.duration : 0,
+                      item.sound > -40 ? 1 : 0,
+                      item.score ?? 0,
+                    ]);
+                  }
+                  if (("photo" == kind || "all" == kind) && !isVideo) {
+                    let photo = btoa(item.hash) + "." + extension;
+                    let resource = `pr/${photo.substring(0, 2)}/${photo}`;
+                    return Promise.resolve([
+                      resource,
+                      false,
+                      filename,
+                      "",
+                      item.metadata,
+                      "",
+                      "",
+                      item.hash,
+                      item.vr === 1,
+                      item.flash === 1,
+                      0,
+                      0,
+                    ]);
+                  }
+                }),
+              )
+                .then((results) => {
+                  // Initialize VR gallery items array
+                  window.vrGalleryItems = [];
+
+                  results
+                    .filter((result) => typeof result.value !== "undefined")
+                    .map((result) => result.value)
+                    .reduce((acc, d) => {
+                      const found = acc.find((a) => a[7] === d[7]);
+                      if (!found) {
+                        acc.push(d);
+                      }
+                      return acc;
+                    }, [])
+                    .forEach(
+                      ([
+                        uri,
+                        isVideo,
+                        filename,
+                        video,
+                        meta,
+                        datatype,
+                        videoResource,
+                        hash,
+                        vr,
+                        flash,
+                        duration,
+                        sound,
+                        score,
+                      ]) =>
+                        flash
+                          ? jQuery("#content").append(
+                              `<a class="gallerypicture flash-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-hash="${hash}" data-src="${uri}" data-resource="${uri}" loading="lazy" alt="" /></div></a>`,
+                            )
+                          : vr
+                            ? (window.vrGalleryItems.push({
+                                title: filename,
+                                thumbnail: uri,
+                                duration: duration || 0,
+                                url: videoResource,
+                                hash: hash,
+                              }),
+                              jQuery("#content").append(
+                                `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}" ` +
                                   (duration
                                     ? `data-duration="${duration}"`
                                     : "") +
                                   `  ` +
                                   (sound ? `data-sound="true"` : "") +
-                                  ` >
-          <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-resource="${uri}" data-filehash="${hash}"  loading="lazy" alt=""></div>` +
+                                  ` ><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-resource="${uri}" data-filehash="${hash}" loading="lazy" alt="" /></div>` +
                                   (duration
                                     ? `<span class="thumb-duration">${formatSeconds(duration)}</span>`
                                     : "") +
-                                  `<script type="text/json">${meta}<\/script>` +
-                                  (datatype === "video" && !sound
+                                  (!sound
                                     ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="0" fill="none" width="24" height="24"/>
+                                <g>
+                                  <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
+                                </g>
+                                </svg>`
+                                    : `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" style="fill:#fff;"/><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg>`) +
+                                  `</a>`,
+                              ))
+                            : isVideo
+                              ? jQuery("#content").append(
+                                  `<a class="gallerypicture" title="${filename}" data-type="${datatype}" data-fancybox="gallery"  data-filehash="${hash}"  href="${videoResource}" ` +
+                                    (duration
+                                      ? `data-duration="${duration}"`
+                                      : "") +
+                                    `  ` +
+                                    (sound ? `data-sound="true"` : "") +
+                                    ` >
+          <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-resource="${uri}" data-filehash="${hash}"  loading="lazy" alt=""></div>` +
+                                    (duration
+                                      ? `<span class="thumb-duration">${formatSeconds(duration)}</span>`
+                                      : "") +
+                                    `<script type="text/json">${meta}<\/script>` +
+                                    (datatype === "video" && !sound
+                                      ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <rect x="0" fill="none" width="24" height="24"/>
               <g>
                 <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
               </g>
               </svg>`
-                                    : datatype === "video" && sound
-                                      ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" style="fill:#fff;"/><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg>`
-                                      : ``) +
-                                  `</a>`,
-                              )
-                            : jQuery("#content").append(
-                                `<a class="gallerypicture" data-width="1920" href="${uri}" title="${filename}"  data-filehash="${hash}"  data-fancybox="gallery">
+                                      : datatype === "video" && sound
+                                        ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" style="fill:#fff;"/><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg>`
+                                        : ``) +
+                                    `</a>`,
+                                )
+                              : jQuery("#content").append(
+                                  `<a class="gallerypicture" data-width="1920" href="${uri}" title="${filename}"  data-filehash="${hash}"  data-fancybox="gallery">
           <div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-src="${uri}" data-resource="${uri}" data-filehash="${hash}"  loading="lazy" alt="" onError="imgError(this)" onLoad="imgLoad(this)"></div><script type="text/json">${meta}<\/script></a>`,
-                              ),
+                                ),
+                    );
+                })
+                .finally(() => {
+                  Object.entries(loadMediaTypeSelections()).forEach(
+                    ([key, val]) => {
+                      if (val) {
+                        return;
+                      }
+                      if (key == "gifs") {
+                        $('.gallerypicture[href*=".gif"]').remove();
+                      } else if (key == "videos") {
+                        $(
+                          '.gallerypicture[href*=".mp4"]:not([data-sound])',
+                        ).remove();
+                        $(
+                          '.gallerypicture[href*=".webm"]:not([data-sound])',
+                        ).remove();
+                      } else if (key == "videoswithsound") {
+                        $('.gallerypicture[href*=".mp4"][data-sound]').remove();
+                        $(
+                          '.gallerypicture[href*=".webm"][data-sound]',
+                        ).remove();
+                      } else if (key == "photos") {
+                        $('.gallerypicture[href*=".png"]').remove();
+                        $('.gallerypicture[href*=".jpg"]').remove();
+                        $('.gallerypicture[href*=".jpeg"]').remove();
+                      }
+                    },
                   );
-              })
-              .finally(() => {
-                Object.entries(loadMediaTypeSelections()).forEach(
-                  ([key, val]) => {
-                    if (val) {
-                      return;
-                    }
-                    if (key == "gifs") {
-                      $('.gallerypicture[href*=".gif"]').remove();
-                    } else if (key == "videos") {
-                      $(
-                        '.gallerypicture[href*=".mp4"]:not([data-sound])',
-                      ).remove();
-                      $(
-                        '.gallerypicture[href*=".webm"]:not([data-sound])',
-                      ).remove();
-                    } else if (key == "videoswithsound") {
-                      $('.gallerypicture[href*=".mp4"][data-sound]').remove();
-                      $('.gallerypicture[href*=".webm"][data-sound]').remove();
-                    } else if (key == "photos") {
-                      $('.gallerypicture[href*=".png"]').remove();
-                      $('.gallerypicture[href*=".jpg"]').remove();
-                      $('.gallerypicture[href*=".jpeg"]').remove();
-                    }
-                  },
-                );
-                processLazyLoad();
-                if (
-                  window.currentAlbumPosition &&
-                  window.currentAlbumPosition.src
-                ) {
-                  let mediaLink = $(
-                    'a[data-filehash="' + window.currentAlbumPosition.src + '"',
-                  );
-                  mediaLink.get(0).scrollIntoView();
-                  mediaLink.click();
-                }
-                jQuery("#content").append(`<div style="height: 63px"></div>`);
-              });
+                  processLazyLoad();
+                  if (
+                    window.currentAlbumPosition &&
+                    window.currentAlbumPosition.src
+                  ) {
+                    let mediaLink = $(
+                      'a[data-filehash="' +
+                        window.currentAlbumPosition.src +
+                        '"',
+                    );
+                    mediaLink.get(0).scrollIntoView();
+                    mediaLink.click();
+                  }
+                  jQuery("#content").append(`<div style="height: 63px"></div>`);
+                });
             } // End of continueShowAlbum
           } // End of showAlbum
 
