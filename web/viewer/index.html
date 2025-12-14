@@ -674,9 +674,11 @@
         isVideoPlayerActive() {
           return !!(
             window.vr ||
-            (typeof Fancybox !== 'undefined' && Fancybox.getInstance && Fancybox.getInstance()) ||
-            document.querySelector('.fancybox__container') ||
-            document.querySelector('.fancybox-container')
+            (typeof Fancybox !== "undefined" &&
+              Fancybox.getInstance &&
+              Fancybox.getInstance()) ||
+            document.querySelector(".fancybox__container") ||
+            document.querySelector(".fancybox-container")
           );
         },
 
@@ -694,19 +696,28 @@
             // CRITICAL: Stop processing media files when fancybox/VR is open (except VR resources and vr-gallery)
             if (this.isVideoPlayerActive()) {
               // Purge all queued media files to prevent them from loading, EXCEPT VR resources and vr-gallery priority
-              const mediaQueue = this.queue.filter(t => {
-                const isVR = t.resource && (t.resource.startsWith("vr/") || t.resource.includes("/vr/"));
+              const mediaQueue = this.queue.filter((t) => {
+                const isVR =
+                  t.resource &&
+                  (t.resource.startsWith("vr/") || t.resource.includes("/vr/"));
                 const isVRGallery = t.priority === "vr-gallery";
                 return this.isMediaFile(t.resource) && !isVR && !isVRGallery;
               });
               if (mediaQueue.length > 0) {
-                console.log(`[Queue] Purging ${mediaQueue.length} media items - video player is active`);
-                this.queue = this.queue.filter(t => {
-                  const isVR = t.resource && (t.resource.startsWith("vr/") || t.resource.includes("/vr/"));
+                console.log(
+                  `[Queue] Purging ${mediaQueue.length} media items - video player is active`,
+                );
+                this.queue = this.queue.filter((t) => {
+                  const isVR =
+                    t.resource &&
+                    (t.resource.startsWith("vr/") ||
+                      t.resource.includes("/vr/"));
                   const isVRGallery = t.priority === "vr-gallery";
                   return !this.isMediaFile(t.resource) || isVR || isVRGallery;
                 });
-                mediaQueue.forEach(t => t.reject(new Error("Purged: video player active")));
+                mediaQueue.forEach((t) =>
+                  t.reject(new Error("Purged: video player active")),
+                );
               }
             }
 
@@ -721,12 +732,17 @@
             const task = this.queue.shift();
 
             // Skip media files when video player is active, EXCEPT for VR resources or vr-gallery priority
-            const isVRResource = task.resource && (
-              task.resource.startsWith("vr/") ||
-              task.resource.includes("/vr/")
-            );
+            const isVRResource =
+              task.resource &&
+              (task.resource.startsWith("vr/") ||
+                task.resource.includes("/vr/"));
             const isVRGalleryPriority = task.priority === "vr-gallery";
-            if (this.isVideoPlayerActive() && this.isMediaFile(task.resource) && !isVRResource && !isVRGalleryPriority) {
+            if (
+              this.isVideoPlayerActive() &&
+              this.isMediaFile(task.resource) &&
+              !isVRResource &&
+              !isVRGalleryPriority
+            ) {
               task.reject(new Error("Skipped: video player active"));
               processNext();
               return;
@@ -1074,7 +1090,10 @@
               // Enforce 48 blob limit - remove oldest (first in Map)
               // But protect currently playing video blob URL
               if (this.blobCache.size >= this.maxBlobs) {
-                const currentVideoSrc = window.player && window.player.currentSrc ? window.player.currentSrc() : null;
+                const currentVideoSrc =
+                  window.player && window.player.currentSrc
+                    ? window.player.currentSrc()
+                    : null;
 
                 // Find oldest blob that's not currently in use by video player
                 let oldestKey = null;
@@ -1134,7 +1153,10 @@
           const inViewport = new Set(viewportImages);
 
           // Get current video source if player exists - NEVER revoke this!
-          const currentVideoSrc = window.player && window.player.currentSrc ? window.player.currentSrc() : null;
+          const currentVideoSrc =
+            window.player && window.player.currentSrc
+              ? window.player.currentSrc()
+              : null;
           const currentVideoResource = window.currentVRVideoResource; // Original resource path
 
           for (const [resource, blobUrl] of this.blobCache.entries()) {
@@ -2311,18 +2333,24 @@
         // Helper function to setup the player with a video URL
         async function setupPlayer(finalVideoUrl) {
           // Use stored thumbnail URL, or derive from video URL as fallback
-          const thumbnailPath = window.currentVRThumbnail ||
-            finalVideoUrl
-              .replace(".mp4", ".jpg")
-              .replace(".webm", ".jpg");
+          const thumbnailPath =
+            window.currentVRThumbnail ||
+            finalVideoUrl.replace(".mp4", ".jpg").replace(".webm", ".jpg");
 
           // Fetch thumbnail through getSrc to get blob URL
           let thumbnailBlobUrl = thumbnailPath;
-          if (thumbnailPath && !thumbnailPath.startsWith("blob:") && !thumbnailPath.startsWith("data:")) {
+          if (
+            thumbnailPath &&
+            !thumbnailPath.startsWith("blob:") &&
+            !thumbnailPath.startsWith("data:")
+          ) {
             try {
               thumbnailBlobUrl = await medcrypt.getSrc(thumbnailPath, "high");
             } catch (error) {
-              console.warn("Failed to fetch thumbnail, using path directly:", error);
+              console.warn(
+                "Failed to fetch thumbnail, using path directly:",
+                error,
+              );
               thumbnailBlobUrl = thumbnailPath;
             }
           }
@@ -2335,7 +2363,7 @@
             }
           }
           var oldPlayer = document.getElementById("videojs-vr-player");
-          if (oldPlayer && typeof videojs !== 'undefined') {
+          if (oldPlayer && typeof videojs !== "undefined") {
             try {
               videojs(oldPlayer).dispose();
             } catch (e) {
@@ -2378,11 +2406,12 @@
         }
 
         // If it's an original resource path, fetch it through medcrypt
-        medcrypt.getSrc(videoUrl, "high")
-          .then(function(blobUrl) {
+        medcrypt
+          .getSrc(videoUrl, "high")
+          .then(function (blobUrl) {
             setupPlayer(blobUrl);
           })
-          .catch(function(error) {
+          .catch(function (error) {
             console.error("Failed to fetch video for reload:", error);
             // Try using the URL directly as fallback
             setupPlayer(videoUrl);
@@ -2391,7 +2420,7 @@
 
       function initializeVRPlayer() {
         // Check if videojs is available
-        if (typeof videojs === 'undefined') {
+        if (typeof videojs === "undefined") {
           console.warn("videojs not yet available, retrying in 100ms...");
           setTimeout(initializeVRPlayer, 100);
           return;
@@ -2421,12 +2450,16 @@
           showHUDOnStart: true,
           hudAutoHideDelay: 0, // Don't auto-hide
           hudHeight: 3.5, // MUCH higher - well above eye level
-          hudScale: 0.030, // 10x original size for readability
+          hudScale: 0.03, // 10x original size for readability
           hudDistance: 2.5, // Closer to camera for better visibility
           // Navigation callbacks
-          onNext: async function() {
+          onNext: async function () {
             // Check if we're in VR mode
-            if (player.vr && player.vr().isPresenting && player.vr().isPresenting()) {
+            if (
+              player.vr &&
+              player.vr().isPresenting &&
+              player.vr().isPresenting()
+            ) {
               // In VR mode - navigate directly using tracked index
               var currentIndex = window.currentVRIndex || 0;
               var nextIndex = (currentIndex + 1) % window.vrGalleryItems.length;
@@ -2436,96 +2469,152 @@
                   // Store the new index
                   window.currentVRIndex = nextIndex;
                   // Resolve URL through getSrc to get blob URL
-                  var blobUrl = await medcrypt.getSrc(nextItem.url, 'vr-gallery');
-                  console.log('[VR] Loading next video:', nextItem.url, '->', blobUrl);
+                  var blobUrl = await medcrypt.getSrc(
+                    nextItem.url,
+                    "vr-gallery",
+                  );
+                  console.log(
+                    "[VR] Loading next video:",
+                    nextItem.url,
+                    "->",
+                    blobUrl,
+                  );
                   // Extract and set projection from filename
-                  var projection = get3dHash(basename(decodePath(nextItem.url), '.' + getFileExtension(nextItem.url)));
-                  if (projection && projection !== 'NONE') {
+                  var projection = get3dHash(
+                    basename(
+                      decodePath(nextItem.url),
+                      "." + getFileExtension(nextItem.url),
+                    ),
+                  );
+                  if (projection && projection !== "NONE") {
                     player.vr().setProjection(projection);
-                    console.log('[VR] Set projection to:', projection);
+                    console.log("[VR] Set projection to:", projection);
                   }
-                  player.src({ src: blobUrl, type: 'video/mp4' });
+                  player.src({ src: blobUrl, type: "video/mp4" });
                   player.play();
                 } catch (err) {
-                  console.error('[VR] Failed to load next video:', err);
+                  console.error("[VR] Failed to load next video:", err);
                 }
               }
             } else {
               // Not in VR - use fancybox
-              var instance = typeof Fancybox !== 'undefined' && Fancybox.getInstance ? Fancybox.getInstance() : null;
+              var instance =
+                typeof Fancybox !== "undefined" && Fancybox.getInstance
+                  ? Fancybox.getInstance()
+                  : null;
               if (instance) {
                 instance.next();
               }
             }
           },
-          onPrevious: async function() {
+          onPrevious: async function () {
             // Check if we're in VR mode
-            if (player.vr && player.vr().isPresenting && player.vr().isPresenting()) {
+            if (
+              player.vr &&
+              player.vr().isPresenting &&
+              player.vr().isPresenting()
+            ) {
               // In VR mode - navigate directly using tracked index
               var currentIndex = window.currentVRIndex || 0;
-              var prevIndex = currentIndex <= 0 ? window.vrGalleryItems.length - 1 : currentIndex - 1;
+              var prevIndex =
+                currentIndex <= 0
+                  ? window.vrGalleryItems.length - 1
+                  : currentIndex - 1;
               var prevItem = window.vrGalleryItems[prevIndex];
               if (prevItem) {
                 try {
                   // Store the new index
                   window.currentVRIndex = prevIndex;
                   // Resolve URL through getSrc to get blob URL
-                  var blobUrl = await medcrypt.getSrc(prevItem.url, 'vr-gallery');
-                  console.log('[VR] Loading previous video:', prevItem.url, '->', blobUrl);
+                  var blobUrl = await medcrypt.getSrc(
+                    prevItem.url,
+                    "vr-gallery",
+                  );
+                  console.log(
+                    "[VR] Loading previous video:",
+                    prevItem.url,
+                    "->",
+                    blobUrl,
+                  );
                   // Extract and set projection from filename
-                  var projection = get3dHash(basename(decodePath(prevItem.url), '.' + getFileExtension(prevItem.url)));
-                  if (projection && projection !== 'NONE') {
+                  var projection = get3dHash(
+                    basename(
+                      decodePath(prevItem.url),
+                      "." + getFileExtension(prevItem.url),
+                    ),
+                  );
+                  if (projection && projection !== "NONE") {
                     player.vr().setProjection(projection);
-                    console.log('[VR] Set projection to:', projection);
+                    console.log("[VR] Set projection to:", projection);
                   }
-                  player.src({ src: blobUrl, type: 'video/mp4' });
+                  player.src({ src: blobUrl, type: "video/mp4" });
                   player.play();
                 } catch (err) {
-                  console.error('[VR] Failed to load previous video:', err);
+                  console.error("[VR] Failed to load previous video:", err);
                 }
               }
             } else {
               // Not in VR - use fancybox
-              var instance = typeof Fancybox !== 'undefined' && Fancybox.getInstance ? Fancybox.getInstance() : null;
+              var instance =
+                typeof Fancybox !== "undefined" && Fancybox.getInstance
+                  ? Fancybox.getInstance()
+                  : null;
               if (instance) {
                 instance.prev();
               }
             }
           },
-          onMediaSelect: async function(item, index) {
+          onMediaSelect: async function (item, index) {
             // Check if we're in VR mode
-            if (player.vr && player.vr().isPresenting && player.vr().isPresenting()) {
+            if (
+              player.vr &&
+              player.vr().isPresenting &&
+              player.vr().isPresenting()
+            ) {
               // In VR mode - load selected video directly
               if (item && item.url) {
                 try {
                   // Store the new index
                   window.currentVRIndex = index;
                   // Resolve URL through getSrc to get blob URL
-                  var blobUrl = await medcrypt.getSrc(item.url, 'vr-gallery');
-                  console.log('[VR] Loading selected video:', item.url, '->', blobUrl);
+                  var blobUrl = await medcrypt.getSrc(item.url, "vr-gallery");
+                  console.log(
+                    "[VR] Loading selected video:",
+                    item.url,
+                    "->",
+                    blobUrl,
+                  );
                   // Extract and set projection from filename
-                  var projection = get3dHash(basename(decodePath(item.url), '.' + getFileExtension(item.url)));
-                  if (projection && projection !== 'NONE') {
+                  var projection = get3dHash(
+                    basename(
+                      decodePath(item.url),
+                      "." + getFileExtension(item.url),
+                    ),
+                  );
+                  if (projection && projection !== "NONE") {
                     player.vr().setProjection(projection);
-                    console.log('[VR] Set projection to:', projection);
+                    console.log("[VR] Set projection to:", projection);
                   }
-                  player.src({ src: blobUrl, type: 'video/mp4' });
+                  player.src({ src: blobUrl, type: "video/mp4" });
                   player.play();
                 } catch (err) {
-                  console.error('[VR] Failed to load selected video:', err);
+                  console.error("[VR] Failed to load selected video:", err);
                 }
               }
             } else {
               // Not in VR - use fancybox
-              var instance = typeof Fancybox !== 'undefined' && Fancybox.getInstance ? Fancybox.getInstance() : null;
+              var instance =
+                typeof Fancybox !== "undefined" && Fancybox.getInstance
+                  ? Fancybox.getInstance()
+                  : null;
               if (instance) {
                 instance.jumpTo(index);
               }
             }
           },
           // Media items for gallery (populated dynamically)
-          mediaItems: window.vrGalleryItems || []
-        }))
+          mediaItems: window.vrGalleryItems || [],
+        }));
       }
 
       function selectAction(selectObject) {
@@ -2552,20 +2641,22 @@
           .getSrc("pr/albums.json" + tail, "high")
           .then((albums_url) => {
             return fetch(albums_url)
-              .then(response => {
+              .then((response) => {
                 if (response.ok) {
                   console.log("Using albums.json");
                   return response.json();
                 }
                 throw new Error("albums.json not available");
               })
-              .then(data => {
+              .then((data) => {
                 window.encrypted_data = JSON.stringify(data);
                 loadPacks();
               });
           })
           .catch((error) => {
-            console.log("albums.json not available, falling back to encrypted_data.js");
+            console.log(
+              "albums.json not available, falling back to encrypted_data.js",
+            );
             // Fallback to legacy encrypted_data.js
             medcrypt
               .getSrc(
@@ -2932,7 +3023,8 @@
       // Load VR/Flash favorites from server
       function loadVRFlashFavorites() {
         // Load VR favorites
-        medcrypt.getSrc("pr/favorites_vr.json", "high")
+        medcrypt
+          .getSrc("pr/favorites_vr.json", "high")
           .then((favoritesUrl) => fetch(favoritesUrl))
           .then((response) => {
             if (response.ok) {
@@ -2950,7 +3042,8 @@
           });
 
         // Load Flash favorites
-        medcrypt.getSrc("pr/favorites_flash.json", "high")
+        medcrypt
+          .getSrc("pr/favorites_flash.json", "high")
           .then((favoritesUrl) => fetch(favoritesUrl))
           .then((response) => {
             if (response.ok) {
@@ -2960,7 +3053,9 @@
           })
           .then((data) => {
             window.flashFavorites = Array.isArray(data) ? data : [];
-            console.log(`Loaded ${window.flashFavorites.length} Flash favorites`);
+            console.log(
+              `Loaded ${window.flashFavorites.length} Flash favorites`,
+            );
           })
           .catch((error) => {
             console.log("Flash favorites not available, using empty array");
@@ -2974,23 +3069,28 @@
 
         // Check if this is VR or Flash media
         const isVR = slide.opts.$orig && slide.opts.$orig.hasClass("vr-link");
-        const isFlash = slide.opts.$orig && slide.opts.$orig.hasClass("flash-link");
+        const isFlash =
+          slide.opts.$orig && slide.opts.$orig.hasClass("flash-link");
 
         if (isVR || isFlash) {
           // Handle VR/Flash favorites
           // VR uses data-filehash, Flash uses data-hash
-          const hash = slide.opts.$orig.find('img').data('filehash') || slide.opts.$orig.find('img').data('hash');
+          const hash =
+            slide.opts.$orig.find("img").data("filehash") ||
+            slide.opts.$orig.find("img").data("hash");
           if (!hash) {
             toast.error("Could not find media hash");
             return;
           }
 
-          const favoritesArray = isVR ? window.vrFavorites : window.flashFavorites;
+          const favoritesArray = isVR
+            ? window.vrFavorites
+            : window.flashFavorites;
           const isFavorited = favoritesArray.includes(hash);
 
           let tokens = rollingTokens(passphrase);
           let token = tokens[Math.floor(tokens.length / 2)];
-          const mediaType = isVR ? 'vr' : 'flash';
+          const mediaType = isVR ? "vr" : "flash";
           let call = `${window.endpoint}?favorite_${mediaType}=${hash}&token=${token}`;
 
           $.ajax(call)
@@ -3611,10 +3711,18 @@
                 }
                 // For Favorites album, also include VR/Flash favorites
                 if (album === "Favorites") {
-                  if (media.vr === 1 && window.vrFavorites && window.vrFavorites.includes(media.hash)) {
+                  if (
+                    media.vr === 1 &&
+                    window.vrFavorites &&
+                    window.vrFavorites.includes(media.hash)
+                  ) {
                     return true;
                   }
-                  if (media.flash === 1 && window.flashFavorites && window.flashFavorites.includes(media.hash)) {
+                  if (
+                    media.flash === 1 &&
+                    window.flashFavorites &&
+                    window.flashFavorites.includes(media.hash)
+                  ) {
                     return true;
                   }
                 }
@@ -3869,7 +3977,7 @@
                               thumbnail: uri,
                               duration: duration || 0,
                               url: videoResource,
-                              hash: hash
+                              hash: hash,
                             }),
                             jQuery("#content").append(
                               `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}" ` +
@@ -4178,8 +4286,9 @@
             if (slide.opts.$orig.hasClass("vr-link")) {
               const playerUrl = slide.opts.$orig.data("url");
               // Get the thumbnail from the clicked gallery item
-              const thumbnailUrl = slide.opts.$orig.find('img').data('src') ||
-                                  slide.opts.$orig.find('img').data('resource');
+              const thumbnailUrl =
+                slide.opts.$orig.find("img").data("src") ||
+                slide.opts.$orig.find("img").data("resource");
 
               // Store original resource path for projection changes
               window.currentVRVideoResource = playerUrl;
@@ -4231,7 +4340,7 @@
               let videoElement = document.getElementsByTagName("video")[0];
 
               var vjsplayer = document.getElementById("videojs-vr-player");
-              if (vjsplayer && typeof videojs !== 'undefined') {
+              if (vjsplayer && typeof videojs !== "undefined") {
                 let player = videojs(vjsplayer);
                 player.play();
                 player.currentTime(
@@ -4267,9 +4376,10 @@
 
               // Update favorite button for VR videos
               // Hash is stored in the img element's data-filehash attribute
-              let vrHash = slide.opts.$orig.find('img').data('filehash');
+              let vrHash = slide.opts.$orig.find("img").data("filehash");
               if (vrHash) {
-                let vrFavorited = window.vrFavorites && window.vrFavorites.includes(vrHash);
+                let vrFavorited =
+                  window.vrFavorites && window.vrFavorites.includes(vrHash);
                 $(".fancybox-button--favorite").text(vrFavorited ? "💔" : "❤️");
               }
 
@@ -4278,10 +4388,14 @@
             if (slide.opts.$orig.hasClass("flash-link")) {
               // Update favorite button for Flash media
               // Hash is stored in the img element's data-hash attribute
-              let flashHash = slide.opts.$orig.find('img').data('hash');
+              let flashHash = slide.opts.$orig.find("img").data("hash");
               if (flashHash) {
-                let flashFavorited = window.flashFavorites && window.flashFavorites.includes(flashHash);
-                $(".fancybox-button--favorite").text(flashFavorited ? "💔" : "❤️");
+                let flashFavorited =
+                  window.flashFavorites &&
+                  window.flashFavorites.includes(flashHash);
+                $(".fancybox-button--favorite").text(
+                  flashFavorited ? "💔" : "❤️",
+                );
               }
 
               return;
@@ -5089,12 +5203,16 @@
             lazyImage.dataset.retryCount = "0";
           }
 
-          const currentRetryCount = parseInt(lazyImage.dataset.retryCount || "0");
+          const currentRetryCount = parseInt(
+            lazyImage.dataset.retryCount || "0",
+          );
           const MAX_RETRIES = 3;
 
           // Check if we've exceeded max retries
           if (currentRetryCount >= MAX_RETRIES) {
-            console.log(`[Max Retries] Giving up on ${lazyImage.dataset.src} after ${MAX_RETRIES} attempts`);
+            console.log(
+              `[Max Retries] Giving up on ${lazyImage.dataset.src} after ${MAX_RETRIES} attempts`,
+            );
 
             // Mark as permanently failed
             medcrypt.failedResources.add(lazyImage.dataset.src);
@@ -5224,14 +5342,17 @@
 
                   // Log with retry count (rate limited to avoid spam)
                   const failureKey = `temp_fail_${lazyImage.dataset.src}`;
-                  const lastLogTime = window.tempFailureLogTimes?.[failureKey] || 0;
+                  const lastLogTime =
+                    window.tempFailureLogTimes?.[failureKey] || 0;
                   const now = Date.now();
 
-                  if (now - lastLogTime > 5000) { // Only log once per 5 seconds per resource
+                  if (now - lastLogTime > 5000) {
+                    // Only log once per 5 seconds per resource
                     console.log(
                       `[Temporary Failure] ${error.message} for: ${lazyImage.dataset.src} - will retry later (${retries + 1}/${MAX_RETRIES})`,
                     );
-                    window.tempFailureLogTimes = window.tempFailureLogTimes || {};
+                    window.tempFailureLogTimes =
+                      window.tempFailureLogTimes || {};
                     window.tempFailureLogTimes[failureKey] = now;
                   }
 
