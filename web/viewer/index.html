@@ -4281,8 +4281,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                   ".gif",
                   ".swf",
                 ].includes("." + extension.toLowerCase());
+                // Use coverHash for album cover images (from albums.json), fallback to hash
+                let coverHash = item.coverHash || item.hash;
                 let image =
-                  btoa(item.hash) + "." + (isVideo ? "jpg" : extension);
+                  btoa(coverHash) + "." + (isVideo ? "jpg" : extension);
                 let resource = `pr/${image.substring(0, 2)}/${image}`;
                 if (item.vr === 1) {
                   resource = item.filename
@@ -4290,13 +4292,13 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                     .replace(".webm", ".jpg");
                 }
                 if (item.flash === 1) {
-                  resource = md5ToImage(item.hash); //item.filename.replace(".swf", ".png");
+                  resource = md5ToImage(coverHash); //item.filename.replace(".swf", ".png");
                 }
                 return Promise.resolve([
                   resource,
                   displayName,
                   album,
-                  item.hash,
+                  coverHash,
                 ]);
               }),
             )
