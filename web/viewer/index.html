@@ -703,7 +703,12 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                   (t.resource.startsWith("vr/") || t.resource.includes("/vr/"));
                 const isVRGallery = t.priority === "vr-gallery";
                 const isHighPriority = t.priority === "high";
-                return this.isMediaFile(t.resource) && !isVR && !isVRGallery && !isHighPriority;
+                return (
+                  this.isMediaFile(t.resource) &&
+                  !isVR &&
+                  !isVRGallery &&
+                  !isHighPriority
+                );
               });
               if (mediaQueue.length > 0) {
                 console.log(
@@ -716,7 +721,12 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                       t.resource.includes("/vr/"));
                   const isVRGallery = t.priority === "vr-gallery";
                   const isHighPriority = t.priority === "high";
-                  return !this.isMediaFile(t.resource) || isVR || isVRGallery || isHighPriority;
+                  return (
+                    !this.isMediaFile(t.resource) ||
+                    isVR ||
+                    isVRGallery ||
+                    isHighPriority
+                  );
                 });
                 mediaQueue.forEach((t) =>
                   t.reject(new Error("Purged: video player active")),
