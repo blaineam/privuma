@@ -3182,7 +3182,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             if (window.alldata.some((m) => m.hash === hash)) return;
 
             // Create synthetic media item for VR/Flash favorites
-            const albumName = type === "vr" ? "VR---Favorites" : "Flash---Favorites";
+            const albumName =
+              type === "vr" ? "VR---Favorites" : "Flash---Favorites";
             const mediaItem = {
               hash: hash,
               filename: filename,
@@ -3204,7 +3205,9 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             window.allAlbums = Object.values(window.allAlbums).map(
               (album) => album[0],
             );
-            console.log(`Added ${added} ${type} favorites to alldata, rebuilt allAlbums`);
+            console.log(
+              `Added ${added} ${type} favorites to alldata, rebuilt allAlbums`,
+            );
           }
         }
 
