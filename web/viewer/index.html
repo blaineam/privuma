@@ -1771,8 +1771,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
       <button class="btn btn-primary" id="unlockBtn">Unlock</button>
     </div>
     <div id="searchBox">
-      <button class="btn btn-secondary" id="backBtn" title="Back"
-        ><svg
+      <button class="btn btn-secondary" id="backBtn" title="Back">
+        <svg
           width="24px"
           height="24px"
           viewBox="0 0 24 24"
@@ -1786,16 +1786,19 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             stroke-linecap="round"
             stroke-linejoin="round"
           />
-        </svg
-      ></button
+        </svg></button
       ><input
         type="search"
         class="form-control"
         id="searchInput"
         name="search"
         placeholder="Search"
-      /><button class="btn btn-secondary" id="favoritesToggle" title="Show Favorites Only"
-        ><svg
+      /><button
+        class="btn btn-secondary"
+        id="favoritesToggle"
+        title="Show Favorites Only"
+      >
+        <svg
           width="20px"
           height="20px"
           viewBox="0 0 24 24"
@@ -1806,8 +1809,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
             fill="currentColor"
           />
-        </svg
-      ></button
+        </svg></button
       ><a class="btn btn-secondary trigger-collapsible" id="tags-toggle"
         ><svg
           fill="None"
@@ -3953,7 +3955,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             e.preventDefault();
             $(this).toggleClass("active");
             const isFavoritesOnly = $(this).hasClass("active");
-            window.localStorage.setItem("favoritesOnly", isFavoritesOnly ? "true" : "false");
+            window.localStorage.setItem(
+              "favoritesOnly",
+              isFavoritesOnly ? "true" : "false",
+            );
             console.log("[Favorites] Filter toggled:", isFavoritesOnly);
             run();
           });
@@ -4464,62 +4469,79 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                     const favHashes = new Set();
                     if (window.alldata) {
                       window.alldata
-                        .filter(item => item.album === "Favorites")
-                        .forEach(item => favHashes.add(item.hash));
+                        .filter((item) => item.album === "Favorites")
+                        .forEach((item) => favHashes.add(item.hash));
                     }
 
                     // Extract VR/Flash favorite hashes
                     const vrFavHashes = new Set();
                     if (window.vrFavorites) {
-                      window.vrFavorites.forEach(fav => {
-                        const hash = typeof fav === 'string' ? fav : fav.hash;
+                      window.vrFavorites.forEach((fav) => {
+                        const hash = typeof fav === "string" ? fav : fav.hash;
                         if (hash) vrFavHashes.add(hash);
                       });
                     }
 
                     const flashFavHashes = new Set();
                     if (window.flashFavorites) {
-                      window.flashFavorites.forEach(fav => {
-                        const hash = typeof fav === 'string' ? fav : fav.hash;
+                      window.flashFavorites.forEach((fav) => {
+                        const hash = typeof fav === "string" ? fav : fav.hash;
                         if (hash) flashFavHashes.add(hash);
                       });
                     }
 
-                    console.log("[Favorites] Regular favorites count:", favHashes.size);
-                    console.log("[Favorites] VR favorites count:", vrFavHashes.size);
-                    console.log("[Favorites] Flash favorites count:", flashFavHashes.size);
+                    console.log(
+                      "[Favorites] Regular favorites count:",
+                      favHashes.size,
+                    );
+                    console.log(
+                      "[Favorites] VR favorites count:",
+                      vrFavHashes.size,
+                    );
+                    console.log(
+                      "[Favorites] Flash favorites count:",
+                      flashFavHashes.size,
+                    );
 
                     // Check if this is a Comics album - if so, and it has ANY favorites, show ALL pages
-                    const isComicsAlbum = album && (album === "Comics" || album.startsWith("Comics---"));
+                    const isComicsAlbum =
+                      album &&
+                      (album === "Comics" || album.startsWith("Comics---"));
                     let skipFiltering = false;
                     if (isComicsAlbum) {
                       // Check if this comic has any favorited pages
                       const comicHashes = new Set();
-                      $(".gallerypicture").each(function() {
+                      $(".gallerypicture").each(function () {
                         const hash = $(this).find("img").data("filehash");
                         if (hash) comicHashes.add(hash);
                       });
-                      const hasFavorites = Array.from(comicHashes).some(h => favHashes.has(h));
+                      const hasFavorites = Array.from(comicHashes).some((h) =>
+                        favHashes.has(h),
+                      );
                       if (hasFavorites) {
                         skipFiltering = true;
-                        console.log("[Favorites] Comics album with favorites - showing all pages");
+                        console.log(
+                          "[Favorites] Comics album with favorites - showing all pages",
+                        );
                       }
                     }
 
                     if (!skipFiltering) {
                       // Remove non-favorite regular media
                       let removedRegular = 0;
-                      $(".gallerypicture:not(.vr-link):not(.flash-link)").each(function() {
-                        const hash = $(this).find("img").data("filehash");
-                        if (!favHashes.has(hash)) {
-                          $(this).remove();
-                          removedRegular++;
-                        }
-                      });
+                      $(".gallerypicture:not(.vr-link):not(.flash-link)").each(
+                        function () {
+                          const hash = $(this).find("img").data("filehash");
+                          if (!favHashes.has(hash)) {
+                            $(this).remove();
+                            removedRegular++;
+                          }
+                        },
+                      );
 
                       // Remove non-favorite VR media
                       let removedVR = 0;
-                      $(".vr-link").each(function() {
+                      $(".vr-link").each(function () {
                         const hash = $(this).find("img").data("filehash");
                         if (!vrFavHashes.has(hash)) {
                           $(this).remove();
@@ -4529,7 +4551,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
                       // Remove non-favorite Flash media
                       let removedFlash = 0;
-                      $(".flash-link").each(function() {
+                      $(".flash-link").each(function () {
                         const hash = $(this).find("img").data("hash");
                         if (!flashFavHashes.has(hash)) {
                           $(this).remove();
@@ -4537,7 +4559,15 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                         }
                       });
 
-                      console.log("[Favorites] Removed:", removedRegular, "regular,", removedVR, "VR,", removedFlash, "Flash items");
+                      console.log(
+                        "[Favorites] Removed:",
+                        removedRegular,
+                        "regular,",
+                        removedVR,
+                        "VR,",
+                        removedFlash,
+                        "Flash items",
+                      );
                     }
                   }
 
@@ -4598,16 +4628,23 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
             // Pre-compute favorites cover cache for performance (only when favorites-only is active)
             const favoritesCoverCache = new Map();
-            if (window.localStorage.getItem("favoritesOnly") === "true" && window.alldata) {
-              const favoriteItems = window.alldata.filter(i => i.album === "Favorites");
+            if (
+              window.localStorage.getItem("favoritesOnly") === "true" &&
+              window.alldata
+            ) {
+              const favoriteItems = window.alldata.filter(
+                (i) => i.album === "Favorites",
+              );
               const albumFavorites = new Map(); // album -> array of favorited items
 
-              favoriteItems.forEach(i => {
+              favoriteItems.forEach((i) => {
                 let originalAlbum = null;
                 if (i.filename && i.filename.includes("-----")) {
                   originalAlbum = i.filename.split("-----")[0];
                 } else {
-                  const nonFavMatch = window.alldata.find(m => m.hash === i.hash && m.album !== "Favorites");
+                  const nonFavMatch = window.alldata.find(
+                    (m) => m.hash === i.hash && m.album !== "Favorites",
+                  );
                   if (nonFavMatch) originalAlbum = nonFavMatch.album;
                 }
 
@@ -4621,15 +4658,20 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
               // For each album, find the most recent favorite and store in cache
               albumFavorites.forEach((items, album) => {
-                const sorted = items.sort((a, b) => (a.time || "") < (b.time || "") ? 1 : -1);
+                const sorted = items.sort((a, b) =>
+                  (a.time || "") < (b.time || "") ? 1 : -1,
+                );
                 if (sorted.length > 0) {
                   favoritesCoverCache.set(album, sorted[0].hash);
                   // Also cache for parent albums
                   const parts = album.split("---");
                   for (let i = 0; i < parts.length - 1; i++) {
                     const parentAlbum = parts.slice(0, i + 1).join("---");
-                    if (!favoritesCoverCache.has(parentAlbum) ||
-                        (sorted[0].time || "") > (albumFavorites.get(parentAlbum)?.[0]?.time || "")) {
+                    if (
+                      !favoritesCoverCache.has(parentAlbum) ||
+                      (sorted[0].time || "") >
+                        (albumFavorites.get(parentAlbum)?.[0]?.time || "")
+                    ) {
                       favoritesCoverCache.set(parentAlbum, sorted[0].hash);
                     }
                   }
@@ -4680,7 +4722,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 let coverHash = item.coverHash || item.hash;
 
                 // When favorites-only is active, use cached most recent favorited item as cover
-                if (favoritesCoverCache.size > 0 && favoritesCoverCache.has(album)) {
+                if (
+                  favoritesCoverCache.size > 0 &&
+                  favoritesCoverCache.has(album)
+                ) {
                   coverHash = favoritesCoverCache.get(album);
                 }
 
@@ -4758,21 +4803,23 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               .finally(() => {
                 // Favorites-only album filtering
                 if (window.localStorage.getItem("favoritesOnly") === "true") {
-                  console.log("[Favorites] Filtering albums to show only those with favorites");
+                  console.log(
+                    "[Favorites] Filtering albums to show only those with favorites",
+                  );
 
                   // Extract VR/Flash favorite hashes into Sets for fast lookup
                   const vrFavHashes = new Set();
                   if (window.vrFavorites) {
-                    window.vrFavorites.forEach(fav => {
-                      const hash = typeof fav === 'string' ? fav : fav.hash;
+                    window.vrFavorites.forEach((fav) => {
+                      const hash = typeof fav === "string" ? fav : fav.hash;
                       if (hash) vrFavHashes.add(hash);
                     });
                   }
 
                   const flashFavHashes = new Set();
                   if (window.flashFavorites) {
-                    window.flashFavorites.forEach(fav => {
-                      const hash = typeof fav === 'string' ? fav : fav.hash;
+                    window.flashFavorites.forEach((fav) => {
+                      const hash = typeof fav === "string" ? fav : fav.hash;
                       if (hash) flashFavHashes.add(hash);
                     });
                   }
@@ -4781,9 +4828,11 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                   const favHashes = new Set();
                   const originalAlbumsWithFavorites = new Set();
                   if (window.alldata) {
-                    const favoriteItems = window.alldata.filter(item => item.album === "Favorites");
+                    const favoriteItems = window.alldata.filter(
+                      (item) => item.album === "Favorites",
+                    );
 
-                    favoriteItems.forEach(item => {
+                    favoriteItems.forEach((item) => {
                       favHashes.add(item.hash);
 
                       // Check multiple ways to find original album
@@ -4799,7 +4848,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                       }
                       // Method 3: Find matching non-favorite item with same hash
                       else {
-                        const nonFavMatch = window.alldata.find(i => i.hash === item.hash && i.album !== "Favorites");
+                        const nonFavMatch = window.alldata.find(
+                          (i) =>
+                            i.hash === item.hash && i.album !== "Favorites",
+                        );
                         if (nonFavMatch) {
                           originalAlbum = nonFavMatch.album;
                         }
@@ -4810,7 +4862,9 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                         // Also add all parent albums in the hierarchy
                         const parts = originalAlbum.split("---");
                         for (let i = 0; i < parts.length; i++) {
-                          originalAlbumsWithFavorites.add(parts.slice(0, i + 1).join("---"));
+                          originalAlbumsWithFavorites.add(
+                            parts.slice(0, i + 1).join("---"),
+                          );
                         }
                       }
                     });
@@ -4818,13 +4872,18 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
                   // Count albums
                   const totalAlbums = $(".gallerypicture").length;
-                  console.log("[Favorites] Total albums before filtering:", totalAlbums);
+                  console.log(
+                    "[Favorites] Total albums before filtering:",
+                    totalAlbums,
+                  );
                   let keptCount = 0;
                   let removedCount = 0;
 
                   // Remove albums that don't have favorites
-                  $(".gallerypicture").each(function() {
-                    const albumHash = $(this).find("img.openalbum").data("hash");
+                  $(".gallerypicture").each(function () {
+                    const albumHash = $(this)
+                      .find("img.openalbum")
+                      .data("hash");
                     if (albumHash) {
                       const parts = albumHash.split(delim);
                       const albumName = decodeURI(atob(parts[0]));
@@ -4838,11 +4897,18 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                         reason = "is Favorites album";
                       }
                       // Keep VR album and VR sub-albums if they contain favorited items
-                      else if ((albumName === "VR" || albumName.startsWith("VR---")) && vrFavHashes.size > 0) {
+                      else if (
+                        (albumName === "VR" || albumName.startsWith("VR---")) &&
+                        vrFavHashes.size > 0
+                      ) {
                         if (albumName.includes("---") && window.alldata) {
                           // For sub-albums, check if any VR items in this album are favorited
-                          const albumItems = window.alldata.filter(item => item.album === albumName && item.vr === 1);
-                          const favorited = albumItems.filter(item => vrFavHashes.has(item.hash));
+                          const albumItems = window.alldata.filter(
+                            (item) => item.album === albumName && item.vr === 1,
+                          );
+                          const favorited = albumItems.filter((item) =>
+                            vrFavHashes.has(item.hash),
+                          );
                           shouldKeep = favorited.length > 0;
                           reason = `VR sub-album with ${favorited.length}/${albumItems.length} favorites`;
                         } else {
@@ -4851,11 +4917,20 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                         }
                       }
                       // Keep Flash album and Flash sub-albums if they contain favorited items
-                      else if ((albumName === "Flash" || albumName.startsWith("Flash---")) && flashFavHashes.size > 0) {
+                      else if (
+                        (albumName === "Flash" ||
+                          albumName.startsWith("Flash---")) &&
+                        flashFavHashes.size > 0
+                      ) {
                         if (albumName.includes("---") && window.alldata) {
                           // For sub-albums, check if any Flash items in this album are favorited
-                          const albumItems = window.alldata.filter(item => item.album === albumName && item.flash === 1);
-                          const favorited = albumItems.filter(item => flashFavHashes.has(item.hash));
+                          const albumItems = window.alldata.filter(
+                            (item) =>
+                              item.album === albumName && item.flash === 1,
+                          );
+                          const favorited = albumItems.filter((item) =>
+                            flashFavHashes.has(item.hash),
+                          );
                           shouldKeep = favorited.length > 0;
                           reason = `Flash sub-album with ${favorited.length}/${albumItems.length} favorites`;
                         } else {
@@ -4868,15 +4943,22 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                         // This album has favorited items (extracted from Favorites album filenames)
                         shouldKeep = true;
                         reason = "original album with favorites";
-                      }
-                      else if (window.alldata) {
-                        const albumItems = window.alldata.filter(item => item.album === albumName);
-                        const favCount = albumItems.filter(item => favHashes.has(item.hash)).length;
+                      } else if (window.alldata) {
+                        const albumItems = window.alldata.filter(
+                          (item) => item.album === albumName,
+                        );
+                        const favCount = albumItems.filter((item) =>
+                          favHashes.has(item.hash),
+                        ).length;
                         shouldKeep = favCount > 0;
-                        reason = shouldKeep ? `regular album with ${favCount} favorites` : `regular album with no favorites (${albumItems.length} total items)`;
+                        reason = shouldKeep
+                          ? `regular album with ${favCount} favorites`
+                          : `regular album with no favorites (${albumItems.length} total items)`;
                       }
 
-                      console.log(`[Favorites] Album "${albumName}": ${shouldKeep ? "KEEP" : "REMOVE"} (${reason})`);
+                      console.log(
+                        `[Favorites] Album "${albumName}": ${shouldKeep ? "KEEP" : "REMOVE"} (${reason})`,
+                      );
 
                       if (!shouldKeep) {
                         $(this).remove();
@@ -4887,7 +4969,9 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                     }
                   });
 
-                  console.log(`[Favorites] Filtering complete: kept ${keptCount}, removed ${removedCount} albums`);
+                  console.log(
+                    `[Favorites] Filtering complete: kept ${keptCount}, removed ${removedCount} albums`,
+                  );
                 }
 
                 processLazyLoad();
@@ -5011,13 +5095,21 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               // Set the current VR index to match the opened video
               if (window.vrGalleryItems && window.vrGalleryItems.length > 0) {
                 const currentIndex = window.vrGalleryItems.findIndex(
-                  (item) => item.url === playerUrl
+                  (item) => item.url === playerUrl,
                 );
                 if (currentIndex !== -1) {
                   window.currentVRIndex = currentIndex;
-                  console.log("[VR] Set current index to:", currentIndex, "for video:", playerUrl);
+                  console.log(
+                    "[VR] Set current index to:",
+                    currentIndex,
+                    "for video:",
+                    playerUrl,
+                  );
                 } else {
-                  console.warn("[VR] Could not find video in gallery items:", playerUrl);
+                  console.warn(
+                    "[VR] Could not find video in gallery items:",
+                    playerUrl,
+                  );
                   window.currentVRIndex = 0;
                 }
               }
