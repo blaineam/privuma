@@ -553,7 +553,7 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         // Save full VR favorites data (not just hashes)
         $vrFavoritesFullJson = json_encode($vrFavoritesFullData);
         $opsNoEncodeNoPrefix->file_put_contents('fa/favorites_vr.json', $vrFavoritesFullJson);
-        $opsNoEncodeNoPrefix->file_put_contents($prefix . '/favorites_vr.json', $vrFavoritesFullJson);
+        $opsNoEncodeNoPrefix->file_put_contents('pr/favorites_vr.json', $vrFavoritesFullJson);
         echo PHP_EOL . 'Synced VR favorites JSON with full data: ' . count($vrFavoritesFullData) . ' items';
 
         // Clean up removed VR favorites from fa/vr/ (keep originals in vr/ intact)
@@ -669,7 +669,7 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         // Save full Flash favorites data (not just hashes)
         $flashFavoritesFullJson = json_encode($flashFavoritesFullData);
         $opsNoEncodeNoPrefix->file_put_contents('fa/favorites_flash.json', $flashFavoritesFullJson);
-        $opsNoEncodeNoPrefix->file_put_contents($prefix . '/favorites_flash.json', $flashFavoritesFullJson);
+        $opsNoEncodeNoPrefix->file_put_contents('pr/favorites_flash.json', $flashFavoritesFullJson);
         echo PHP_EOL . 'Synced Flash favorites JSON with full data: ' . count($flashFavoritesFullData) . ' items';
 
         // Clean up removed Flash favorites from fa/flash/ (keep originals in flash/ intact)

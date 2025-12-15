@@ -624,6 +624,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           let cacheKey = resource;
           if (cacheKey.startsWith("pr/")) {
             cacheKey = cacheKey.substring(3);
+          } else if (cacheKey.startsWith("un/")) {
+            cacheKey = cacheKey.substring(3);
           } else if (cacheKey.startsWith("fa/")) {
             cacheKey = cacheKey.substring(3);
           } else if (cacheKey.startsWith("crypt/")) {
@@ -819,6 +821,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             let baseResource = resource;
             if (baseResource.startsWith("pr/")) {
               baseResource = baseResource.substring(3);
+            } else if (baseResource.startsWith("un/")) {
+              baseResource = baseResource.substring(3);
             } else if (baseResource.startsWith("fa/")) {
               baseResource = baseResource.substring(3);
             } else if (baseResource.startsWith("crypt/")) {
@@ -864,6 +868,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                     url = usingRapiServe.length
                       ? `${usingRapiServe}/${pathConfig.path}`
                       : getBasePath() + pathConfig.path;
+                    url = url.replace("/un/un/","/un/");
+                    if (!url.includes(".js") && !url.includes(".json") && !url.includes(".txt")) {
+                        url = url.replace("/un/fa/", "/fa/");
+                    }
                   }
 
                   // HEAD request to check if file exists
@@ -892,6 +900,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                       this.useCrypt = true;
                     } else if (
                       pathConfig.path.startsWith("pr/") ||
+                      pathConfig.path.startsWith("un/") ||
                       pathConfig.path.startsWith("fa/")
                     ) {
                       this.usesPrFa = true;
@@ -975,6 +984,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                     encrypted: false,
                   });
                   unencryptedPaths.push({
+                    path: "un/" + baseResource,
+                    encrypted: false,
+                  });
+                  unencryptedPaths.push({
                     path: "fa/" + baseResource,
                     encrypted: false,
                   });
@@ -993,6 +1006,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               // Non-media files (JS, JSON, etc)
               unencryptedPaths.push({
                 path: "pr/" + baseResource,
+                encrypted: false,
+              });
+              unencryptedPaths.push({
+                path: "un/" + baseResource,
                 encrypted: false,
               });
               unencryptedPaths.push({
@@ -1023,6 +1040,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 encrypted: true,
               });
               encryptedPaths.push({
+                path: "un/" + baseResource,
+                encrypted: true,
+              });
+              encryptedPaths.push({
                 path: "fa/" + baseResource,
                 encrypted: true,
               });
@@ -1034,6 +1055,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               // Non-media files encrypted
               encryptedPaths.push({
                 path: "pr/" + baseResource,
+                encrypted: true,
+              });
+              encryptedPaths.push({
+                path: "un/" + baseResource,
                 encrypted: true,
               });
               encryptedPaths.push({
