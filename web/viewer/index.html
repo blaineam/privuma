@@ -4344,9 +4344,12 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
                   // Pre-compute VR favorites set for filtering during creation
                   const vrFavHashes = new Set();
-                  if (window.localStorage.getItem("favoritesOnly") === "true" && window.vrFavorites) {
-                    window.vrFavorites.forEach(fav => {
-                      const hash = typeof fav === 'string' ? fav : fav.hash;
+                  if (
+                    window.localStorage.getItem("favoritesOnly") === "true" &&
+                    window.vrFavorites
+                  ) {
+                    window.vrFavorites.forEach((fav) => {
+                      const hash = typeof fav === "string" ? fav : fav.hash;
                       if (hash) vrFavHashes.add(hash);
                     });
                   }
@@ -4382,13 +4385,15 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                               `<a class="gallerypicture flash-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}"><div class="img-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy" data-hash="${hash}" data-src="${uri}" data-resource="${uri}" loading="lazy" alt="" /></div></a>`,
                             )
                           : vr
-                            ? ((vrFavHashes.size === 0 || vrFavHashes.has(hash)) && window.vrGalleryItems.push({
-                                title: filename,
-                                thumbnail: uri,
-                                duration: duration || 0,
-                                url: videoResource,
-                                hash: hash,
-                              }),
+                            ? ((vrFavHashes.size === 0 ||
+                                vrFavHashes.has(hash)) &&
+                                window.vrGalleryItems.push({
+                                  title: filename,
+                                  thumbnail: uri,
+                                  duration: duration || 0,
+                                  url: videoResource,
+                                  hash: hash,
+                                }),
                               jQuery("#content").append(
                                 `<a class="gallerypicture vr-link" data-fancybox href="javascript:;" data-src="#inline-player" data-url="${videoResource}" ` +
                                   (duration
@@ -4559,10 +4564,20 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                       });
 
                       // Also filter window.vrGalleryItems array for WebXR gallery
-                      if (window.vrGalleryItems && window.vrGalleryItems.length > 0) {
+                      if (
+                        window.vrGalleryItems &&
+                        window.vrGalleryItems.length > 0
+                      ) {
                         const originalCount = window.vrGalleryItems.length;
-                        window.vrGalleryItems = window.vrGalleryItems.filter(item => vrFavHashes.has(item.hash));
-                        console.log("[Favorites] Filtered vrGalleryItems from", originalCount, "to", window.vrGalleryItems.length);
+                        window.vrGalleryItems = window.vrGalleryItems.filter(
+                          (item) => vrFavHashes.has(item.hash),
+                        );
+                        console.log(
+                          "[Favorites] Filtered vrGalleryItems from",
+                          originalCount,
+                          "to",
+                          window.vrGalleryItems.length,
+                        );
                       }
 
                       // Remove non-favorite Flash media
