@@ -4080,7 +4080,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 (a) => a.album === album,
               );
               if (albumInfo && albumInfo.hash) {
-                const albumJsonPath = `pr/albums/album_${albumInfo.hash}.json`;
+                const albumJsonPath = `albums/album_${albumInfo.hash}.json`;
                 console.log(
                   `Loading album on-demand: ${album} (path: ${albumJsonPath})`,
                 );
@@ -4725,7 +4725,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 }
 
                 let filenameParts = filename.split(".");
-                let extension = filenameParts.pop() || "jpg";
+                let extension = filenameParts.pop() || item.coverExt || "jpg";
                 let photo = item["filename"];
                 let isVideo = [
                   ".mpg",
