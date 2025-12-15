@@ -4693,7 +4693,12 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                   (a.time || "") < (b.time || "") ? 1 : -1,
                 );
                 if (sorted.length > 0) {
-                  favoritesCoverCache.set(album, sorted[0].hash + "||" + sorted[0].filename.split(".").at(-1));
+                  favoritesCoverCache.set(
+                    album,
+                    sorted[0].hash +
+                      "||" +
+                      sorted[0].filename.split(".").at(-1),
+                  );
                   // Also cache for parent albums
                   const parts = album.split("---");
                   for (let i = 0; i < parts.length - 1; i++) {
@@ -4703,7 +4708,12 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                       (sorted[0].time || "") >
                         (albumFavorites.get(parentAlbum)?.[0]?.time || "")
                     ) {
-                      favoritesCoverCache.set(parentAlbum, sorted[0].hash + "||" + sorted[0].filename.split(".").at(-1));
+                      favoritesCoverCache.set(
+                        parentAlbum,
+                        sorted[0].hash +
+                          "||" +
+                          sorted[0].filename.split(".").at(-1),
+                      );
                     }
                   }
                 }
@@ -4726,9 +4736,9 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
                 // Use coverHash for album cover images (from albums.json), fallback to hash
                 let coverHash = item.coverHash || item.hash;
-                
+
                 let coverExt = item.coverExt;
-                
+
                 // When favorites-only is active, use cached most recent favorited item as cover
                 if (
                   favoritesCoverCache.size > 0 &&
@@ -4738,7 +4748,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                   coverHash = cache[0];
                   coverExt = cache[1];
                 }
-                
+
                 let filenameParts = filename.split(".");
                 let extension = filenameParts.pop() || coverExt || "jpg";
                 let photo = item["filename"];
