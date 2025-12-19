@@ -4165,17 +4165,19 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
             // The rest of showAlbum continues here
             function continueShowAlbum() {
+              // Clear existing content before rendering to prevent duplicates
+              // and ensure proper sort order (especially when album data loads after favorites)
+              jQuery("#content").empty();
+
               $("body").addClass("album");
               let mediaFilters = loadMediaTypeSelections();
-              res.sort((a, b) => {
+              res = res.sort((a, b) => {
                 // Defensive check for missing filename
                 if (!a["filename"] || !b["filename"]) {
                   return (!a["filename"] ? 1 : 0) - (!b["filename"] ? 1 : 0);
                 }
-                let aext = a["filename"].split(".").pop();
-                let bext = b["filename"].split(".").pop();
-                let atime = a["time"];
-                let btime = b["time"];
+
+                // Comic albums sort by filename
                 if (
                   album.toLowerCase().includes("comic") &&
                   !album.toLowerCase().includes("-comic")
@@ -4186,37 +4188,45 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                   });
                 }
 
-                if (aext == "gif" && bext != "gif") {
-                  return -1;
+                // Get lowercase extensions for case-insensitive comparison
+                let aext = a["filename"].split(".").pop().toLowerCase();
+                let bext = b["filename"].split(".").pop().toLowerCase();
+
+                // Determine type priorities: gif=1, video=2, photo=3
+                let aPriority = 3; // default to photo
+                let bPriority = 3;
+
+                if (aext === "gif") {
+                  aPriority = 1;
+                } else if (aext === "webm" || aext === "mp4") {
+                  aPriority = 2;
                 }
 
-                if (bext == "gif" && aext != "gif") {
-                  return 1;
+                if (bext === "gif") {
+                  bPriority = 1;
+                } else if (bext === "webm" || bext === "mp4") {
+                  bPriority = 2;
                 }
 
-                if (
-                  ["webm", "mp4"].includes(aext) &&
-                  !["webm", "mp4"].includes(bext)
-                ) {
-                  return -1;
+                // Always sort by type priority first (gif > video > photo)
+                if (aPriority !== bPriority) {
+                  return aPriority - bPriority;
                 }
 
-                if (
-                  ["webm", "mp4"].includes(bext) &&
-                  !["webm", "mp4"].includes(aext)
-                ) {
-                  return 1;
-                }
-
+                // Within same type, apply secondary sorting:
+                // 1. Duration (if enabled)
+                // 2. Score (if enabled)
+                // 3. Timestamp (default)
                 if (mediaFilters["sortbyduration"]) {
-                  return b["duration"] - a["duration"];
+                  return (b["duration"] || 0) - (a["duration"] || 0);
                 }
 
                 if (mediaFilters["sortbyscore"]) {
-                  return b["score"] - a["score"];
+                  return (b["score"] || 0) - (a["score"] || 0);
                 }
 
-                return b["time"] - a["time"];
+                // Default: sort by timestamp (descending - newest first)
+                return (b["time"] || 0) - (a["time"] || 0);
               });
 
               function drawTags() {
@@ -4345,6 +4355,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                       item.duration > 0 ? item.duration : 0,
                       item.sound > -40 ? 1 : 0,
                       item.score ?? 0,
+                      item.time || 0,
+                      extension.toLowerCase(),
                     ]);
                   }
                   if (("photo" == kind || "all" == kind) && !isVideo) {
@@ -4363,6 +4375,9 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                       item.flash === 1,
                       0,
                       0,
+                      item.score ?? 0,
+                      item.time || 0,
+                      extension.toLowerCase(),
                     ]);
                   }
                 }),
@@ -4372,18 +4387,26 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                   window.vrGalleryItems = [];
 
                   // Pre-compute VR favorites set for filtering during creation
+                  // IMPORTANT: Only include favorites that are actually in the current album (res)
                   const vrFavHashes = new Set();
                   if (
                     window.localStorage.getItem("favoritesOnly") === "true" &&
                     window.vrFavorites
                   ) {
+                    // Get hashes of VR items in current album
+                    const currentAlbumHashes = new Set(res.filter(item => item.vr === 1).map(item => item.hash));
+
                     window.vrFavorites.forEach((fav) => {
                       const hash = typeof fav === "string" ? fav : fav.hash;
-                      if (hash) vrFavHashes.add(hash);
+                      // Only add to filter set if this favorite is in the current album
+                      if (hash && currentAlbumHashes.has(hash)) {
+                        vrFavHashes.add(hash);
+                      }
                     });
                   }
 
-                  results
+                  // Process and deduplicate results
+                  const processedItems = results
                     .filter((result) => typeof result.value !== "undefined")
                     .map((result) => result.value)
                     .reduce((acc, d) => {
@@ -4392,8 +4415,70 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                         acc.push(d);
                       }
                       return acc;
-                    }, [])
-                    .forEach(
+                    }, []);
+
+                  // Sort the processed items
+                  const sortedItems = processedItems.sort((a, b) => {
+                      // a and b are arrays: [uri, isVideo, filename, video, meta, datatype, videoResource, hash, vr, flash, duration, sound, score, time, extension]
+                      const aExt = a[14]; // extension (lowercase)
+                      const bExt = b[14];
+                      // Parse timestamps to numbers for proper comparison (strings like "2025-05-13 01:45:07")
+                      const aTime = a[13] ? (typeof a[13] === 'string' ? new Date(a[13]).getTime() : a[13]) : 0;
+                      const bTime = b[13] ? (typeof b[13] === 'string' ? new Date(b[13]).getTime() : b[13]) : 0;
+                      const aDuration = a[10] || 0;
+                      const bDuration = b[10] || 0;
+                      const aScore = a[12] || 0;
+                      const bScore = b[12] || 0;
+
+                      // Debug logging (remove after testing)
+                      if (typeof aExt === 'undefined' || typeof bExt === 'undefined') {
+                        console.warn('Missing extension data:', { aExt, bExt, a, b });
+                      }
+
+                      // Determine type priorities: gif=1, video=2, photo=3
+                      let aPriority = 3; // default to photo
+                      let bPriority = 3;
+
+                      if (aExt === "gif") {
+                        aPriority = 1;
+                      } else if (aExt === "webm" || aExt === "mp4") {
+                        aPriority = 2;
+                      }
+
+                      if (bExt === "gif") {
+                        bPriority = 1;
+                      } else if (bExt === "webm" || bExt === "mp4") {
+                        bPriority = 2;
+                      }
+
+                      // Always sort by type priority first (gif > video > photo)
+                      if (aPriority !== bPriority) {
+                        return aPriority - bPriority;
+                      }
+
+                      // Within same type, apply secondary sorting
+                      if (mediaFilters["sortbyduration"]) {
+                        return bDuration - aDuration;
+                      }
+
+                      if (mediaFilters["sortbyscore"]) {
+                        return bScore - aScore;
+                      }
+
+                      // Default: sort by timestamp (descending - newest first)
+                      return bTime - aTime;
+                    });
+
+                  // Log first few items to verify sort
+                  console.log('[Sort] First 5 items:', sortedItems.slice(0, 5).map(item => ({
+                    filename: item[2],
+                    ext: item[14],
+                    time: item[13],
+                    hash: item[7]
+                  })));
+
+                  // Render the sorted items
+                  sortedItems.forEach(
                       ([
                         uri,
                         isVideo,
@@ -4408,6 +4493,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                         duration,
                         sound,
                         score,
+                        time,
+                        extension,
                       ]) =>
                         flash
                           ? jQuery("#content").append(
@@ -4508,20 +4595,24 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                   if (window.localStorage.getItem("favoritesOnly") === "true") {
                     console.log("[Favorites] Filtering to show only favorites");
 
-                    // Collect favorite hashes for regular media
+                    // Collect favorite hashes for regular media from CURRENT ALBUM ONLY
                     const favHashes = new Set();
                     if (window.alldata) {
+                      // Get hashes of items that are both in current album AND in Favorites
+                      const currentAlbumHashes = new Set(res.map(item => item.hash));
                       window.alldata
-                        .filter((item) => item.album === "Favorites")
+                        .filter((item) => item.album === "Favorites" && currentAlbumHashes.has(item.hash))
                         .forEach((item) => favHashes.add(item.hash));
                     }
 
-                    // Extract VR/Flash favorite hashes
+                    // Extract VR/Flash favorite hashes from CURRENT ALBUM ONLY
+                    const currentAlbumHashes = new Set(res.map(item => item.hash));
+
                     const vrFavHashes = new Set();
                     if (window.vrFavorites) {
                       window.vrFavorites.forEach((fav) => {
                         const hash = typeof fav === "string" ? fav : fav.hash;
-                        if (hash) vrFavHashes.add(hash);
+                        if (hash && currentAlbumHashes.has(hash)) vrFavHashes.add(hash);
                       });
                     }
 
@@ -4529,7 +4620,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                     if (window.flashFavorites) {
                       window.flashFavorites.forEach((fav) => {
                         const hash = typeof fav === "string" ? fav : fav.hash;
-                        if (hash) flashFavHashes.add(hash);
+                        if (hash && currentAlbumHashes.has(hash)) flashFavHashes.add(hash);
                       });
                     }
 
