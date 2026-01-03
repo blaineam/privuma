@@ -4424,6 +4424,17 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                   // Sort the processed items
                   const sortedItems = processedItems.sort((a, b) => {
                     // a and b are arrays: [uri, isVideo, filename, video, meta, datatype, videoResource, hash, vr, flash, duration, sound, score, time, extension]
+                    // Comic albums sort by filename
+                    if (
+                      album.toLowerCase().includes("comic") &&
+                      !album.toLowerCase().includes("-comic")
+                    ) {
+                      return a[2].localeCompare(b[2], undefined, {
+                        numeric: true,
+                        sensitivity: "base",
+                      });
+                    }                    
+                    
                     const aExt = a[14]; // extension (lowercase)
                     const bExt = b[14];
                     // Parse timestamps to numbers for proper comparison (strings like "2025-05-13 01:45:07")
