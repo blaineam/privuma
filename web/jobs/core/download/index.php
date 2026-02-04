@@ -133,7 +133,9 @@ $oppositedata = str_replace('`', '', json_encode($oppositestmt->fetchAll(PDO::FE
 
 $previouslyDownloadedMedia = array_flip(
     array_map(
-        function ($item) { return trim($item, "\/"); },
+        function ($item) {
+            return trim($item, "\/");
+        },
         array_column(
             $ops->scandir('', true, true, null, false, true, true, true),
             'Name'
@@ -344,7 +346,9 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
     $favoritesJson = json_decode($favorites, true);
     $existingFavoritesPaths = array_flip(
         array_map(
-            function ($item) { return trim($item, "\/"); },
+            function ($item) {
+                return trim($item, "\/");
+            },
             array_column(
                 $opsFavorites->scandir('', true, true, null, false, true, true, true),
                 'Path'
@@ -765,7 +769,9 @@ $dlData = array_filter($dlData, function ($item) use ($previouslyDownloadedMedia
 
 $existingFavorites = array_flip(
     array_map(
-        function ($item) { return trim($item, "\/"); },
+        function ($item) {
+            return trim($item, "\/");
+        },
         array_column(
             $opsFavorites->scandir('', true, true, null, false, true, true, true),
             'Name'

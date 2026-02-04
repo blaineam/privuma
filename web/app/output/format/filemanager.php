@@ -1141,7 +1141,9 @@ if (isset($_GET['upload']) && !FM_READONLY) {
     {
         $extArr = explode(',', FM_UPLOAD_EXTENSION);
         if (FM_UPLOAD_EXTENSION && $extArr) {
-            array_walk($extArr, function (&$x) {$x = ".$x";});
+            array_walk($extArr, function (&$x) {
+                $x = ".$x";
+            });
             return implode(',', $extArr);
         }
         return '';
