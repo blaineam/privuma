@@ -20,7 +20,7 @@
     html, body{margin: 0;padding: 0;height: 100%;width: 100%;background-color: #000000;color:#ffffff;}.gallerypicture {width: calc(100%/4)!important;display: inline-block;height: 18.75vw!important;position: relative;}.gallerypicture img {
       image-rendering: pixelated;
       image-rendering: -moz-crisp-edges;
-      image-rendering: crisp-edges;object-fit: cover;cursor: pointer;object-position: 50% 50%;width: 100%;height: 100%;transition: transform .5s ease-in-out,opacity .5s ease-in-out;}.gallerypicture img:hover {transform: scale(1.2);}.gallerypicture .img-wrapper{overflow:hidden; width:100%; height:100%;display:inline-block;}.gallerypicture .album-menu{display: block;position: absolute;top:0px;width: 100%;background-color: rgba(0, 0, 0, 0.85);height: auto;line-height: 20px;font-size: 18px;padding: 4px 0px 4px 4px;color: white;}.logout{position: fixed;display: block;top:5px;right: 5px;width: auto;color: white;z-index: 5;background-color: #333333;}h1,h3{margin-top: 50px;}img {border: 0;}img:not([src]) {visibility: hidden;}@media screen and (max-width: 1200px) {.gallerypicture {width: calc(100%/3)!important;height: 25vw!important;}}@media screen and (max-width: 992px) {.gallerypicture {width: calc(100%/2)!important;height: 37.5vw!important;}}
+      image-rendering: crisp-edges;object-fit: cover;cursor: pointer;object-position: 50% 50%;width: 100%;height: 100%;transition: transform .5s ease-in-out,opacity .5s ease-in-out;}.gallerypicture img:hover {transform: scale(1.2);}.gallerypicture .img-wrapper{overflow:hidden; width:100%; height:100%;display:inline-block;}.gallerypicture .album-menu{display: block;position: absolute;top:0px;width: 100%;background-color: var(--glass-bg);height: auto;line-height: 20px;font-size: 18px;padding: 4px 0px 4px 4px;color: var(--text-color);}.logout{position: fixed;display: block;top:5px;right: 5px;width: auto;color: var(--text-color);z-index: 5;background-color: #333333;}h1,h3{margin-top: 50px;}img {border: 0;}img:not([src]) {visibility: hidden;}@media screen and (max-width: 1200px) {.gallerypicture {width: calc(100%/3)!important;height: 25vw!important;}}@media screen and (max-width: 992px) {.gallerypicture {width: calc(100%/2)!important;height: 37.5vw!important;}}
     #logout {
         opacity: 0;
         z-index: 3;
@@ -53,7 +53,7 @@
     text-align: center;
     }
     #media-types li.active {
-    background-color: #333333;
+    background-color: var(--glass-border-hover);
     }
     #tags {
       width: 100%;
@@ -151,7 +151,7 @@
     }
     
     .progress-bar {
-      height: ;
+      height: 2px;
       background: #007bff;
       width: 0;
       transition: width 0.3s ease-in-out;
@@ -184,7 +184,7 @@
       padding: 5px 10px;
       background-color: rgba(0,0,0,0.75);
       border-radius: 7.5px;
-      color: white;
+      color: var(--text-color);
     }
     .fancybox-bg {
         background: rgba(15, 15, 30, 0.0) !important;
@@ -235,22 +235,24 @@
       --glass-transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       --page-bg: rgb(0, 0, 0);
       --text-color: rgb(255, 255, 255);
+      --text-color-faded: rgb(200, 200, 200);
     }
 
     /* Light Mode overrides */
     @media (prefers-color-scheme: light) {
       :root {
-        --glass-bg: rgba(255, 255, 255, 0.25);
+        --glass-bg: rgba(255, 255, 255, 0.65);
         --glass-bg-light: rgba(255, 255, 255, 0.35);
         --glass-bg-hover: rgba(255, 255, 255, 0.4);
-        --glass-border: rgba(255, 255, 255, 0.18);
-        --glass-border-hover: rgba(255, 255, 255, 0.3);
+        --glass-border: rgba(0, 0, 0, 0.18);
+        --glass-border-hover: rgba(0, 0, 0, 0.3);
         --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
         --glass-shadow-hover: 0 12px 40px rgba(31, 38, 135, 0.25);
         --glass-accent: rgba(0, 150, 200, 0.9);
         --glass-accent-glow: 0 0 20px rgba(0, 150, 200, 0.35);
         --page-bg: rgb(240, 240, 245);
         --text-color: rgb(22, 22, 22);
+        --text-color-faded: rgb(55, 55, 55);
       }
 
       body {
@@ -277,14 +279,14 @@
       .dropdown-content,
       .dropdown-menu,
       .album-menu {
-        background: rgba(255, 255, 255, 0.85) !important;
+        background: var(--glass-bg) !important;
       }
 
       .dropdown-content a:hover,
       .dropdown-content li:hover,
       .dropdown-menu a:hover,
       .dropdown-menu li:hover {
-        background: rgba(100, 100, 100, 0.15) !important;
+        background: var(--glass-bg-hover) !important;
       }
     }
 
@@ -312,32 +314,32 @@
       background: rgba(255, 255, 255, 0.06) !important;
       backdrop-filter: blur(10px) !important;
       -webkit-backdrop-filter: blur(10px) !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border: 1px solid var(--glass-bg-hover) !important;
       border-radius: 50px !important;
-      color: #fff !important;
+      color: var(--text-color) !important;
       transition: var(--glass-transition) !important;
       padding: 8px 16px !important;
     }
 
     #searchInput:focus {
-      background: rgba(255, 255, 255, 0.1) !important;
+      background: var(--glass-bg) !important;
       border-color: var(--glass-accent) !important;
       box-shadow: var(--glass-accent-glow) !important;
       outline: none !important;
     }
 
     #searchInput::placeholder {
-      color: rgba(255, 255, 255, 0.5) !important;
+      color: var(--text-color-faded) !important;
     }
 
     #searchBox .btn {
-      background: rgba(255, 255, 255, 0.08) !important;
+      background: var(--glass-border) !important;
       backdrop-filter: blur(12px) saturate(150%) !important;
       -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
       border: 1px solid var(--glass-border) !important;
       border-radius: 50% !important;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
-      color: rgba(255, 255, 255, 0.9) !important;
+      color: var(--text-color) !important;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
       width: 32px !important;
       height: 32px !important;
@@ -349,7 +351,7 @@
     }
 
     #searchBox .btn:hover {
-      background: rgba(255, 255, 255, 0.15) !important;
+      background: var(--glass-bg-hover) !important;
       border-color: var(--glass-accent) !important;
       box-shadow: var(--glass-accent-glow) !important;
       transform: scale(1.1) !important;
@@ -368,7 +370,7 @@
       -webkit-backdrop-filter: blur(12px) !important;
       border: 1px solid rgba(255, 51, 102, 0.3) !important;
       border-radius: 50% !important;
-      color: #fff !important;
+      color: var(--text-color) !important;
       transition: var(--glass-transition) !important;
       width: 24px !important;
       height: 24px !important;
@@ -392,7 +394,7 @@
 
     /* Album menu - blur only, no border/rounded corners */
     .album-menu {
-      background: rgba(15, 15, 30, 0.8) !important;
+      background: var(--glass-bg);
       backdrop-filter: var(--glass-blur) !important;
       -webkit-backdrop-filter: var(--glass-blur) !important;
       border: none !important;
@@ -404,7 +406,7 @@
     .album-menu li,
     .album-menu a {
       background: transparent !important;
-      color: #fff !important;
+      color: var(--text-color) !important;
       transition: var(--glass-transition) !important;
       border-radius: 0 !important;
       padding: 10px 20px !important;
@@ -412,7 +414,7 @@
 
     .album-menu li:hover,
     .album-menu a:hover {
-      background: rgba(255, 255, 255, 0.1) !important;
+      background: var(--glass-bg) !important;
     }
 
     /* Dropdown button and span - glassmorphic circles, smaller for padding */
@@ -423,7 +425,7 @@
       -webkit-backdrop-filter: blur(12px) !important;
       border: 1px solid var(--glass-border) !important;
       border-radius: 50% !important;
-      color: #fff !important;
+      color: var(--text-color) !important;
       width: 28px !important;
       height: 28px !important;
       min-width: 28px !important;
@@ -450,7 +452,7 @@
     /* Dropdown content menu - glassmorphic */
     .dropdown-content,
     .dropdown-menu {
-      background: rgba(15, 15, 30, 0.9) !important;
+      background: var(--glass-bg) !important;
       backdrop-filter: var(--glass-blur) !important;
       -webkit-backdrop-filter: var(--glass-blur) !important;
       border: 1px solid var(--glass-border) !important;
@@ -467,7 +469,7 @@
     .dropdown-menu a,
     .dropdown-menu li {
       background: transparent !important;
-      color: #fff !important;
+      color: var(--text-color) !important;
       transition: background 0.2s ease !important;
       border-radius: var(--glass-radius-sm) !important;
       padding: 4px 10px !important;
@@ -509,7 +511,7 @@
     .dropdown-content .openalbum:hover,
     .dropdown-menu a:hover,
     .dropdown-menu li:hover {
-      background: rgba(255, 255, 255, 0.15) !important;
+      background: var(--glass-bg-hover) !important;
     }
 
     /* showAlbum view - pill shaped searchbox */
@@ -539,12 +541,12 @@
     }
 
     #tags li {
-      background: rgba(255, 255, 255, 0.1) !important;
+      background: var(--glass-bg) !important;
       backdrop-filter: blur(10px) !important;
       -webkit-backdrop-filter: blur(10px) !important;
-      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      border: 1px solid var(--glass-bg-hover) !important;
       border-radius: 50px !important;
-      color: #fff !important;
+      color: var(--text-color) !important;
       transition: var(--glass-transition) !important;
       cursor: pointer;
     }
@@ -608,13 +610,13 @@
     }
 
     #media-types li:hover {
-      background: rgba(255, 255, 255, 0.15) !important;
+      background: var(--glass-border-hover) !important;
     }
 
     #media-types li.active {
-      background: rgba(255, 255, 255, 0.25) !important;
-      box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.15),
-                  0 0 8px rgba(255, 255, 255, 0.1) !important;
+      background: var(--glass-border-hover) !important;
+      box-shadow: inset 0 0 10px var(--glass-bg-hover),
+                  0 0 8px var(--glass-bg) !important;
     }
 
     #media-types hr {
@@ -648,7 +650,7 @@
 
     /* Fancybox Toolbar - Horizontal layout */
     .fancybox-toolbar {
-      background: rgba(255, 255, 255, 0.1) !important;
+      background: var(--glass-bg) !important;
       backdrop-filter: var(--glass-blur) !important;
       -webkit-backdrop-filter: var(--glass-blur) !important;
       border: 1px solid var(--glass-border) !important;
@@ -672,7 +674,7 @@
 
     /* Fancybox Buttons - Smaller, properly centered */
     .fancybox-button {
-      background: rgba(255, 255, 255, 0.08) !important;
+      background: var(--glass-border) !important;
       backdrop-filter: blur(12px) saturate(150%) !important;
       -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
       border: 1px solid var(--glass-border) !important;
@@ -694,7 +696,7 @@
       height: 16px !important;
       margin: 0 !important;
       padding: 0 !important;
-      color: rgba(255, 255, 255, 0.9) !important;
+      color: var(--text-color) !important;
       filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3)) !important;
     }
 
@@ -707,7 +709,7 @@
     }
 
     .fancybox-button:hover {
-      background: rgba(255, 255, 255, 0.15) !important;
+      background: var(--glass-bg-hover) !important;
       border-color: var(--glass-accent) !important;
       box-shadow: var(--glass-accent-glow) !important;
       transform: scale(1.1) !important;
@@ -734,7 +736,7 @@
     .fancybox-button--slideShow,
     .fancybox-button--share,
     .fancybox-button--thumbs {
-      background: rgba(255, 255, 255, 0.08) !important;
+      background: var(--glass-border) !important;
       backdrop-filter: blur(12px) saturate(150%) !important;
       -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
       border: 1px solid var(--glass-border) !important;
@@ -760,7 +762,7 @@
     .fancybox-button--slideShow:hover,
     .fancybox-button--share:hover,
     .fancybox-button--thumbs:hover {
-      background: rgba(255, 255, 255, 0.15) !important;
+      background: var(--glass-bg-hover) !important;
       border-color: var(--glass-accent) !important;
       box-shadow: var(--glass-accent-glow) !important;
       transform: scale(1.1) !important;
@@ -772,7 +774,7 @@
     .fancybox-button[data-fancybox-next],
     button[data-fancybox-prev],
     button[data-fancybox-next] {
-      background: rgba(255, 255, 255, 0.1) !important;
+      background: var(--glass-bg) !important;
       backdrop-filter: var(--glass-blur) !important;
       -webkit-backdrop-filter: var(--glass-blur) !important;
       border: 1px solid var(--glass-border) !important;
@@ -821,14 +823,14 @@
     }
 
     .fancybox-navigation .fancybox-button:hover {
-      background: rgba(255, 255, 255, 0.2) !important;
+      background: var(--glass-bg) !important;
       border-color: var(--glass-accent) !important;
       box-shadow: var(--glass-accent-glow), 0 2px 12px rgba(0, 0, 0, 0.25) !important;
     }
 
     /* Fancybox Infobar - Smaller pill with reduced vertical padding */
     .fancybox-infobar {
-      background: rgba(255, 255, 255, 0.1) !important;
+      background: var(--glass-bg) !important;
       backdrop-filter: var(--glass-blur) !important;
       -webkit-backdrop-filter: var(--glass-blur) !important;
       border: 1px solid var(--glass-border) !important;
@@ -883,10 +885,10 @@
     /* Expanded body gets CONTAINED glassmorphic blur */
     .fancybox-caption__body.expanded,
     .fancybox-caption__body:has(.collapsible:not(.collapsed)) {
-      background: rgba(255, 255, 255, 0.12) !important;
+      background: var(--glass-bg-hover) !important;
       backdrop-filter: blur(20px) saturate(180%) !important;
       -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      border: 1px solid var(--glass-bg) !important;
       border-radius: var(--glass-radius) !important;
       max-height: 50vh !important;
       overflow-y: auto !important;
@@ -925,13 +927,13 @@
     [class*="toggle-collapsible"],
     .fancybox-caption button,
     .fancybox-caption__body button {
-      background: rgba(255, 255, 255, 0.08) !important;
+      background: var(--glass-bg) !important;
       backdrop-filter: blur(12px) saturate(150%) !important;
       -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
       border: 1px solid var(--glass-border) !important;
       border-radius: 50px !important;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
-      color: rgba(255, 255, 255, 0.9) !important;
+      color: var(--text-color) !important;
       padding: 6px 14px !important;
       font-size: 12px !important;
       cursor: pointer !important;
@@ -959,7 +961,7 @@
     .toggle-collapsible:hover,
     .fancybox-caption button:hover,
     .fancybox-caption__body button:hover {
-      background: rgba(255, 255, 255, 0.15) !important;
+      background: var(--glass-bg-hover) !important;
       backdrop-filter: var(--glass-blur) !important;
       -webkit-backdrop-filter: var(--glass-blur) !important;
       border-color: var(--glass-border-hover) !important;
@@ -980,31 +982,16 @@
       text-shadow: 0 0 10px var(--glass-accent), 0 0 20px var(--glass-accent) !important;
     }
 
-    /* Expanded caption content - remove black backgrounds */
-    .fancybox-caption__body.expanded,
-    .fancybox-caption__body .collapsible-content,
-    .fancybox-caption__body [class*="collapsible"],
-    .fancybox-caption__body [class*="expanded"] {
-      background: transparent !important;
-      background-color: transparent !important;
-    }
-
-    .fancybox-caption__body.expanded *,
-    .fancybox-caption__body .collapsible-content * {
-      background: transparent !important;
-      background-color: transparent !important;
-    }
-
     /* Fancybox Thumbnails */
     .fancybox-thumbs {
-      background: rgba(15, 15, 30, 0.9) !important;
+      background: var(--glass-bg) !important;
       backdrop-filter: var(--glass-blur) !important;
       -webkit-backdrop-filter: var(--glass-blur) !important;
     }
 
     .fancybox-thumbs__list a {
       border-radius: var(--glass-radius-sm) !important;
-      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      border: 1px solid var(--glass-bg-hover) !important;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
       transition: var(--glass-transition) !important;
     }
@@ -1193,7 +1180,7 @@
       border-radius: 50% !important;
       width: 28px !important;
       height: 28px !important;
-      color: rgba(255, 255, 255, 0.9) !important;
+      color: var(--text-color) !important;
       cursor: pointer !important;
       transition: var(--glass-transition) !important;
       font-size: 0 !important;
@@ -1224,7 +1211,7 @@
       padding: 6px 14px !important;
       height: 28px !important;
       box-sizing: border-box !important;
-      color: rgba(255, 255, 255, 0.9) !important;
+      color: var(--text-color) !important;
       cursor: pointer !important;
       transition: var(--glass-transition) !important;
       font-size: 11px !important;
@@ -1243,7 +1230,7 @@
 
     #actionMenu option {
       background: rgba(30, 30, 50, 0.95) !important;
-      color: #fff !important;
+      color: var(--text-color) !important;
       padding: 8px !important;
     }
 
@@ -1258,7 +1245,7 @@
 
     /* Video.js Progress Bar */
     .video-js .vjs-progress-control .vjs-progress-holder {
-      background: rgba(255, 255, 255, 0.15) !important;
+      background: var(--glass-bg-hover) !important;
       border-radius: 4px !important;
     }
 
@@ -1269,13 +1256,13 @@
     }
 
     .video-js .vjs-load-progress {
-      background: rgba(255, 255, 255, 0.2) !important;
+      background: var(--glass-bg) !important;
       border-radius: 4px !important;
     }
 
     /* Video.js Volume Control */
     .video-js .vjs-volume-bar {
-      background: rgba(255, 255, 255, 0.15) !important;
+      background: var(--glass-bg-hover) !important;
       border-radius: 4px !important;
     }
 
@@ -1398,16 +1385,16 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: min(380px, 90vw);
+      width: min(300px, 90vw);
       height: auto;
       min-height: 180px;
-      background: rgba(255, 255, 255, 0.15) !important;
+      background: var(--glass-bg-hover) !important;
       backdrop-filter: blur(20px) saturate(180%) !important;
       -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.25) !important;
+      border: 1px solid var(--glass-bg) !important;
       border-radius: 20px !important;
       box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.25),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+                  inset 0 1px 0 var(--glass-bg) !important;
       z-index: -1;
       padding: 40px;
     }
@@ -1419,12 +1406,12 @@
     input#downloadPassword.form-control {
       all: unset !important;
       display: block !important;
-      background: rgba(255, 255, 255, 0.12) !important;
+      background: var(--glass-bg-hover) !important;
       backdrop-filter: blur(20px) saturate(180%) !important;
       -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-      border: 1px solid rgba(255, 255, 255, 0.25) !important;
+      border: 1px solid var(--glass-bg) !important;
       border-radius: 50px !important;
-      color: #fff !important;
+      color: var(--text-color) !important;
       transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2) !important;
       padding: 16px 24px !important;
       width: min(320px, 80vw) !important;
@@ -1432,7 +1419,7 @@
       font-size: 16px !important;
       font-family: inherit !important;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+                  inset 0 1px 0 var(--glass-bg-hover) !important;
       box-sizing: border-box !important;
       margin-bottom: 16px !important;
       text-align: center !important;
@@ -1449,7 +1436,7 @@
       border: 1px solid rgba(0, 212, 255, 0.6) !important;
       box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2),
                   0 8px 32px rgba(0, 212, 255, 0.3),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+                  inset 0 1px 0 var(--glass-bg) !important;
       outline: none !important;
       transform: scale(1.02) !important;
     }
@@ -1470,12 +1457,12 @@
     button#unlockBtn.btn.btn-primary {
       all: unset !important;
       display: inline-block !important;
-      background: rgba(255, 255, 255, 0.2) !important;
+      background: var(--glass-bg) !important;
       backdrop-filter: blur(20px) saturate(180%) !important;
       -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
       border: 1px solid rgba(255, 255, 255, 0.3) !important;
       border-radius: 50px !important;
-      color: #fff !important;
+      color: var(--text-color) !important;
       transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 2.2) !important;
       padding: 16px 48px !important;
       font-size: 14px !important;
@@ -1485,7 +1472,7 @@
       text-transform: uppercase !important;
       letter-spacing: 3px !important;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+                  inset 0 1px 0 var(--glass-bg) !important;
       min-width: 160px !important;
       text-align: center !important;
       -webkit-appearance: none !important;
@@ -1498,7 +1485,7 @@
       background: rgba(255, 255, 255, 0.3) !important;
       border: 1px solid rgba(255, 255, 255, 0.5) !important;
       box-shadow: 0 8px 32px rgba(31, 38, 135, 0.3),
-                  0 0 20px rgba(255, 255, 255, 0.15),
+                  0 0 20px var(--glass-bg-hover),
                   inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
       transform: translateY(-3px) scale(1.02) !important;
     }
@@ -1506,7 +1493,7 @@
     #unlockBtn:active,
     button#unlockBtn:active {
       transform: translateY(-1px) scale(0.98) !important;
-      background: rgba(255, 255, 255, 0.25) !important;
+      background: var(--glass-bg) !important;
     }
 
     #unlockBtn:focus,
@@ -1514,7 +1501,7 @@
       outline: none !important;
       box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.3),
                   0 4px 16px rgba(0, 0, 0, 0.2),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+                  inset 0 1px 0 var(--glass-bg) !important;
     }
 
     /* Stereo thumbnail cropping - show only left half for SBS/LR, top half for TB */
@@ -3106,7 +3093,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
     </div>
     <div id="logout" onclick="logout()">
       <svg
-        fill="#ffffff"
+        fill="currentColor"
         height="24px"
         width="24px"
         version="1.1"
@@ -3147,7 +3134,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           width="24px"
           height="24px"
           viewBox="0 0 24 24"
-          fill="none"
+          fill="currentColor"
           xmlns="http://www.w3.org/2000/svg"
         >
           <path
@@ -3173,7 +3160,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           width="20px"
           height="20px"
           viewBox="0 0 24 24"
-          fill="none"
+          fill="currentColor"
           xmlns="http://www.w3.org/2000/svg"
         >
           <path
@@ -3183,7 +3170,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
         </svg></button
       ><a class="btn btn-secondary trigger-collapsible" id="tags-toggle"
         ><svg
-          fill="None"
+          fill="currentColor"
           height="24px"
           width="24px"
           version="1.1"
@@ -3227,25 +3214,25 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             <g transform="matrix(1.11619,0,0,1.11619,-337.756,-1248.26)">
               <path
                 d="M1666.12,1145.19C1762.42,1145.19 1821.51,1398.16 1821.51,1398.16C1821.51,1398.16 2087.36,1397.72 2110.12,1467.78C2139.88,1559.36 1917.55,1693.74 1917.55,1693.74C1917.55,1693.74 2000.12,1946.43 1940.53,1989.73C1862.62,2046.33 1666.12,1876.41 1666.12,1876.41C1666.12,1876.41 1451.3,2033.03 1391.71,1989.73C1313.81,1933.13 1414.69,1693.74 1414.69,1693.74C1414.69,1693.74 1199.36,1537.83 1222.12,1467.78C1251.88,1376.19 1510.73,1398.16 1510.73,1398.16C1510.73,1398.16 1592.46,1145.19 1666.12,1145.19Z"
-                style="fill: white"
+                fill="currentColor"
               />
             </g>
             <g transform="matrix(0.575566,0,0,0.938068,-53.4881,711.775)">
               <path
                 d="M1982.51,190.388C1982.51,246.384 1908.41,291.845 1817.15,291.845L258.288,291.845C167.025,291.845 92.931,246.384 92.931,190.388C92.931,134.393 167.025,88.931 258.288,88.931L1817.15,88.931C1908.41,88.931 1982.51,134.393 1982.51,190.388Z"
-                style="fill: white"
+                fill="currentColor"
               />
             </g>
             <g transform="matrix(0.513422,0,0,0.938068,-47.713,329.173)">
               <path
                 d="M1982.51,190.388C1982.51,246.384 1899.45,291.845 1797.14,291.845L278.302,291.845C175.993,291.845 92.931,246.384 92.931,190.388C92.931,134.393 175.993,88.931 278.302,88.931L1797.14,88.931C1899.45,88.931 1982.51,134.393 1982.51,190.388Z"
-                style="fill: white"
+                fill="currentColor"
               />
             </g>
             <g transform="matrix(0.436467,0,0,0.938068,-40.5615,-53.4296)">
               <path
                 d="M1982.51,190.388C1982.51,246.384 1884.8,291.845 1764.45,291.845L310.985,291.845C190.638,291.845 92.931,246.384 92.931,190.388C92.931,134.393 190.638,88.931 310.985,88.931L1764.45,88.931C1884.8,88.931 1982.51,134.393 1982.51,190.388Z"
-                style="fill: white"
+                fill="currentColor"
               />
             </g>
           </g>
@@ -3256,7 +3243,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           width="30px"
           height="30px"
           viewBox="0 0 24 24"
-          fill="none"
+          fill="currentColor"
           xmlns="http://www.w3.org/2000/svg"
         >
           <g stroke-width="0" />
@@ -3266,14 +3253,14 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               fill-rule="evenodd"
               clip-rule="evenodd"
               d="M17 17C19.7614 17 22 14.7614 22 12C22 9.23858 19.7614 7 17 7C14.2386 7 12 9.23858 12 12C12 14.7614 14.2386 17 17 17ZM17.75 10C17.75 9.58579 17.4142 9.25 17 9.25C16.5858 9.25 16.25 9.58579 16.25 10V11.8462C16.25 12.0266 16.3151 12.201 16.4332 12.3374L17.4332 13.4912C17.7045 13.8042 18.1782 13.838 18.4912 13.5668C18.8042 13.2955 18.838 12.8218 18.5668 12.5088L17.75 11.5664V10Z"
-              fill="#ffffff"
+              fill="currentColor"
             />
             <g opacity="0.5">
               <path
                 fill-rule="evenodd"
                 clip-rule="evenodd"
                 d="M1.25 7C1.25 6.58579 1.58579 6.25 2 6.25H10C10.4142 6.25 10.75 6.58579 10.75 7C10.75 7.41421 10.4142 7.75 10 7.75H2C1.58579 7.75 1.25 7.41421 1.25 7ZM1.25 12C1.25 11.5858 1.58579 11.25 2 11.25H8C8.41421 11.25 8.75 11.5858 8.75 12C8.75 12.4142 8.41421 12.75 8 12.75H2C1.58579 12.75 1.25 12.4142 1.25 12ZM1.25 17C1.25 16.5858 1.58579 16.25 2 16.25H10C10.4142 16.25 10.75 16.5858 10.75 17C10.75 17.4142 10.4142 17.75 10 17.75H2C1.58579 17.75 1.25 17.4142 1.25 17Z"
-                fill="#ffffff"
+                fill="currentColor"
               />
             </g>
           </g>
@@ -3284,14 +3271,14 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           width="30px"
           height="30px"
           viewBox="0 0 15 15"
-          fill="none"
+          fill="currentColor"
           xmlns="http://www.w3.org/2000/svg"
         >
           <path
             fill-rule="evenodd"
             clip-rule="evenodd"
             d="M1 1.5C1 0.671573 1.67157 0 2.5 0H10.7071L14 3.29289V13.5C14 14.3284 13.3284 15 12.5 15H2.5C1.67157 15 1 14.3284 1 13.5V1.5ZM2 11V6H5V7H3V10H4V8.5H5V11H2ZM8 7H9V6H6V7H7V10H6V11H9V10H8V7ZM13 6V7H11V8H12V9H11V11H10V6H13Z"
-            fill="#ffffff"
+            fill="currentColor"
           />
         </svg>
       </li>
@@ -3305,7 +3292,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           <rect x="0" fill="none" width="24" height="24" />
           <g>
             <path
-              fill="#ffffff"
+              fill="currentColor"
               d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"
             />
           </g>
@@ -3330,19 +3317,22 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           <g>
             <path
               d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z"
-              style="fill: #fff"
+              fill="currentColor"
             />
             <path
               d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z"
-              style="fill: #fff; fill-rule: nonzero"
+              fill="currentColor"
+              style="fill-rule: nonzero"
             />
             <path
               d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z"
-              style="fill: #fff; fill-rule: nonzero"
+              fill="currentColor"
+              style="fill-rule: nonzero"
             />
             <path
               d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z"
-              style="fill: #fff; fill-rule: nonzero"
+              fill="currentColor"
+              style="fill-rule: nonzero"
             />
           </g>
         </svg>
@@ -3362,7 +3352,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
         >
           <g>
             <path
-              fill="#ffffff"
+              fill="currentColor"
               d="M93.194,18c0-2.47-2.002-4.472-4.472-4.472c-0.228,0-0.447,0.034-0.667,0.067V13.5H11.25v0.028
                           c-2.47,0-4.472,2.002-4.472,4.472l0,0.001v63.998l0,0.001l0,0.001V82.5h0.05c0.252,2.231,2.123,3.972,4.421,3.972V86.5h76.805
                           v-0.095c0.219,0.033,0.438,0.067,0.667,0.067c2.299,0,4.17-1.74,4.422-3.972h0.078V18H93.194z M83.265,76.543H72.404
@@ -3370,7 +3360,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                           c-1.251,0-2.324,0.749-2.807,1.821L28.838,63.013l-3.702-6.411l-0.005,0.003c-0.264-0.542-0.814-0.918-1.457-0.918
                           c-0.659,0-1.224,0.395-1.479,0.958l-5.46,9.457V23.485h66.53V76.543z"
             />
-            <circle fill="#ffffff" cx="68.122" cy="38.584" r="10.1" />
+            <circle fill="currentColor" cx="68.122" cy="38.584" r="10.1" />
           </g>
         </svg>
       </li>
@@ -5947,10 +5937,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                                     ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <rect x="0" fill="none" width="24" height="24"/>
                                 <g>
-                                  <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
+                                  <path fill="currentColor" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
                                 </g>
                                 </svg>`
-                                    : `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" style="fill:#fff;"/><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg>`) +
+                                    : `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" fill="currentColor"/><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" fill="currentColor" style="fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" fill="currentColor" style="fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" fill="currentColor" style="fill-rule:nonzero;"/></g></svg>`) +
                                   `</a>`,
                               );
                             })()
@@ -5972,11 +5962,11 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                                     ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <rect x="0" fill="none" width="24" height="24"/>
               <g>
-                <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
+                <path fill="currentColor" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
               </g>
               </svg>`
                                     : datatype === "video" && sound
-                                      ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" style="fill:#fff;"/><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg>`
+                                      ? `<svg style="position: absolute;z-index: 1;right: 15px;bottom: 15px;width: 30px;height: 30px;" width="30px" height="30px" viewBox="0 0 30 30" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g><path d="M16.215,25l-6.215,0l0,-2.504l-2.5,0l0,2.504c-1.381,0 -2.5,-1.119 -2.5,-2.5l0,-15c0,-1.381 1.119,-2.5 2.5,-2.5l0,2.496l2.5,0l0,-2.496l10,0l0,2.496l2.5,0l0,-2.496c1.381,0 2.5,1.12 2.5,2.5l0,7.674c-0.863,-0.387 -1.818,-0.602 -2.824,-0.602c-3.818,-0 -6.918,3.099 -6.918,6.917c0,1.281 0.349,2.482 0.957,3.511Zm6.285,-11.254l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-12.5,6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm-0,-6.25l-0,-3.75l-2.5,0l-0,3.75l2.5,0Zm2.5,5.004l5.625,-3.75l-5.625,-3.75l-0,7.5Z" fill="currentColor" /><path d="M26.068,24.849c-0.145,-0.001 -0.284,-0.058 -0.386,-0.16c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.828,-0.827 1.293,-1.95 1.293,-3.12c0,-1.17 -0.465,-2.293 -1.293,-3.12c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c2.138,2.139 2.138,5.657 -0,7.795c-0.104,0.103 -0.245,0.161 -0.391,0.16Z" fill="currentColor" style="fill-rule:nonzero;"/><path d="M24.513,23.294c-0.147,-0 -0.288,-0.06 -0.391,-0.165c-0.213,-0.213 -0.213,-0.564 -0,-0.777c0.414,-0.414 0.646,-0.975 0.646,-1.56c0,-0.585 -0.232,-1.147 -0.646,-1.56c-0.086,-0.1 -0.133,-0.227 -0.133,-0.359c0,-0.302 0.249,-0.551 0.551,-0.551c0.132,-0 0.259,0.047 0.359,0.132c1.281,1.283 1.281,3.392 -0,4.675c-0.102,0.104 -0.241,0.163 -0.386,0.165Z" fill="currentColor" style="fill-rule:nonzero;"/><path d="M22.22,16.426c-0.205,-0.086 -0.443,-0.041 -0.601,0.116l-2.04,2.045l-1.427,-0c-0.605,-0 -1.103,0.497 -1.103,1.102l0,2.205c0,0.605 0.498,1.103 1.103,1.103l1.427,-0l2.04,2.045c0.104,0.103 0.245,0.161 0.391,0.16c0.073,0.002 0.144,-0.013 0.21,-0.044c0.205,-0.085 0.341,-0.285 0.342,-0.507l-0,-7.718c-0.001,-0.222 -0.137,-0.423 -0.342,-0.507Z" fill="currentColor" style="fill-rule:nonzero;"/></g></svg>`
                                       : ``) +
                                   `</a>`,
                               )
@@ -6367,13 +6357,13 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
                         width="20px" height="20px" viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">
                   <g>
-                    <path fill="#ffffff" d="M93.194,18c0-2.47-2.002-4.472-4.472-4.472c-0.228,0-0.447,0.034-0.667,0.067V13.5H11.25v0.028
+                    <path fill="currentColor" d="M93.194,18c0-2.47-2.002-4.472-4.472-4.472c-0.228,0-0.447,0.034-0.667,0.067V13.5H11.25v0.028
                       c-2.47,0-4.472,2.002-4.472,4.472l0,0.001v63.998l0,0.001l0,0.001V82.5h0.05c0.252,2.231,2.123,3.972,4.421,3.972V86.5h76.805
                       v-0.095c0.219,0.033,0.438,0.067,0.667,0.067c2.299,0,4.17-1.74,4.422-3.972h0.078V18H93.194z M83.265,76.543H72.404
                       c-0.038-0.155-0.092-0.304-0.166-0.442l0.018-0.01l-22.719-39.35l-0.009,0.005c-0.5-1.027-1.544-1.74-2.764-1.74
                       c-1.251,0-2.324,0.749-2.807,1.821L28.838,63.013l-3.702-6.411l-0.005,0.003c-0.264-0.542-0.814-0.918-1.457-0.918
                       c-0.659,0-1.224,0.395-1.479,0.958l-5.46,9.457V23.485h66.53V76.543z"/>
-                    <circle fill="#ffffff" cx="68.122" cy="38.584" r="10.1"/>
+                    <circle fill="currentColor" cx="68.122" cy="38.584" r="10.1"/>
                   </g>
                 </svg>
                 <span>Photos</span>
@@ -6382,13 +6372,13 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 <svg width="20px" height="20px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <rect x="0" fill="none" width="24" height="24"/>
                   <g>
-                  <path fill="#ffffff" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
+                  <path fill="currentColor" d="M8 4h8v1.997h2V4c1.105 0 2 .896 2 2v12c0 1.104-.895 2-2 2v-2.003h-2V20H8v-2.003H6V20c-1.105 0-2-.895-2-2V6c0-1.105.895-2 2-2v1.997h2V4zm2 11l4.5-3L10 9v6zm8 .997v-3h-2v3h2zm0-5v-3h-2v3h2zm-10 5v-3H6v3h2zm0-5v-3H6v3h2z"/>
                   </g>
                 </svg>
                 <span>Videos</span>
                 </div>
                 <div class="openalbum" data-hash="${btoa(album) + delim + "all"}">
-                <svg width="20px" height="20px"  fill="#ffffff" viewBox="0 0 640 512" xmlns="http://www.w3.org/2000/svg"><path d="M608 0H160a32 32 0 0 0-32 32v96h160V64h192v320h128a32 32 0 0 0 32-32V32a32 32 0 0 0-32-32zM232 103a9 9 0 0 1-9 9h-30a9 9 0 0 1-9-9V73a9 9 0 0 1 9-9h30a9 9 0 0 1 9 9zm352 208a9 9 0 0 1-9 9h-30a9 9 0 0 1-9-9v-30a9 9 0 0 1 9-9h30a9 9 0 0 1 9 9zm0-104a9 9 0 0 1-9 9h-30a9 9 0 0 1-9-9v-30a9 9 0 0 1 9-9h30a9 9 0 0 1 9 9zm0-104a9 9 0 0 1-9 9h-30a9 9 0 0 1-9-9V73a9 9 0 0 1 9-9h30a9 9 0 0 1 9 9zm-168 57H32a32 32 0 0 0-32 32v288a32 32 0 0 0 32 32h384a32 32 0 0 0 32-32V192a32 32 0 0 0-32-32zM96 224a32 32 0 1 1-32 32 32 32 0 0 1 32-32zm288 224H64v-32l64-64 32 32 128-128 96 96z"/></svg>
+                <svg width="20px" height="20px"  fill="currentColor" viewBox="0 0 640 512" xmlns="http://www.w3.org/2000/svg"><path d="M608 0H160a32 32 0 0 0-32 32v96h160V64h192v320h128a32 32 0 0 0 32-32V32a32 32 0 0 0-32-32zM232 103a9 9 0 0 1-9 9h-30a9 9 0 0 1-9-9V73a9 9 0 0 1 9-9h30a9 9 0 0 1 9 9zm352 208a9 9 0 0 1-9 9h-30a9 9 0 0 1-9-9v-30a9 9 0 0 1 9-9h30a9 9 0 0 1 9 9zm0-104a9 9 0 0 1-9 9h-30a9 9 0 0 1-9-9v-30a9 9 0 0 1 9-9h30a9 9 0 0 1 9 9zm0-104a9 9 0 0 1-9 9h-30a9 9 0 0 1-9-9V73a9 9 0 0 1 9-9h30a9 9 0 0 1 9 9zm-168 57H32a32 32 0 0 0-32 32v288a32 32 0 0 0 32 32h384a32 32 0 0 0 32-32V192a32 32 0 0 0-32-32zM96 224a32 32 0 1 1-32 32 32 32 0 0 1 32-32zm288 224H64v-32l64-64 32 32 128-128 96 96z"/></svg>
                 <span>All</span>
                 </div>
               </div>
