@@ -171,6 +171,7 @@ class processMedia
                             (new preserveMedia([], $downloadOps))->compress(
                                 $mediaPath,
                                 $mediaPreservationPath,
+                                true,
                             )
                         ) {
                             file_exists($mediaPath) && unlink($mediaPath);
@@ -212,6 +213,7 @@ class processMedia
                                 (new preserveMedia([], $downloadOps))->compress(
                                     $thumbnailPath,
                                     $thumbnailPreservationPath,
+                                    true,
                                 )
                             ) {
                                 file_exists($thumbnailPath) &&
