@@ -368,11 +368,21 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
             '.mp4',
             $item['filename']
         );
-        $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
+        $preserve = $item['hash'] . '.' . strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         $thumbnailPreserve = $item['hash'] . '.jpg';
-        $isAnimated = (str_contains($preserve, '.webm') || str_contains($preserve, '.mp4') || str_contains($preserve, '.gif'));
-        $newFavorite = !array_key_exists($preserve, $existingFavorites) || ($isAnimated && !array_key_exists($thumbnailPreserve, $existingFavorites));
-        $fileExists = array_key_exists($preserve, $previouslyDownloadedMedia) && (!$isAnimated || array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia));
+        $isVideo = str_contains($preserve, '.webm') || str_contains($preserve, '.mp4');
+        $isAnimated = ($isVideo || str_contains($preserve, '.gif'));
+        $webpPreserve = $item['hash'] . '.webp';
+        $fileInFavorites = array_key_exists($preserve, $existingFavorites)
+            || (!$isVideo && array_key_exists($webpPreserve, $existingFavorites));
+        $thumbnailInFavorites = array_key_exists($thumbnailPreserve, $existingFavorites)
+            || array_key_exists($webpPreserve, $existingFavorites);
+        $newFavorite = !$fileInFavorites || ($isAnimated && !$thumbnailInFavorites);
+        $fileInStorage = array_key_exists($preserve, $previouslyDownloadedMedia)
+            || (!$isVideo && array_key_exists($webpPreserve, $previouslyDownloadedMedia));
+        $thumbnailInStorage = array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia)
+            || array_key_exists($webpPreserve, $previouslyDownloadedMedia);
+        $fileExists = $fileInStorage && (!$isAnimated || $thumbnailInStorage);
         return $newFavorite && $fileExists;
     });
 
@@ -384,17 +394,18 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
             '.mp4',
             $item['filename']
         );
-        $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
+        $preserve = $item['hash'] . '.' . strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         $thumbnailPreserve = $item['hash'] . '.jpg';
-        return ['name' => $preserve, 'thumbnail' => $thumbnailPreserve];
+        return ['name' => $preserve, 'thumbnail' => $thumbnailPreserve, 'webp' => $item['hash'] . '.webp'];
     }, $favoritesJson);
 
     $removedFavorites = array_filter($existingFavoritesPaths, function ($name) use ($favoritesNames) {
         $ext = pathinfo($name, PATHINFO_EXTENSION);
         return !array_key_exists(basename($name), array_column($favoritesNames, 'name'))
             && !array_key_exists(basename($name), array_column($favoritesNames, 'thumbnail'))
+            && !array_key_exists(basename($name), array_column($favoritesNames, 'webp'))
             && count(explode(DIRECTORY_SEPARATOR, $name)) > 1
-            && in_array(strtolower($ext), ['webm', 'mp4', 'gif', 'jpg', 'png']);
+            && in_array(strtolower($ext), ['webm', 'mp4', 'gif', 'jpg', 'png', 'webp']);
     });
 
     echo PHP_EOL . 'Found ' . count($removedFavorites) . ' Removed Favorites';
@@ -412,6 +423,11 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
             $dst = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.jpg', true));
             echo PHP_EOL . 'Moving favorite thumbnail: ' . $src . '  to: ' . $dst;
             $opsNoEncodeNoPrefix->rename($src, $dst, true);
+
+            // Also move .webp thumbnail if it exists
+            $srcWebp = cloudFS::canonicalize($prefix . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.webp', true));
+            $dstWebp = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.webp', true));
+            $opsNoEncodeNoPrefix->rename($srcWebp, $dstWebp, true);
         }
     }
 
@@ -543,11 +559,17 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
                     $copiedVideoCount++;
                 }
 
-                // Only copy thumbnail if not already in fa/vr/
-                if (!isset($existingFaVrFiles[$data['thumb']])) {
+                // Only copy thumbnail if not already in fa/vr/ (check both .jpg and .webp)
+                $thumbWebp = preg_replace('/\.jpg$/i', '.webp', $data['thumb']);
+                if (!isset($existingFaVrFiles[$data['thumb']]) && !isset($existingFaVrFiles[$thumbWebp])) {
+                    // Try .jpg first, fallback to .webp
                     $thumbSrc = 'vr/' . $data['thumb'];
                     $thumbDst = 'fa/vr/' . $data['thumb'];
-                    $opsNoEncodeNoPrefix->copy($thumbSrc, $thumbDst, true, true);
+                    if (!$opsNoEncodeNoPrefix->copy($thumbSrc, $thumbDst, true, true)) {
+                        $thumbSrcWebp = 'vr/' . $thumbWebp;
+                        $thumbDstWebp = 'fa/vr/' . $thumbWebp;
+                        $opsNoEncodeNoPrefix->copy($thumbSrcWebp, $thumbDstWebp, true, true);
+                    }
                     $copiedThumbCount++;
                 }
             }
@@ -659,11 +681,17 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
                     $copiedSwfCount++;
                 }
 
-                // Only copy thumbnail if not already in fa/flash/
-                if (!isset($existingFaFlashFiles[$relThumbPath])) {
-                    $thumbSrc = $data['thumb'];
-                    $thumbDst = 'fa/flash/' . $relThumbPath;
-                    $opsNoEncodeNoPrefix->copy($thumbSrc, $thumbDst, true, true);
+                // Only copy thumbnail if not already in fa/flash/ (check both .png and .webp)
+                $relThumbPathWebp = preg_replace('/\.png$/i', '.webp', $relThumbPath);
+                if (!isset($existingFaFlashFiles[$relThumbPath]) && !isset($existingFaFlashFiles[$relThumbPathWebp])) {
+                    // Try .webp first, fallback to .png
+                    $thumbSrcWebp = preg_replace('/\.png$/i', '.webp', $data['thumb']);
+                    $thumbDstWebp = 'fa/flash/' . $relThumbPathWebp;
+                    if (!$opsNoEncodeNoPrefix->copy($thumbSrcWebp, $thumbDstWebp, true, true)) {
+                        $thumbSrc = $data['thumb'];
+                        $thumbDst = 'fa/flash/' . $relThumbPath;
+                        $opsNoEncodeNoPrefix->copy($thumbSrc, $thumbDst, true, true);
+                    }
                     $copiedThumbCount++;
                 }
             }
@@ -687,14 +715,16 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
                 }
 
                 $ext = strtolower(pathinfo($faFlashFile['Path'], PATHINFO_EXTENSION));
-                if ($ext === 'swf' || $ext === 'png') {
+                if ($ext === 'swf' || $ext === 'png' || $ext === 'webp') {
                     // Find hash for this file by checking against flashHashToData
                     $faPath = 'fa/flash/' . $faFlashFile['Path'];
                     $originalPath = 'flash/' . $faFlashFile['Path'];
                     $foundHash = null;
 
                     foreach ($flashHashToData as $hash => $data) {
-                        if ($data['path'] === $originalPath || $data['thumb'] === $originalPath) {
+                        // Match path, thumb (.png), or webp version of thumb
+                        $thumbWebp = preg_replace('/\.png$/i', '.webp', $data['thumb']);
+                        if ($data['path'] === $originalPath || $data['thumb'] === $originalPath || $thumbWebp === $originalPath) {
                             $foundHash = $hash;
                             break;
                         }
@@ -760,11 +790,16 @@ $dlData = array_filter($dlData, function ($item) use ($previouslyDownloadedMedia
         '.mp4',
         $item['filename']
     );
-    $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
+    $preserve = $item['hash'] . '.' . strtolower(pathinfo($filename, PATHINFO_EXTENSION));
     $thumbnailPreserve = $item['hash'] . '.jpg';
-    return !array_key_exists($preserve, $previouslyDownloadedMedia)
-        || ((str_contains($preserve, '.webm') || str_contains($preserve, '.mp4'))
-            && !array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia));
+    $isVideo = str_contains($preserve, '.webm') || str_contains($preserve, '.mp4');
+    $webpPreserve = $item['hash'] . '.webp';
+    $fileExists = array_key_exists($preserve, $previouslyDownloadedMedia)
+        || (!$isVideo && array_key_exists($webpPreserve, $previouslyDownloadedMedia));
+    $thumbnailExists = array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia)
+        || array_key_exists($webpPreserve, $previouslyDownloadedMedia);
+    return !$fileExists
+        || ($isVideo && !$thumbnailExists);
 });
 
 $existingFavorites = array_flip(
@@ -787,11 +822,16 @@ $dlData = array_filter($dlData, function ($item) use ($existingFavorites) {
         '.mp4',
         $item['filename']
     );
-    $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
+    $preserve = $item['hash'] . '.' . strtolower(pathinfo($filename, PATHINFO_EXTENSION));
     $thumbnailPreserve = $item['hash'] . '.jpg';
-    return !array_key_exists($preserve, $existingFavorites)
-        || ((str_contains($preserve, '.webm') || str_contains($preserve, '.mp4'))
-            && !array_key_exists($thumbnailPreserve, $existingFavorites));
+    $isVideo = str_contains($preserve, '.webm') || str_contains($preserve, '.mp4');
+    $webpPreserve = $item['hash'] . '.webp';
+    $fileExists = array_key_exists($preserve, $existingFavorites)
+        || (!$isVideo && array_key_exists($webpPreserve, $existingFavorites));
+    $thumbnailExists = array_key_exists($thumbnailPreserve, $existingFavorites)
+        || array_key_exists($webpPreserve, $existingFavorites);
+    return !$fileExists
+        || ($isVideo && !$thumbnailExists);
 });
 
 echo PHP_EOL . 'Found ' . count($dlData) . ' new media items to be downloaded';
@@ -821,14 +861,16 @@ foreach ($dlData as $item) {
         $item['filename']
     );
 
-    $preserve = $item['hash'] . '.' . pathinfo($filename, PATHINFO_EXTENSION);
+    $preserve = $item['hash'] . '.' . strtolower(pathinfo($filename, PATHINFO_EXTENSION));
     $thumbnailPreserve = $item['hash'] . '.jpg';
     $path = privuma::getDataFolder() . DIRECTORY_SEPARATOR . (new mediaFile($item['filename'], $item['album']))->path();
     $path = $privuma->getOriginalPath($path) ?: $path;
     $ext = pathinfo($path, PATHINFO_EXTENSION);
     $thumbnailPath = dirname($path) . DIRECTORY_SEPARATOR . basename($path, '.' . $ext) . '.jpg';
 
-    if (!$ops->is_file($preserve)) {
+    $isVideo = (strpos($filename, '.webm') !== false || strpos($filename, '.mp4') !== false);
+    $webpPreserve = $item['hash'] . '.webp';
+    if (!$ops->is_file($preserve) && ($isVideo || !$ops->is_file($webpPreserve))) {
         if (!isset($item['url'])) {
             if (
                 $item['url'] = $privuma->getCloudFS()->public_link($path) ?: $tokenizer->mediaLink($path, false, false, true)
@@ -861,6 +903,7 @@ foreach ($dlData as $item) {
         (strpos($filename, '.webm') !== false || strpos($filename, '.mp4') !== false)
         && !is_null($item['thumbnail'])
         && !$ops->is_file($thumbnailPreserve)
+        && !$ops->is_file($webpPreserve)
     ) {
         echo PHP_EOL . 'Queue Downloading of thumbnail: ' . $thumbnailPreserve . ' from album: ' . $item['album'];
         $privuma->getQueueManager()->enqueue(
@@ -879,6 +922,7 @@ foreach ($dlData as $item) {
         (strpos($filename, '.webm') !== false || strpos($filename, '.mp4') !== false)
         && is_null($item['thumbnail'])
         && !$ops->is_file($thumbnailPreserve)
+        && !$ops->is_file($webpPreserve)
         && ($item['thumbnail'] = $privuma->getCloudFS()->public_link($thumbnailPath) ?: $tokenizer->mediaLink($thumbnailPath, false, false, true))
     ) {
         echo PHP_EOL . 'Queue Downloading of generated thumbnail: ' . $thumbnailPreserve . ' from album: ' . $item['album'];
