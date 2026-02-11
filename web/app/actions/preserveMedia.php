@@ -86,7 +86,7 @@ class preserveMedia
         }
     }
 
-    public function compress(string $file, string $preserve): bool
+    public function compress(string $file, string $preserve, bool $webpOnly = false): bool
     {
         $allowedPhotos = ['BMP', 'GIF', 'HEIC', 'ICO', 'JPG', 'JPEG', 'PNG', 'TIFF', 'WEBP'];
         $allowedVideos = ['MPG', 'MOD', 'MMV', 'TOD', 'WMV', 'ASF', 'AVI', 'DIVX', 'MOV', 'M4V', '3GP', '3G2', 'MP4', 'M2T', 'M2TS', 'MTS', 'MKV', 'WEBM'];
@@ -97,9 +97,30 @@ class preserveMedia
         $ext = !empty(pathinfo($file, PATHINFO_EXTENSION)) ? pathinfo($file, PATHINFO_EXTENSION): $mimeExt;
         $preserveExt = pathinfo($preserve, PATHINFO_EXTENSION);
 
+        // WebP-only mode: store just the WebP for images, skip the original format
+        if ($webpOnly && (in_array(strtoupper($ext), $allowedPhotos) || in_array(strtoupper($preserveExt), $allowedPhotos))) {
+            if (strtoupper($ext) === 'WEBP') {
+                return $this->ops->rename($file, $preserve, false);
+            }
+            $webpPath = preg_replace('/\.[^.]+$/', '.webp', $preserve);
+            $isAnimated = strtoupper($ext) === 'GIF' || (strtoupper($ext) === 'PNG' && $this->isAnimatedPng($file));
+            if ($this->createWebPFromLocal($file, $webpPath, $isAnimated)) {
+                unlink($file);
+                return true;
+            }
+            echo PHP_EOL . 'WebP-only conversion failed, falling through to normal processing';
+        }
+
         if (privuma::getEnv('COMPRESS_MEDIA') !== true) {
-            if (in_array(strtoupper($ext), ['GIF', 'JPG', 'JPEG', 'PNG', 'MP4', 'WEBM'])) {
+            $passthroughVideos = ['MP4', 'WEBM'];
+            if (in_array(strtoupper($ext), $allowedPhotos) || in_array(strtoupper($ext), $passthroughVideos)) {
                 echo PHP_EOL . 'Skipping Compression';
+                // Always create WebP for images (lightweight and needed for download jobs)
+                if (in_array(strtoupper($ext), $allowedPhotos) && strtoupper($ext) !== 'WEBP') {
+                    $webpPath = preg_replace('/\.[^.]+$/', '.webp', $preserve);
+                    $isAnimated = strtoupper($ext) === 'GIF' || (strtoupper($ext) === 'PNG' && $this->isAnimatedPng($file));
+                    $this->createWebPFromLocal($file, $webpPath, $isAnimated);
+                }
                 return $this->ops->rename($file, $preserve, false);
             } else {
                 echo PHP_EOL . "Skipping unsupported file format while conversions are disabled: {$ext}";
@@ -169,6 +190,9 @@ class preserveMedia
 
             if ($response == 0) {
                 echo PHP_EOL . 'gifsicle was successful';
+                // Create WebP version from local file before uploading (more efficient)
+                $webpPath = preg_replace('/\.[^.]+$/', '.webp', $filePath);
+                $this->createWebPFromLocal($newFileTemp, $webpPath, true);
                 $output = $this->ops->rename($newFileTemp, $filePath, false);
             } else {
                 echo PHP_EOL . implode(PHP_EOL, $void);
@@ -183,11 +207,18 @@ class preserveMedia
             }
             exec('nice ' . $path . ' ' . escapeshellarg($tempFile) . ' -resize 1920x1920 -quality 60 -fuzz 7% ' . escapeshellarg($newFileTemp), $void, $response);
             $is = getimagesize($newFileTemp);
+            $isAnimatedPng = strtolower($ext) === 'png' && $this->isAnimatedPng($tempFile);
             if ($response == 0) {
                 echo PHP_EOL . 'convert was successful';
+                // Create WebP version from local file before uploading (more efficient)
+                $webpPath = preg_replace('/\.[^.]+$/', '.webp', $filePath);
+                $this->createWebPFromLocal($newFileTemp, $webpPath, $isAnimatedPng);
                 $output = $this->ops->rename($newFileTemp, $filePath, false);
             } elseif ((exif_imagetype($newFileTemp) || $is !== false) && filesize($newFileTemp) < 1024 * 1024 * 30) {
                 echo PHP_EOL . 'convert failed but this is a reasonably sized image (<30MB), lets save it anyways';
+                // Create WebP version from local file before uploading (more efficient)
+                $webpPath = preg_replace('/\.[^.]+$/', '.webp', $filePath);
+                $this->createWebPFromLocal($newFileTemp, $webpPath, $isAnimatedPng);
                 $output = $this->ops->rename($newFileTemp, $filePath, false);
             } else {
                 echo PHP_EOL . implode(PHP_EOL, $void);
@@ -198,5 +229,91 @@ class preserveMedia
         is_file($tempFile) && unlink($tempFile);
         is_file($newFileTemp) && unlink($newFileTemp);
         return $output;
+    }
+
+    private function isAnimatedPng(string $filePath): bool
+    {
+        if (!is_file($filePath)) {
+            return false;
+        }
+        $content = file_get_contents($filePath, false, null, 0, 1024);
+        // APNG files contain 'acTL' chunk for animation control
+        return strpos($content, 'acTL') !== false;
+    }
+
+    /**
+     * Create WebP version from a local source file (more efficient - no cloud round-trip)
+     */
+    private function createWebPFromLocal(string $localSource, string $webpDestPath, bool $isAnimated = false): bool
+    {
+        $ext = strtolower(pathinfo($localSource, PATHINFO_EXTENSION));
+
+        echo PHP_EOL . 'Creating WebP version: ' . $webpDestPath;
+
+        if (!is_file($localSource)) {
+            echo PHP_EOL . 'Source file does not exist for WebP conversion';
+            return false;
+        }
+
+        $webpTemp = tempnam(sys_get_temp_dir(), 'PVMA-WEBP-') . '.webp';
+        $cpuLimit = 'nice cpulimit -f -l ' . privuma::getEnv('MAX_CPU_PERCENTAGE') . ' -- ';
+
+        if ($ext === 'gif') {
+            // Use gif2webp for GIFs
+            $gif2webpPath = '/usr/bin/gif2webp';
+            exec($gif2webpPath . ' -version 2>&1', $test, $binNotFound);
+            if ($binNotFound !== 0) {
+                $gif2webpPath = '/usr/local/bin/gif2webp';
+            }
+            // Quality 80 for lossy but visually close, -m 4 for reasonable compression effort
+            $cmd = $cpuLimit . escapeshellarg($gif2webpPath) . ' -lossy -q 80 -m 4 ' . escapeshellarg($localSource) . ' -o ' . escapeshellarg($webpTemp);
+        } else {
+            // Use ffmpeg with libwebp_anim for all other images (static and animated PNGs)
+            $ffmpegPath = PHP_OS_FAMILY == 'Darwin' ? '/usr/local/bin/ffmpeg' : '/usr/bin/ffmpeg';
+            $cmd = $cpuLimit . $ffmpegPath . ' -hide_banner -loglevel error -y -i ' . escapeshellarg($localSource) . ' -c:v libwebp_anim -lossless 0 -q:v 80 -loop 0 -preset default -an -vsync 0 ' . escapeshellarg($webpTemp);
+        }
+
+        echo PHP_EOL . 'Running WebP command: ' . $cmd;
+        exec($cmd, $void, $response);
+
+        if ($response === 0 && is_file($webpTemp) && filesize($webpTemp) > 0) {
+            echo PHP_EOL . 'WebP conversion successful';
+            $result = $this->ops->rename($webpTemp, $webpDestPath, false);
+            is_file($webpTemp) && unlink($webpTemp);
+            return $result;
+        } else {
+            echo PHP_EOL . 'WebP conversion failed';
+            if (!empty($void)) {
+                echo PHP_EOL . implode(PHP_EOL, $void);
+            }
+            is_file($webpTemp) && unlink($webpTemp);
+            return false;
+        }
+    }
+
+    /**
+     * Create WebP version from a cloud-stored file (pulls file first)
+     */
+    public function createWebP(string $sourcePath, bool $isAnimated = false): bool
+    {
+        $webpPath = preg_replace('/\.[^.]+$/', '.webp', $sourcePath);
+
+        echo PHP_EOL . 'Creating WebP version from cloud file: ' . $webpPath;
+
+        // Pull file from cloud for conversion
+        $localSource = $this->ops->pull($sourcePath);
+        if (!$localSource || !is_file($localSource)) {
+            echo PHP_EOL . 'Failed to pull source file for WebP conversion';
+            return false;
+        }
+
+        $result = $this->createWebPFromLocal($localSource, $webpPath, $isAnimated);
+
+        // Clean up the pulled local source
+        if ($localSource !== $sourcePath && is_file($localSource)) {
+            unlink($localSource);
+        }
+
+        return $result;
     }
 }
