@@ -76,6 +76,8 @@ class processMedia
                             PATHINFO_EXTENSION
                         );
                         $isGif = strtoupper($dlExt) === 'GIF';
+                        $isVideo = in_array(strtoupper($dlExt), ['MP4', 'WEBM']);
+                        $webpPreservationPath = preg_replace('/\.[^.]+$/', '.webp', $mediaPreservationPath);
                         $gifThumbnailPath = str_replace(
                             ['.gif', '.GIF'],
                             '.jpg',
@@ -84,10 +86,12 @@ class processMedia
                         $gifThumbnailExists = $downloadOps->is_file(
                             $gifThumbnailPath
                         );
+                        $mediaExists = $downloadOps->is_file($mediaPreservationPath)
+                            || (!$isVideo && $downloadOps->is_file($webpPreservationPath));
                         if (
                             $isGif &&
                             $gifThumbnailExists &&
-                            $downloadOps->is_file($mediaPreservationPath)
+                            $mediaExists
                         ) {
                             echo PHP_EOL .
                                 "Skip Existing Media already downloaded to: $mediaPreservationPath";
@@ -95,7 +99,7 @@ class processMedia
                         }
                         if (
                             !$isGif &&
-                            $downloadOps->is_file($mediaPreservationPath)
+                            $mediaExists
                         ) {
                             echo PHP_EOL .
                                 "Skip Existing Media already downloaded to: $mediaPreservationPath";
@@ -164,6 +168,8 @@ class processMedia
                             );
                         }
 
+                        $isVideoMedia = in_array(strtoupper($dlExt), ['MP4', 'WEBM']);
+                        $webpMediaPreservationPath = preg_replace('/\.[^.]+$/', '.webp', $mediaPreservationPath);
                         echo PHP_EOL .
                             "Attempting to Compress Media: $mediaPath | " .
                             $data['url'];
@@ -176,22 +182,10 @@ class processMedia
                         ) {
                             file_exists($mediaPath) && unlink($mediaPath);
                             echo PHP_EOL .
-                                "Downloaded media to: $mediaPreservationPath";
+                                "Downloaded media to: " . ($isVideoMedia ? $mediaPreservationPath : $webpMediaPreservationPath);
                         } else {
-                            echo PHP_EOL . 'Compression failed';
-                            if (is_file($mediaPath)) {
-                                echo PHP_EOL .
-                                    "Downloading media to: $mediaPreservationPath";
-                                $downloadOps->rename(
-                                    $mediaPath,
-                                    $mediaPreservationPath,
-                                    false
-                                );
-                            } else {
-                                echo PHP_EOL .
-                                    'Download failed: ' .
-                                    $data['url'];
-                            }
+                            echo PHP_EOL . 'Compression failed for: ' . $data['url'];
+                            file_exists($mediaPath) && unlink($mediaPath);
                         }
 
                         if (
@@ -213,7 +207,6 @@ class processMedia
                                 (new preserveMedia([], $downloadOps))->compress(
                                     $thumbnailPath,
                                     $thumbnailPreservationPath,
-                                    true,
                                 )
                             ) {
                                 file_exists($thumbnailPath) &&
