@@ -423,8 +423,10 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
             $dst = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.jpg', true));
             echo PHP_EOL . 'Moving favorite thumbnail: ' . $src . '  to: ' . $dst;
             $opsNoEncodeNoPrefix->rename($src, $dst, true);
+        }
 
-            // Also move .webp thumbnail if it exists
+        // Also move .webp version if it exists (may be the only format stored for images)
+        if (strtolower($ext) !== 'webp') {
             $srcWebp = cloudFS::canonicalize($prefix . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.webp', true));
             $dstWebp = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.webp', true));
             $opsNoEncodeNoPrefix->rename($srcWebp, $dstWebp, true);

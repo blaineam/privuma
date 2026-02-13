@@ -108,7 +108,8 @@ class preserveMedia
                 unlink($file);
                 return true;
             }
-            echo PHP_EOL . 'WebP-only conversion failed, falling through to normal processing';
+            echo PHP_EOL . 'WebP-only conversion failed';
+            return false;
         }
 
         if (privuma::getEnv('COMPRESS_MEDIA') !== true) {
