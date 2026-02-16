@@ -1976,12 +1976,12 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
 
         // Convert image path to WebP equivalent
         toWebPPath(path) {
-          return path.replace(/\.(jpg|jpeg|png|gif|bmp)$/i, '.webp');
+          return path.replace(/\.(jpg|jpeg|png|gif|bmp)$/i, ".webp");
         },
 
         // Convert image path to JPG equivalent (for thumbnails)
         toJpgPath(path) {
-          return path.replace(/\.(gif|webp|png|bmp|jpeg)$/i, '.jpg');
+          return path.replace(/\.(gif|webp|png|bmp|jpeg)$/i, ".jpg");
         },
 
         isMediaFile(resource) {
@@ -2170,7 +2170,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             this.activeConcurrentFetches++;
 
             try {
-              const url = await this.fetchResource(task.resource, task.priority);
+              const url = await this.fetchResource(
+                task.resource,
+                task.priority,
+              );
               task.resolve(url);
             } catch (error) {
               task.reject(error);
@@ -2221,7 +2224,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               baseResource.startsWith("flash/") ||
               baseResource.startsWith("vr/");
             const isMedia = this.isMediaFile(baseResource);
-            const isHighPriority = priority === "high" || priority === "vr-gallery";
+            const isHighPriority =
+              priority === "high" || priority === "vr-gallery";
 
             // Helper function to try a path with retries
             const tryPath = async (pathConfig) => {
@@ -2370,8 +2374,12 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             // Check if this image could have alternate format versions available
             const isWebPCandidate = this.isWebPCandidate(baseResource);
             const isGifFile = this.isGif(baseResource);
-            const webpResource = isWebPCandidate ? this.toWebPPath(baseResource) : null;
-            const jpgResource = isWebPCandidate ? this.toJpgPath(baseResource) : null;
+            const webpResource = isWebPCandidate
+              ? this.toWebPPath(baseResource)
+              : null;
+            const jpgResource = isWebPCandidate
+              ? this.toJpgPath(baseResource)
+              : null;
 
             if (isMedia && !isFlashOrVr) {
               // Regular media file path sequence
@@ -2383,114 +2391,242 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                   if (isHighPriority) {
                     // Fancybox: Try WebP first for animated WebP support
                     if (!this.skipPrFa) {
-                      unencryptedPaths.push({ path: "pr/" + webpResource, encrypted: false });
-                      unencryptedPaths.push({ path: "un/" + webpResource, encrypted: false });
-                      unencryptedPaths.push({ path: "fa/" + webpResource, encrypted: false });
+                      unencryptedPaths.push({
+                        path: "pr/" + webpResource,
+                        encrypted: false,
+                      });
+                      unencryptedPaths.push({
+                        path: "un/" + webpResource,
+                        encrypted: false,
+                      });
+                      unencryptedPaths.push({
+                        path: "fa/" + webpResource,
+                        encrypted: false,
+                      });
                     }
                     if (!this.usesPrFa) {
-                      unencryptedPaths.push({ path: webpResource, encrypted: false });
+                      unencryptedPaths.push({
+                        path: webpResource,
+                        encrypted: false,
+                      });
                     }
                   } else {
                     // Thumbnails: Try JPG first (static thumbnail for GIFs)
                     if (!this.skipPrFa) {
-                      unencryptedPaths.push({ path: "pr/" + jpgResource, encrypted: false });
-                      unencryptedPaths.push({ path: "un/" + jpgResource, encrypted: false });
-                      unencryptedPaths.push({ path: "fa/" + jpgResource, encrypted: false });
+                      unencryptedPaths.push({
+                        path: "pr/" + jpgResource,
+                        encrypted: false,
+                      });
+                      unencryptedPaths.push({
+                        path: "un/" + jpgResource,
+                        encrypted: false,
+                      });
+                      unencryptedPaths.push({
+                        path: "fa/" + jpgResource,
+                        encrypted: false,
+                      });
                     }
                     if (!this.usesPrFa) {
-                      unencryptedPaths.push({ path: jpgResource, encrypted: false });
+                      unencryptedPaths.push({
+                        path: jpgResource,
+                        encrypted: false,
+                      });
                     }
                     // Then try WebP as second fallback
                     if (!this.skipPrFa) {
-                      unencryptedPaths.push({ path: "pr/" + webpResource, encrypted: false });
-                      unencryptedPaths.push({ path: "un/" + webpResource, encrypted: false });
-                      unencryptedPaths.push({ path: "fa/" + webpResource, encrypted: false });
+                      unencryptedPaths.push({
+                        path: "pr/" + webpResource,
+                        encrypted: false,
+                      });
+                      unencryptedPaths.push({
+                        path: "un/" + webpResource,
+                        encrypted: false,
+                      });
+                      unencryptedPaths.push({
+                        path: "fa/" + webpResource,
+                        encrypted: false,
+                      });
                     }
                     if (!this.usesPrFa) {
-                      unencryptedPaths.push({ path: webpResource, encrypted: false });
+                      unencryptedPaths.push({
+                        path: webpResource,
+                        encrypted: false,
+                      });
                     }
                   }
                   // Then try original GIF as final fallback
                   if (!this.skipPrFa) {
-                    unencryptedPaths.push({ path: "pr/" + baseResource, encrypted: false });
-                    unencryptedPaths.push({ path: "un/" + baseResource, encrypted: false });
-                    unencryptedPaths.push({ path: "fa/" + baseResource, encrypted: false });
+                    unencryptedPaths.push({
+                      path: "pr/" + baseResource,
+                      encrypted: false,
+                    });
+                    unencryptedPaths.push({
+                      path: "un/" + baseResource,
+                      encrypted: false,
+                    });
+                    unencryptedPaths.push({
+                      path: "fa/" + baseResource,
+                      encrypted: false,
+                    });
                   }
                   if (!this.usesPrFa) {
-                    unencryptedPaths.push({ path: baseResource, encrypted: false });
+                    unencryptedPaths.push({
+                      path: baseResource,
+                      encrypted: false,
+                    });
                   }
                 } else if (isWebPCandidate) {
                   if (isHighPriority) {
                     // Fancybox: Try WebP first, then original format (skip JPG - that's only a thumbnail)
                     if (!this.skipPrFa) {
-                      unencryptedPaths.push({ path: "pr/" + webpResource, encrypted: false });
-                      unencryptedPaths.push({ path: "un/" + webpResource, encrypted: false });
-                      unencryptedPaths.push({ path: "fa/" + webpResource, encrypted: false });
+                      unencryptedPaths.push({
+                        path: "pr/" + webpResource,
+                        encrypted: false,
+                      });
+                      unencryptedPaths.push({
+                        path: "un/" + webpResource,
+                        encrypted: false,
+                      });
+                      unencryptedPaths.push({
+                        path: "fa/" + webpResource,
+                        encrypted: false,
+                      });
                     }
                     if (!this.usesPrFa) {
-                      unencryptedPaths.push({ path: webpResource, encrypted: false });
+                      unencryptedPaths.push({
+                        path: webpResource,
+                        encrypted: false,
+                      });
                     }
                     // Then try original format as fallback
                     if (baseResource !== webpResource) {
                       if (!this.skipPrFa) {
-                        unencryptedPaths.push({ path: "pr/" + baseResource, encrypted: false });
-                        unencryptedPaths.push({ path: "un/" + baseResource, encrypted: false });
-                        unencryptedPaths.push({ path: "fa/" + baseResource, encrypted: false });
+                        unencryptedPaths.push({
+                          path: "pr/" + baseResource,
+                          encrypted: false,
+                        });
+                        unencryptedPaths.push({
+                          path: "un/" + baseResource,
+                          encrypted: false,
+                        });
+                        unencryptedPaths.push({
+                          path: "fa/" + baseResource,
+                          encrypted: false,
+                        });
                       }
                       if (!this.usesPrFa) {
-                        unencryptedPaths.push({ path: baseResource, encrypted: false });
+                        unencryptedPaths.push({
+                          path: baseResource,
+                          encrypted: false,
+                        });
                       }
                     }
                   } else {
                     // Thumbnails: Try JPG first, then WebP, then original format
                     // Step 1: JPG (use jpgResource, or baseResource if it's already .jpg)
-                    const thumbJpg = jpgResource !== baseResource ? jpgResource : baseResource;
+                    const thumbJpg =
+                      jpgResource !== baseResource ? jpgResource : baseResource;
                     if (!this.skipPrFa) {
-                      unencryptedPaths.push({ path: "pr/" + thumbJpg, encrypted: false });
-                      unencryptedPaths.push({ path: "un/" + thumbJpg, encrypted: false });
-                      unencryptedPaths.push({ path: "fa/" + thumbJpg, encrypted: false });
+                      unencryptedPaths.push({
+                        path: "pr/" + thumbJpg,
+                        encrypted: false,
+                      });
+                      unencryptedPaths.push({
+                        path: "un/" + thumbJpg,
+                        encrypted: false,
+                      });
+                      unencryptedPaths.push({
+                        path: "fa/" + thumbJpg,
+                        encrypted: false,
+                      });
                     }
                     if (!this.usesPrFa) {
-                      unencryptedPaths.push({ path: thumbJpg, encrypted: false });
+                      unencryptedPaths.push({
+                        path: thumbJpg,
+                        encrypted: false,
+                      });
                     }
                     // Step 2: WebP (skip if same as what we already tried)
                     if (webpResource !== thumbJpg) {
                       if (!this.skipPrFa) {
-                        unencryptedPaths.push({ path: "pr/" + webpResource, encrypted: false });
-                        unencryptedPaths.push({ path: "un/" + webpResource, encrypted: false });
-                        unencryptedPaths.push({ path: "fa/" + webpResource, encrypted: false });
+                        unencryptedPaths.push({
+                          path: "pr/" + webpResource,
+                          encrypted: false,
+                        });
+                        unencryptedPaths.push({
+                          path: "un/" + webpResource,
+                          encrypted: false,
+                        });
+                        unencryptedPaths.push({
+                          path: "fa/" + webpResource,
+                          encrypted: false,
+                        });
                       }
                       if (!this.usesPrFa) {
-                        unencryptedPaths.push({ path: webpResource, encrypted: false });
+                        unencryptedPaths.push({
+                          path: webpResource,
+                          encrypted: false,
+                        });
                       }
                     }
                     // Step 3: Original format (skip if same as JPG or WebP)
-                    if (baseResource !== thumbJpg && baseResource !== webpResource) {
+                    if (
+                      baseResource !== thumbJpg &&
+                      baseResource !== webpResource
+                    ) {
                       if (!this.skipPrFa) {
-                        unencryptedPaths.push({ path: "pr/" + baseResource, encrypted: false });
-                        unencryptedPaths.push({ path: "un/" + baseResource, encrypted: false });
-                        unencryptedPaths.push({ path: "fa/" + baseResource, encrypted: false });
+                        unencryptedPaths.push({
+                          path: "pr/" + baseResource,
+                          encrypted: false,
+                        });
+                        unencryptedPaths.push({
+                          path: "un/" + baseResource,
+                          encrypted: false,
+                        });
+                        unencryptedPaths.push({
+                          path: "fa/" + baseResource,
+                          encrypted: false,
+                        });
                       }
                       if (!this.usesPrFa) {
-                        unencryptedPaths.push({ path: baseResource, encrypted: false });
+                        unencryptedPaths.push({
+                          path: baseResource,
+                          encrypted: false,
+                        });
                       }
                     }
                   }
                 } else {
                   // Non-image media (videos, etc): Just try original paths
                   if (!this.skipPrFa) {
-                    unencryptedPaths.push({ path: "pr/" + baseResource, encrypted: false });
-                    unencryptedPaths.push({ path: "un/" + baseResource, encrypted: false });
-                    unencryptedPaths.push({ path: "fa/" + baseResource, encrypted: false });
+                    unencryptedPaths.push({
+                      path: "pr/" + baseResource,
+                      encrypted: false,
+                    });
+                    unencryptedPaths.push({
+                      path: "un/" + baseResource,
+                      encrypted: false,
+                    });
+                    unencryptedPaths.push({
+                      path: "fa/" + baseResource,
+                      encrypted: false,
+                    });
                   }
                   if (!this.usesPrFa) {
-                    unencryptedPaths.push({ path: baseResource, encrypted: false });
+                    unencryptedPaths.push({
+                      path: baseResource,
+                      encrypted: false,
+                    });
                   }
                 }
               }
             } else if (isFlashOrVr) {
               // Flash/VR specific — try WebP first, then original format as fallback
-              if (isWebPCandidate && webpResource && webpResource !== baseResource) {
+              if (
+                isWebPCandidate &&
+                webpResource &&
+                webpResource !== baseResource
+              ) {
                 unencryptedPaths.push({ path: webpResource, encrypted: false });
               }
               unencryptedPaths.push({ path: baseResource, encrypted: false });
@@ -2530,69 +2666,172 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               if (isGifFile) {
                 if (isHighPriority) {
                   // Fancybox: Try WebP first for animated WebP support
-                  encryptedPaths.push({ path: "pr/" + webpResource, encrypted: true });
-                  encryptedPaths.push({ path: "un/" + webpResource, encrypted: true });
-                  encryptedPaths.push({ path: "fa/" + webpResource, encrypted: true });
+                  encryptedPaths.push({
+                    path: "pr/" + webpResource,
+                    encrypted: true,
+                  });
+                  encryptedPaths.push({
+                    path: "un/" + webpResource,
+                    encrypted: true,
+                  });
+                  encryptedPaths.push({
+                    path: "fa/" + webpResource,
+                    encrypted: true,
+                  });
                   encryptedPaths.push({ path: webpResource, encrypted: true });
                 } else {
                   // Thumbnails: Try JPG first (static thumbnail for GIFs)
-                  encryptedPaths.push({ path: "pr/" + jpgResource, encrypted: true });
-                  encryptedPaths.push({ path: "un/" + jpgResource, encrypted: true });
-                  encryptedPaths.push({ path: "fa/" + jpgResource, encrypted: true });
+                  encryptedPaths.push({
+                    path: "pr/" + jpgResource,
+                    encrypted: true,
+                  });
+                  encryptedPaths.push({
+                    path: "un/" + jpgResource,
+                    encrypted: true,
+                  });
+                  encryptedPaths.push({
+                    path: "fa/" + jpgResource,
+                    encrypted: true,
+                  });
                   encryptedPaths.push({ path: jpgResource, encrypted: true });
                   // Then try WebP as second fallback
-                  encryptedPaths.push({ path: "pr/" + webpResource, encrypted: true });
-                  encryptedPaths.push({ path: "un/" + webpResource, encrypted: true });
-                  encryptedPaths.push({ path: "fa/" + webpResource, encrypted: true });
+                  encryptedPaths.push({
+                    path: "pr/" + webpResource,
+                    encrypted: true,
+                  });
+                  encryptedPaths.push({
+                    path: "un/" + webpResource,
+                    encrypted: true,
+                  });
+                  encryptedPaths.push({
+                    path: "fa/" + webpResource,
+                    encrypted: true,
+                  });
                   encryptedPaths.push({ path: webpResource, encrypted: true });
                 }
                 // Then try original GIF as final fallback
-                encryptedPaths.push({ path: "pr/" + baseResource, encrypted: true });
-                encryptedPaths.push({ path: "un/" + baseResource, encrypted: true });
-                encryptedPaths.push({ path: "fa/" + baseResource, encrypted: true });
+                encryptedPaths.push({
+                  path: "pr/" + baseResource,
+                  encrypted: true,
+                });
+                encryptedPaths.push({
+                  path: "un/" + baseResource,
+                  encrypted: true,
+                });
+                encryptedPaths.push({
+                  path: "fa/" + baseResource,
+                  encrypted: true,
+                });
                 encryptedPaths.push({ path: baseResource, encrypted: true });
               } else if (isWebPCandidate) {
                 if (isHighPriority) {
                   // Fancybox: Try WebP first, then original format (skip JPG - that's only a thumbnail)
-                  encryptedPaths.push({ path: "pr/" + webpResource, encrypted: true });
-                  encryptedPaths.push({ path: "un/" + webpResource, encrypted: true });
-                  encryptedPaths.push({ path: "fa/" + webpResource, encrypted: true });
+                  encryptedPaths.push({
+                    path: "pr/" + webpResource,
+                    encrypted: true,
+                  });
+                  encryptedPaths.push({
+                    path: "un/" + webpResource,
+                    encrypted: true,
+                  });
+                  encryptedPaths.push({
+                    path: "fa/" + webpResource,
+                    encrypted: true,
+                  });
                   encryptedPaths.push({ path: webpResource, encrypted: true });
                   // Then try original format as fallback
                   if (baseResource !== webpResource) {
-                    encryptedPaths.push({ path: "pr/" + baseResource, encrypted: true });
-                    encryptedPaths.push({ path: "un/" + baseResource, encrypted: true });
-                    encryptedPaths.push({ path: "fa/" + baseResource, encrypted: true });
-                    encryptedPaths.push({ path: baseResource, encrypted: true });
+                    encryptedPaths.push({
+                      path: "pr/" + baseResource,
+                      encrypted: true,
+                    });
+                    encryptedPaths.push({
+                      path: "un/" + baseResource,
+                      encrypted: true,
+                    });
+                    encryptedPaths.push({
+                      path: "fa/" + baseResource,
+                      encrypted: true,
+                    });
+                    encryptedPaths.push({
+                      path: baseResource,
+                      encrypted: true,
+                    });
                   }
                 } else {
                   // Thumbnails: Try JPG first, then WebP, then original format
                   // Step 1: JPG (use jpgResource, or baseResource if it's already .jpg)
-                  const thumbJpgEnc = jpgResource !== baseResource ? jpgResource : baseResource;
-                  encryptedPaths.push({ path: "pr/" + thumbJpgEnc, encrypted: true });
-                  encryptedPaths.push({ path: "un/" + thumbJpgEnc, encrypted: true });
-                  encryptedPaths.push({ path: "fa/" + thumbJpgEnc, encrypted: true });
+                  const thumbJpgEnc =
+                    jpgResource !== baseResource ? jpgResource : baseResource;
+                  encryptedPaths.push({
+                    path: "pr/" + thumbJpgEnc,
+                    encrypted: true,
+                  });
+                  encryptedPaths.push({
+                    path: "un/" + thumbJpgEnc,
+                    encrypted: true,
+                  });
+                  encryptedPaths.push({
+                    path: "fa/" + thumbJpgEnc,
+                    encrypted: true,
+                  });
                   encryptedPaths.push({ path: thumbJpgEnc, encrypted: true });
                   // Step 2: WebP (skip if same as what we already tried)
                   if (webpResource !== thumbJpgEnc) {
-                    encryptedPaths.push({ path: "pr/" + webpResource, encrypted: true });
-                    encryptedPaths.push({ path: "un/" + webpResource, encrypted: true });
-                    encryptedPaths.push({ path: "fa/" + webpResource, encrypted: true });
-                    encryptedPaths.push({ path: webpResource, encrypted: true });
+                    encryptedPaths.push({
+                      path: "pr/" + webpResource,
+                      encrypted: true,
+                    });
+                    encryptedPaths.push({
+                      path: "un/" + webpResource,
+                      encrypted: true,
+                    });
+                    encryptedPaths.push({
+                      path: "fa/" + webpResource,
+                      encrypted: true,
+                    });
+                    encryptedPaths.push({
+                      path: webpResource,
+                      encrypted: true,
+                    });
                   }
                   // Step 3: Original format (skip if same as JPG or WebP)
-                  if (baseResource !== thumbJpgEnc && baseResource !== webpResource) {
-                    encryptedPaths.push({ path: "pr/" + baseResource, encrypted: true });
-                    encryptedPaths.push({ path: "un/" + baseResource, encrypted: true });
-                    encryptedPaths.push({ path: "fa/" + baseResource, encrypted: true });
-                    encryptedPaths.push({ path: baseResource, encrypted: true });
+                  if (
+                    baseResource !== thumbJpgEnc &&
+                    baseResource !== webpResource
+                  ) {
+                    encryptedPaths.push({
+                      path: "pr/" + baseResource,
+                      encrypted: true,
+                    });
+                    encryptedPaths.push({
+                      path: "un/" + baseResource,
+                      encrypted: true,
+                    });
+                    encryptedPaths.push({
+                      path: "fa/" + baseResource,
+                      encrypted: true,
+                    });
+                    encryptedPaths.push({
+                      path: baseResource,
+                      encrypted: true,
+                    });
                   }
                 }
               } else {
                 // Non-image media: Just try original paths
-                encryptedPaths.push({ path: "pr/" + baseResource, encrypted: true });
-                encryptedPaths.push({ path: "un/" + baseResource, encrypted: true });
-                encryptedPaths.push({ path: "fa/" + baseResource, encrypted: true });
+                encryptedPaths.push({
+                  path: "pr/" + baseResource,
+                  encrypted: true,
+                });
+                encryptedPaths.push({
+                  path: "un/" + baseResource,
+                  encrypted: true,
+                });
+                encryptedPaths.push({
+                  path: "fa/" + baseResource,
+                  encrypted: true,
+                });
                 encryptedPaths.push({ path: baseResource, encrypted: true });
               }
             } else if (isFlashOrVr) {
