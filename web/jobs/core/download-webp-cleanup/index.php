@@ -80,7 +80,7 @@ function findWebpDuplicates(cloudFS $ops, string $prefix, array $imageExts): arr
         $hashMap[$hash][] = $ext;
     }
 
-    echo PHP_EOL . "Found " . count($hashMap) . " unique hashes in $prefix/";
+    echo PHP_EOL . 'Found ' . count($hashMap) . " unique hashes in $prefix/";
 
     $deletions = [];
     foreach ($hashMap as $hash => $exts) {
@@ -106,7 +106,7 @@ function findWebpDuplicates(cloudFS $ops, string $prefix, array $imageExts): arr
 
             // Keep .jpg if it's a thumbnail for animated content (gif/animated png) or video
             if ($ext === 'jpg' && ($hasAnimatedSource || $hasVideoSource)) {
-                echo PHP_EOL . "  Keeping $prefix/$hash.jpg (thumbnail for " . ($hasVideoSource ? 'video' : 'animated') . " content)";
+                echo PHP_EOL . "  Keeping $prefix/$hash.jpg (thumbnail for " . ($hasVideoSource ? 'video' : 'animated') . ' content)';
                 continue;
             }
 
@@ -115,7 +115,7 @@ function findWebpDuplicates(cloudFS $ops, string $prefix, array $imageExts): arr
         }
     }
 
-    echo PHP_EOL . "Found " . count($deletions) . " duplicates in $prefix/";
+    echo PHP_EOL . 'Found ' . count($deletions) . " duplicates in $prefix/";
     return $deletions;
 }
 

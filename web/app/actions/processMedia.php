@@ -192,7 +192,7 @@ class processMedia
                             }
                             file_exists($mediaPath) && unlink($mediaPath);
                             echo PHP_EOL .
-                                "Downloaded media to: " . ($isVideoMedia ? $mediaPreservationPath : $webpMediaPreservationPath);
+                                'Downloaded media to: ' . ($isVideoMedia ? $mediaPreservationPath : $webpMediaPreservationPath);
                         } else {
                             echo PHP_EOL . 'Compression failed for: ' . $data['url'];
                             file_exists($mediaPath) && unlink($mediaPath);
@@ -416,7 +416,7 @@ class processMedia
     {
         $frameTemp = tempnam(sys_get_temp_dir(), 'PVMA-FRAME-') . '.webp';
         $ffmpegPath = PHP_OS_FAMILY == 'Darwin' ? '/usr/local/bin/ffmpeg' : '/usr/bin/ffmpeg';
-        $cmd = "$ffmpegPath -hide_banner -loglevel error -y -i " . escapeshellarg($videoPath) . " -vframes 1 -c:v libwebp -q:v 80 " . escapeshellarg($frameTemp);
+        $cmd = "$ffmpegPath -hide_banner -loglevel error -y -i " . escapeshellarg($videoPath) . ' -vframes 1 -c:v libwebp -q:v 80 ' . escapeshellarg($frameTemp);
         echo PHP_EOL . 'Extracting video frame: ' . $cmd;
         exec($cmd, $void, $response);
 
