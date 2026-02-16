@@ -180,6 +180,16 @@ class processMedia
                                 true,
                             )
                         ) {
+                            // For videos, extract a frame as WebP thumbnail before deleting the temp file
+                            if ($isVideoMedia && file_exists($mediaPath)) {
+                                $webpThumbPath = preg_replace('/\.[^.]+$/', '.webp', $mediaPreservationPath);
+                                $framePath = $this->extractVideoFrame($mediaPath);
+                                if ($framePath) {
+                                    echo PHP_EOL . "Extracted video frame as WebP thumbnail: $webpThumbPath";
+                                    $downloadOps->rename($framePath, $webpThumbPath, false);
+                                    is_file($framePath) && unlink($framePath);
+                                }
+                            }
                             file_exists($mediaPath) && unlink($mediaPath);
                             echo PHP_EOL .
                                 "Downloaded media to: " . ($isVideoMedia ? $mediaPreservationPath : $webpMediaPreservationPath);
@@ -214,18 +224,8 @@ class processMedia
                                 echo PHP_EOL .
                                     "Downloaded media to: $thumbnailPreservationPath";
                             } else {
-                                echo PHP_EOL . 'Compression failed';
-                                if (file_exists($thumbnailPath)) {
-                                    echo PHP_EOL .
-                                        "Downloading media to: $thumbnailPreservationPath";
-                                    $downloadOps->rename(
-                                        $thumbnailPath,
-                                        $thumbnailPreservationPath,
-                                        false
-                                    );
-                                } else {
-                                    echo PHP_EOL . 'Download failed';
-                                }
+                                echo PHP_EOL . 'Thumbnail compression failed, cleaning up';
+                                file_exists($thumbnailPath) && unlink($thumbnailPath);
                             }
                         }
                         return;
@@ -410,6 +410,23 @@ class processMedia
                 'Existing preserve file located at: ' .
                 $data['preserve'];
         }
+    }
+
+    private function extractVideoFrame(string $videoPath): ?string
+    {
+        $frameTemp = tempnam(sys_get_temp_dir(), 'PVMA-FRAME-') . '.webp';
+        $ffmpegPath = PHP_OS_FAMILY == 'Darwin' ? '/usr/local/bin/ffmpeg' : '/usr/bin/ffmpeg';
+        $cmd = "$ffmpegPath -hide_banner -loglevel error -y -i " . escapeshellarg($videoPath) . " -vframes 1 -c:v libwebp -q:v 80 " . escapeshellarg($frameTemp);
+        echo PHP_EOL . 'Extracting video frame: ' . $cmd;
+        exec($cmd, $void, $response);
+
+        if ($response === 0 && is_file($frameTemp) && filesize($frameTemp) > 0) {
+            return $frameTemp;
+        }
+
+        echo PHP_EOL . 'Video frame extraction failed';
+        is_file($frameTemp) && unlink($frameTemp);
+        return null;
     }
 
     private function downloadUrl(string $url): ?string

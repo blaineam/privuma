@@ -1340,6 +1340,7 @@
     .gallerypicture .media-icon,
     .gallerypicture [class*="icon"] svg {
       background: var(--glass-bg) !important;
+      color: var(--text-color) !important;
       backdrop-filter: blur(12px) !important;
       -webkit-backdrop-filter: blur(12px) !important;
       border: 1px solid var(--glass-border) !important;
@@ -1660,6 +1661,44 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
      const n=t("./_assert.js");r.u8=t=>new Uint8Array(t.buffer,t.byteOffset,t.byteLength);r.u16=t=>new Uint16Array(t.buffer,t.byteOffset,Math.floor(t.byteLength/2));r.u32=t=>new Uint32Array(t.buffer,t.byteOffset,Math.floor(t.byteLength/4));if(r.createView=t=>new DataView(t.buffer,t.byteOffset,t.byteLength),r.isLE=68===new Uint8Array(new Uint32Array([287454020]).buffer)[0],!r.isLE)throw new Error("Non little-endian hardware is not supported");const o=Array.from({length:256},((t,e)=>e.toString(16).padStart(2,"0")));function s(t){(0,n.bytes)(t);let e="";for(let r=0;r<t.length;r++)e+=o[t[r]];return e}r.bytesToHex=s;const i={_0:48,_9:57,_A:65,_F:70,_a:97,_f:102};function c(t){return t>=i._0&&t<=i._9?t-i._0:t>=i._A&&t<=i._F?t-(i._A-10):t>=i._a&&t<=i._f?t-(i._a-10):void 0}function a(t){if("string"!=typeof t)throw new Error("hex string expected, got "+typeof t);const e=t.length,r=e/2;if(e%2)throw new Error("padded hex string expected, got unpadded hex of length "+e);const n=new Uint8Array(r);for(let e=0,o=0;e<r;e++,o+=2){const r=c(t.charCodeAt(o)),s=c(t.charCodeAt(o+1));if(void 0===r||void 0===s){const e=t[o]+t[o+1];throw new Error('hex string expected, got non-hex character "'+e+'" at index '+o)}n[e]=16*r+s}return n}function l(t){if("string"!=typeof t)throw new Error("hex string expected, got "+typeof t);return BigInt(""===t?"0":`0x${t}`)}r.hexToBytes=a,r.hexToNumber=l,r.bytesToNumberBE=function(t){return l(s(t))},r.numberToBytesBE=function(t,e){return a(t.toString(16).padStart(2*e,"0"))};function u(t){if("string"!=typeof t)throw new Error("string expected, got "+typeof t);return new Uint8Array((new TextEncoder).encode(t))}r.nextTick=async()=>{},r.asyncLoop=async function(t,e,n){let o=Date.now();for(let s=0;s<t;s++){n(s);const t=Date.now()-o;t>=0&&t<e||(await(0,r.nextTick)(),o+=t)}},r.utf8ToBytes=u,r.bytesToUtf8=function(t){return(new TextDecoder).decode(t)},r.toBytes=function(t){if("string"==typeof t)t=u(t);else{if(!(0,n.isBytes)(t))throw new Error("Uint8Array expected, got "+typeof t);t=t.slice()}return t},r.concatBytes=function(...t){let e=0;for(let r=0;r<t.length;r++){const o=t[r];(0,n.bytes)(o),e+=o.length}const r=new Uint8Array(e);for(let e=0,n=0;e<t.length;e++){const o=t[e];r.set(o,n),n+=o.length}return r},r.checkOpts=function(t,e){if(null==e||"object"!=typeof e)throw new Error("options must be defined");return Object.assign(t,e)},r.equalBytes=function(t,e){if(t.length!==e.length)return!1;let r=0;for(let n=0;n<t.length;n++)r|=t[n]^e[n];return 0===r};r.Hash=class{};function h(t,e,r,n){if("function"==typeof t.setBigUint64)return t.setBigUint64(e,r,n);const o=BigInt(32),s=BigInt(4294967295),i=Number(r>>o&s),c=Number(r&s),a=n?4:0,l=n?0:4;t.setUint32(e+a,i,n),t.setUint32(e+l,c,n)}r.wrapCipher=(t,e)=>(Object.assign(e,t),e),r.setBigUint64=h,r.u64Lengths=function(t,e){const n=new Uint8Array(16),o=(0,r.createView)(n);return h(o,0,BigInt(e?e.length:0),!0),h(o,8,BigInt(t.length),!0),n}},{"./_assert.js":5}],12:[function(t,e,r){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.gcm=r.ctr=r.cbc=r.utils=r.managedNonce=r.getWebcryptoSubtle=r.randomBytes=void 0;const n=t("@noble/ciphers/crypto");Object.defineProperty(r,"randomBytes",{enumerable:!0,get:function(){return n.randomBytes}}),Object.defineProperty(r,"getWebcryptoSubtle",{enumerable:!0,get:function(){return n.getWebcryptoSubtle}});const o=t("./utils.js"),s=t("./_assert.js");r.managedNonce=function(t){return(0,s.number)(t.nonceLength),(e,...r)=>({encrypt:(s,...i)=>{const{nonceLength:c}=t,a=(0,n.randomBytes)(c),l=t(e,a,...r).encrypt(s,...i),u=(0,o.concatBytes)(a,l);return l.fill(0),u},decrypt:(n,...o)=>{const{nonceLength:s}=t,i=n.subarray(0,s),c=n.subarray(s);return t(e,i,...r).decrypt(c,...o)}})},r.utils={async encrypt(t,e,r,o){const s=(0,n.getWebcryptoSubtle)(),i=await s.importKey("raw",t,e,!0,["encrypt"]),c=await s.encrypt(r,i,o);return new Uint8Array(c)},async decrypt(t,e,r,o){const s=(0,n.getWebcryptoSubtle)(),i=await s.importKey("raw",t,e,!0,["decrypt"]),c=await s.decrypt(r,i,o);return new Uint8Array(c)}};const i={CBC:"AES-CBC",CTR:"AES-CTR",GCM:"AES-GCM"};function c(t){return(e,n,o)=>{(0,s.bytes)(e),(0,s.bytes)(n);const c={name:t,length:8*e.length},a=function(t,e,r){if(t===i.CBC)return{name:i.CBC,iv:e};if(t===i.CTR)return{name:i.CTR,counter:e,length:64};if(t===i.GCM)return r?{name:i.GCM,iv:e,additionalData:r}:{name:i.GCM,iv:e};throw new Error("unknown aes block mode")}(t,n,o);return{encrypt:t=>((0,s.bytes)(t),r.utils.encrypt(e,c,a,t)),decrypt:t=>((0,s.bytes)(t),r.utils.decrypt(e,c,a,t))}}}r.cbc=c(i.CBC),r.ctr=c(i.CTR),r.gcm=c(i.GCM)},{"./_assert.js":5,"./utils.js":11,"@noble/ciphers/crypto":9}],13:[function(t,e,r){"use strict";function n(t){if(!Number.isSafeInteger(t)||t<0)throw new Error(`positive integer expected, not ${t}`)}function o(t){if("boolean"!=typeof t)throw new Error(`boolean expected, not ${t}`)}function s(t){return t instanceof Uint8Array||null!=t&&"object"==typeof t&&"Uint8Array"===t.constructor.name}function i(t,...e){if(!s(t))throw new Error("Uint8Array expected");if(e.length>0&&!e.includes(t.length))throw new Error(`Uint8Array expected of length ${e}, not of length=${t.length}`)}function c(t){if("function"!=typeof t||"function"!=typeof t.create)throw new Error("Hash should be wrapped by utils.wrapConstructor");n(t.outputLen),n(t.blockLen)}function a(t,e=!0){if(t.destroyed)throw new Error("Hash instance has been destroyed");if(e&&t.finished)throw new Error("Hash#digest() has already been called")}function l(t,e){i(t);const r=e.outputLen;if(t.length<r)throw new Error(`digestInto() expects output buffer of length at least ${r}`)}Object.defineProperty(r,"__esModule",{value:!0}),r.output=r.exists=r.hash=r.bytes=r.bool=r.number=r.isBytes=void 0,r.number=n,r.bool=o,r.isBytes=s,r.bytes=i,r.hash=c,r.exists=a,r.output=l;const u={number:n,bool:o,bytes:i,hash:c,exists:a,output:l};r.default=u},{}],14:[function(t,e,r){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.HashMD=r.Maj=r.Chi=void 0;const n=t("./_assert.js"),o=t("./utils.js");r.Chi=(t,e,r)=>t&e^~t&r;r.Maj=(t,e,r)=>t&e^t&r^e&r;class s extends o.Hash{constructor(t,e,r,n){super(),this.blockLen=t,this.outputLen=e,this.padOffset=r,this.isLE=n,this.finished=!1,this.length=0,this.pos=0,this.destroyed=!1,this.buffer=new Uint8Array(t),this.view=(0,o.createView)(this.buffer)}update(t){(0,n.exists)(this);const{view:e,buffer:r,blockLen:s}=this,i=(t=(0,o.toBytes)(t)).length;for(let n=0;n<i;){const c=Math.min(s-this.pos,i-n);if(c!==s)r.set(t.subarray(n,n+c),this.pos),this.pos+=c,n+=c,this.pos===s&&(this.process(e,0),this.pos=0);else{const e=(0,o.createView)(t);for(;s<=i-n;n+=s)this.process(e,n)}}return this.length+=t.length,this.roundClean(),this}digestInto(t){(0,n.exists)(this),(0,n.output)(t,this),this.finished=!0;const{buffer:e,view:r,blockLen:s,isLE:i}=this;let{pos:c}=this;e[c++]=128,this.buffer.subarray(c).fill(0),this.padOffset>s-c&&(this.process(r,0),c=0);for(let t=c;t<s;t++)e[t]=0;!function(t,e,r,n){if("function"==typeof t.setBigUint64)return t.setBigUint64(e,r,n);const o=BigInt(32),s=BigInt(4294967295),i=Number(r>>o&s),c=Number(r&s),a=n?4:0,l=n?0:4;t.setUint32(e+a,i,n),t.setUint32(e+l,c,n)}(r,s-8,BigInt(8*this.length),i),this.process(r,0);const a=(0,o.createView)(t),l=this.outputLen;if(l%4)throw new Error("_sha2: outputLen should be aligned to 32bit");const u=l/4,h=this.get();if(u>h.length)throw new Error("_sha2: outputLen bigger than state");for(let t=0;t<u;t++)a.setUint32(4*t,h[t],i)}digest(){const{buffer:t,outputLen:e}=this;this.digestInto(t);const r=t.slice(0,e);return this.destroy(),r}_cloneInto(t){t||(t=new this.constructor),t.set(...this.get());const{blockLen:e,buffer:r,length:n,finished:o,destroyed:s,pos:i}=this;return t.length=n,t.pos=i,t.finished=o,t.destroyed=s,n%e&&t.buffer.set(r),t}}r.HashMD=s},{"./_assert.js":13,"./utils.js":20}],15:[function(t,e,r){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.crypto=void 0,r.crypto="object"==typeof globalThis&&"crypto"in globalThis?globalThis.crypto:void 0},{}],16:[function(t,e,r){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.hmac=r.HMAC=void 0;const n=t("./_assert.js"),o=t("./utils.js");class s extends o.Hash{constructor(t,e){super(),this.finished=!1,this.destroyed=!1,(0,n.hash)(t);const r=(0,o.toBytes)(e);if(this.iHash=t.create(),"function"!=typeof this.iHash.update)throw new Error("Expected instance of class which extends utils.Hash");this.blockLen=this.iHash.blockLen,this.outputLen=this.iHash.outputLen;const s=this.blockLen,i=new Uint8Array(s);i.set(r.length>s?t.create().update(r).digest():r);for(let t=0;t<i.length;t++)i[t]^=54;this.iHash.update(i),this.oHash=t.create();for(let t=0;t<i.length;t++)i[t]^=106;this.oHash.update(i),i.fill(0)}update(t){return(0,n.exists)(this),this.iHash.update(t),this}digestInto(t){(0,n.exists)(this),(0,n.bytes)(t,this.outputLen),this.finished=!0,this.iHash.digestInto(t),this.oHash.update(t),this.oHash.digestInto(t),this.destroy()}digest(){const t=new Uint8Array(this.oHash.outputLen);return this.digestInto(t),t}_cloneInto(t){t||(t=Object.create(Object.getPrototypeOf(this),{}));const{oHash:e,iHash:r,finished:n,destroyed:o,blockLen:s,outputLen:i}=this;return t.finished=n,t.destroyed=o,t.blockLen=s,t.outputLen=i,t.oHash=e._cloneInto(t.oHash),t.iHash=r._cloneInto(t.iHash),t}destroy(){this.destroyed=!0,this.oHash.destroy(),this.iHash.destroy()}}r.HMAC=s;r.hmac=(t,e,r)=>new s(t,e).update(r).digest(),r.hmac.create=(t,e)=>new s(t,e)},{"./_assert.js":13,"./utils.js":20}],17:[function(t,e,r){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.pbkdf2Async=r.pbkdf2=void 0;const n=t("./_assert.js"),o=t("./hmac.js"),s=t("./utils.js");function i(t,e,r,i){(0,n.hash)(t);const c=(0,s.checkOpts)({dkLen:32,asyncTick:10},i),{c:a,dkLen:l,asyncTick:u}=c;if((0,n.number)(a),(0,n.number)(l),(0,n.number)(u),a<1)throw new Error("PBKDF2: iterations (c) should be >= 1");const h=(0,s.toBytes)(e),f=(0,s.toBytes)(r),y=new Uint8Array(l),d=o.hmac.create(t,h),p=d._cloneInto().update(f);return{c:a,dkLen:l,asyncTick:u,DK:y,PRF:d,PRFSalt:p}}function c(t,e,r,n,o){return t.destroy(),e.destroy(),n&&n.destroy(),o.fill(0),r}r.pbkdf2=function(t,e,r,n){const{c:o,dkLen:a,DK:l,PRF:u,PRFSalt:h}=i(t,e,r,n);let f;const y=new Uint8Array(4),d=(0,s.createView)(y),p=new Uint8Array(u.outputLen);for(let t=1,e=0;e<a;t++,e+=u.outputLen){const r=l.subarray(e,e+u.outputLen);d.setInt32(0,t,!1),(f=h._cloneInto(f)).update(y).digestInto(p),r.set(p.subarray(0,r.length));for(let t=1;t<o;t++){u._cloneInto(f).update(p).digestInto(p);for(let t=0;t<r.length;t++)r[t]^=p[t]}}return c(u,h,l,f,p)},r.pbkdf2Async=async function(t,e,r,n){const{c:o,dkLen:a,asyncTick:l,DK:u,PRF:h,PRFSalt:f}=i(t,e,r,n);let y;const d=new Uint8Array(4),p=(0,s.createView)(d),g=new Uint8Array(h.outputLen);for(let t=1,e=0;e<a;t++,e+=h.outputLen){const r=u.subarray(e,e+h.outputLen);p.setInt32(0,t,!1),(y=f._cloneInto(y)).update(d).digestInto(g),r.set(g.subarray(0,r.length)),await(0,s.asyncLoop)(o-1,l,(()=>{h._cloneInto(y).update(g).digestInto(g);for(let t=0;t<r.length;t++)r[t]^=g[t]}))}return c(h,f,u,y,g)}},{"./_assert.js":13,"./hmac.js":16,"./utils.js":20}],18:[function(t,e,r){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.scryptAsync=r.scrypt=void 0;const n=t("./_assert.js"),o=t("./sha256.js"),s=t("./pbkdf2.js"),i=t("./utils.js");function c(t,e,r,n,o,s){let c=t[e++]^r[n++],a=t[e++]^r[n++],l=t[e++]^r[n++],u=t[e++]^r[n++],h=t[e++]^r[n++],f=t[e++]^r[n++],y=t[e++]^r[n++],d=t[e++]^r[n++],p=t[e++]^r[n++],g=t[e++]^r[n++],b=t[e++]^r[n++],w=t[e++]^r[n++],m=t[e++]^r[n++],E=t[e++]^r[n++],v=t[e++]^r[n++],x=t[e++]^r[n++],A=c,B=a,U=l,k=u,L=h,_=f,j=y,C=d,S=p,T=g,O=b,M=w,I=m,K=E,N=v,H=x;for(let t=0;t<8;t+=2)L^=(0,i.rotl)(A+I|0,7),S^=(0,i.rotl)(L+A|0,9),I^=(0,i.rotl)(S+L|0,13),A^=(0,i.rotl)(I+S|0,18),T^=(0,i.rotl)(_+B|0,7),K^=(0,i.rotl)(T+_|0,9),B^=(0,i.rotl)(K+T|0,13),_^=(0,i.rotl)(B+K|0,18),N^=(0,i.rotl)(O+j|0,7),U^=(0,i.rotl)(N+O|0,9),j^=(0,i.rotl)(U+N|0,13),O^=(0,i.rotl)(j+U|0,18),k^=(0,i.rotl)(H+M|0,7),C^=(0,i.rotl)(k+H|0,9),M^=(0,i.rotl)(C+k|0,13),H^=(0,i.rotl)(M+C|0,18),B^=(0,i.rotl)(A+k|0,7),U^=(0,i.rotl)(B+A|0,9),k^=(0,i.rotl)(U+B|0,13),A^=(0,i.rotl)(k+U|0,18),j^=(0,i.rotl)(_+L|0,7),C^=(0,i.rotl)(j+_|0,9),L^=(0,i.rotl)(C+j|0,13),_^=(0,i.rotl)(L+C|0,18),M^=(0,i.rotl)(O+T|0,7),S^=(0,i.rotl)(M+O|0,9),T^=(0,i.rotl)(S+M|0,13),O^=(0,i.rotl)(T+S|0,18),I^=(0,i.rotl)(H+N|0,7),K^=(0,i.rotl)(I+H|0,9),N^=(0,i.rotl)(K+I|0,13),H^=(0,i.rotl)(N+K|0,18);o[s++]=c+A|0,o[s++]=a+B|0,o[s++]=l+U|0,o[s++]=u+k|0,o[s++]=h+L|0,o[s++]=f+_|0,o[s++]=y+j|0,o[s++]=d+C|0,o[s++]=p+S|0,o[s++]=g+T|0,o[s++]=b+O|0,o[s++]=w+M|0,o[s++]=m+I|0,o[s++]=E+K|0,o[s++]=v+N|0,o[s++]=x+H|0}function a(t,e,r,n,o){let s=n+0,i=n+16*o;for(let n=0;n<16;n++)r[i+n]=t[e+16*(2*o-1)+n];for(let n=0;n<o;n++,s+=16,e+=16)c(r,i,t,e,r,s),n>0&&(i+=16),c(r,s,t,e+=16,r,i)}function l(t,e,r){const c=(0,i.checkOpts)({dkLen:32,asyncTick:10,maxmem:1073742848},r),{N:a,r:l,p:u,dkLen:h,asyncTick:f,maxmem:y,onProgress:d}=c;if((0,n.number)(a),(0,n.number)(l),(0,n.number)(u),(0,n.number)(h),(0,n.number)(f),(0,n.number)(y),void 0!==d&&"function"!=typeof d)throw new Error("progressCb should be function");const p=128*l,g=p/4;if(a<=1||0!=(a&a-1)||a>=2**(p/8)||a>2**32)throw new Error("Scrypt: N must be larger than 1, a power of 2, less than 2^(128 * r / 8) and less than 2^32");if(u<0||u>137438953440/p)throw new Error("Scrypt: p must be a positive integer less than or equal to ((2^32 - 1) * 32) / (128 * r)");if(h<0||h>137438953440)throw new Error("Scrypt: dkLen should be positive integer less than or equal to (2^32 - 1) * 32");const b=p*(a+u);if(b>y)throw new Error(`Scrypt: parameters too large, ${b} (128 * r * (N + p)) > ${y} (maxmem)`);const w=(0,s.pbkdf2)(o.sha256,t,e,{c:1,dkLen:p*u}),m=(0,i.u32)(w),E=(0,i.u32)(new Uint8Array(p*a)),v=(0,i.u32)(new Uint8Array(p));let x=()=>{};if(d){const t=2*a*u,e=Math.max(Math.floor(t/1e4),1);let r=0;x=()=>{r++,!d||r%e&&r!==t||d(r/t)}}return{N:a,r:l,p:u,dkLen:h,blockSize32:g,V:E,B32:m,B:w,tmp:v,blockMixCb:x,asyncTick:f}}function u(t,e,r,n,i){const c=(0,s.pbkdf2)(o.sha256,t,r,{c:1,dkLen:e});return r.fill(0),n.fill(0),i.fill(0),c}r.scrypt=function(t,e,r){const{N:n,r:o,p:s,dkLen:c,blockSize32:h,V:f,B32:y,B:d,tmp:p,blockMixCb:g}=l(t,e,r);i.isLE||(0,i.byteSwap32)(y);for(let t=0;t<s;t++){const e=h*t;for(let t=0;t<h;t++)f[t]=y[e+t];for(let t=0,e=0;t<n-1;t++)a(f,e,f,e+=h,o),g();a(f,(n-1)*h,y,e,o),g();for(let t=0;t<n;t++){const t=y[e+h-16]%n;for(let r=0;r<h;r++)p[r]=y[e+r]^f[t*h+r];a(p,0,y,e,o),g()}}return i.isLE||(0,i.byteSwap32)(y),u(t,c,d,f,p)},r.scryptAsync=async function(t,e,r){const{N:n,r:o,p:s,dkLen:c,blockSize32:h,V:f,B32:y,B:d,tmp:p,blockMixCb:g,asyncTick:b}=l(t,e,r);i.isLE||(0,i.byteSwap32)(y);for(let t=0;t<s;t++){const e=h*t;for(let t=0;t<h;t++)f[t]=y[e+t];let r=0;await(0,i.asyncLoop)(n-1,b,(()=>{a(f,r,f,r+=h,o),g()})),a(f,(n-1)*h,y,e,o),g(),await(0,i.asyncLoop)(n,b,(()=>{const t=y[e+h-16]%n;for(let r=0;r<h;r++)p[r]=y[e+r]^f[t*h+r];a(p,0,y,e,o),g()}))}return i.isLE||(0,i.byteSwap32)(y),u(t,c,d,f,p)}},{"./_assert.js":13,"./pbkdf2.js":17,"./sha256.js":19,"./utils.js":20}],19:[function(t,e,r){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.sha224=r.sha256=void 0;const n=t("./_md.js"),o=t("./utils.js"),s=new Uint32Array([1116352408,1899447441,3049323471,3921009573,961987163,1508970993,2453635748,2870763221,3624381080,310598401,607225278,1426881987,1925078388,2162078206,2614888103,3248222580,3835390401,4022224774,264347078,604807628,770255983,1249150122,1555081692,1996064986,2554220882,2821834349,2952996808,3210313671,3336571891,3584528711,113926993,338241895,666307205,773529912,1294757372,1396182291,1695183700,1986661051,2177026350,2456956037,2730485921,2820302411,3259730800,3345764771,3516065817,3600352804,4094571909,275423344,430227734,506948616,659060556,883997877,958139571,1322822218,1537002063,1747873779,1955562222,2024104815,2227730452,2361852424,2428436474,2756734187,3204031479,3329325298]),i=new Uint32Array([1779033703,3144134277,1013904242,2773480762,1359893119,2600822924,528734635,1541459225]),c=new Uint32Array(64);class a extends n.HashMD{constructor(){super(64,32,8,!1),this.A=0|i[0],this.B=0|i[1],this.C=0|i[2],this.D=0|i[3],this.E=0|i[4],this.F=0|i[5],this.G=0|i[6],this.H=0|i[7]}get(){const{A:t,B:e,C:r,D:n,E:o,F:s,G:i,H:c}=this;return[t,e,r,n,o,s,i,c]}set(t,e,r,n,o,s,i,c){this.A=0|t,this.B=0|e,this.C=0|r,this.D=0|n,this.E=0|o,this.F=0|s,this.G=0|i,this.H=0|c}process(t,e){for(let r=0;r<16;r++,e+=4)c[r]=t.getUint32(e,!1);for(let t=16;t<64;t++){const e=c[t-15],r=c[t-2],n=(0,o.rotr)(e,7)^(0,o.rotr)(e,18)^e>>>3,s=(0,o.rotr)(r,17)^(0,o.rotr)(r,19)^r>>>10;c[t]=s+c[t-7]+n+c[t-16]|0}let{A:r,B:i,C:a,D:l,E:u,F:h,G:f,H:y}=this;for(let t=0;t<64;t++){const e=y+((0,o.rotr)(u,6)^(0,o.rotr)(u,11)^(0,o.rotr)(u,25))+(0,n.Chi)(u,h,f)+s[t]+c[t]|0,d=((0,o.rotr)(r,2)^(0,o.rotr)(r,13)^(0,o.rotr)(r,22))+(0,n.Maj)(r,i,a)|0;y=f,f=h,h=u,u=l+e|0,l=a,a=i,i=r,r=e+d|0}r=r+this.A|0,i=i+this.B|0,a=a+this.C|0,l=l+this.D|0,u=u+this.E|0,h=h+this.F|0,f=f+this.G|0,y=y+this.H|0,this.set(r,i,a,l,u,h,f,y)}roundClean(){c.fill(0)}destroy(){this.set(0,0,0,0,0,0,0,0),this.buffer.fill(0)}}class l extends a{constructor(){super(),this.A=-1056596264,this.B=914150663,this.C=812702999,this.D=-150054599,this.E=-4191439,this.F=1750603025,this.G=1694076839,this.H=-1090891868,this.outputLen=28}}r.sha256=(0,o.wrapConstructor)((()=>new a)),r.sha224=(0,o.wrapConstructor)((()=>new l))},{"./_md.js":14,"./utils.js":20}],20:[function(t,e,r){"use strict";
      /*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */Object.defineProperty(r,"__esModule",{value:!0}),r.randomBytes=r.wrapXOFConstructorWithOpts=r.wrapConstructorWithOpts=r.wrapConstructor=r.checkOpts=r.Hash=r.concatBytes=r.toBytes=r.utf8ToBytes=r.asyncLoop=r.nextTick=r.hexToBytes=r.bytesToHex=r.byteSwap32=r.byteSwapIfBE=r.byteSwap=r.isLE=r.rotl=r.rotr=r.createView=r.u32=r.u8=r.isBytes=void 0;const n=t("@noble/hashes/crypto"),o=t("./_assert.js");r.isBytes=function(t){return t instanceof Uint8Array||null!=t&&"object"==typeof t&&"Uint8Array"===t.constructor.name};r.u8=t=>new Uint8Array(t.buffer,t.byteOffset,t.byteLength);r.u32=t=>new Uint32Array(t.buffer,t.byteOffset,Math.floor(t.byteLength/4));r.createView=t=>new DataView(t.buffer,t.byteOffset,t.byteLength);r.rotr=(t,e)=>t<<32-e|t>>>e;r.rotl=(t,e)=>t<<e|t>>>32-e>>>0,r.isLE=68===new Uint8Array(new Uint32Array([287454020]).buffer)[0];r.byteSwap=t=>t<<24&4278190080|t<<8&16711680|t>>>8&65280|t>>>24&255,r.byteSwapIfBE=r.isLE?t=>t:t=>(0,r.byteSwap)(t),r.byteSwap32=function(t){for(let e=0;e<t.length;e++)t[e]=(0,r.byteSwap)(t[e])};const s=Array.from({length:256},((t,e)=>e.toString(16).padStart(2,"0")));r.bytesToHex=function(t){(0,o.bytes)(t);let e="";for(let r=0;r<t.length;r++)e+=s[t[r]];return e};const i={_0:48,_9:57,_A:65,_F:70,_a:97,_f:102};function c(t){return t>=i._0&&t<=i._9?t-i._0:t>=i._A&&t<=i._F?t-(i._A-10):t>=i._a&&t<=i._f?t-(i._a-10):void 0}r.hexToBytes=function(t){if("string"!=typeof t)throw new Error("hex string expected, got "+typeof t);const e=t.length,r=e/2;if(e%2)throw new Error("padded hex string expected, got unpadded hex of length "+e);const n=new Uint8Array(r);for(let e=0,o=0;e<r;e++,o+=2){const r=c(t.charCodeAt(o)),s=c(t.charCodeAt(o+1));if(void 0===r||void 0===s){const e=t[o]+t[o+1];throw new Error('hex string expected, got non-hex character "'+e+'" at index '+o)}n[e]=16*r+s}return n};function a(t){if("string"!=typeof t)throw new Error("utf8ToBytes expected string, got "+typeof t);return new Uint8Array((new TextEncoder).encode(t))}function l(t){return"string"==typeof t&&(t=a(t)),(0,o.bytes)(t),t}r.nextTick=async()=>{},r.asyncLoop=async function(t,e,n){let o=Date.now();for(let s=0;s<t;s++){n(s);const t=Date.now()-o;t>=0&&t<e||(await(0,r.nextTick)(),o+=t)}},r.utf8ToBytes=a,r.toBytes=l,r.concatBytes=function(...t){let e=0;for(let r=0;r<t.length;r++){const n=t[r];(0,o.bytes)(n),e+=n.length}const r=new Uint8Array(e);for(let e=0,n=0;e<t.length;e++){const o=t[e];r.set(o,n),n+=o.length}return r};r.Hash=class{clone(){return this._cloneInto()}};const u={}.toString;r.checkOpts=function(t,e){if(void 0!==e&&"[object Object]"!==u.call(e))throw new Error("Options should be object or undefined");return Object.assign(t,e)},r.wrapConstructor=function(t){const e=e=>t().update(l(e)).digest(),r=t();return e.outputLen=r.outputLen,e.blockLen=r.blockLen,e.create=()=>t(),e},r.wrapConstructorWithOpts=function(t){const e=(e,r)=>t(r).update(l(e)).digest(),r=t({});return e.outputLen=r.outputLen,e.blockLen=r.blockLen,e.create=e=>t(e),e},r.wrapXOFConstructorWithOpts=function(t){const e=(e,r)=>t(r).update(l(e)).digest(),r=t({});return e.outputLen=r.outputLen,e.blockLen=r.blockLen,e.create=e=>t(e),e},r.randomBytes=function(t=32){if(n.crypto&&"function"==typeof n.crypto.getRandomValues)return n.crypto.getRandomValues(new Uint8Array(t));throw new Error("crypto.getRandomValues must be defined")}},{"./_assert.js":13,"@noble/hashes/crypto":15}],21:[function(t,e,r){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.encode=r.decode=void 0;const n={},o={};["ҠҿԀԟڀڿݠޟ߀ߟကဟႠႿᄀᅟᆀᆟᇠሿበቿዠዿጠጿᎠᏟᐠᙟᚠᛟកសᠠᡟᣀᣟᦀᦟ᧠᧿ᨠᨿᯀᯟᰀᰟᴀᴟ⇠⇿⋀⋟⍀⏟␀␟─❟➀➿⠀⥿⦠⦿⨠⩟⪀⪿⫠⭟ⰀⰟⲀⳟⴀⴟⵀⵟ⺠⻟㇀㇟㐀䶟䷀龿ꀀꑿ꒠꒿ꔀꗿꙀꙟꚠꛟ꜀ꝟꞀꞟꡀꡟ","ƀƟɀʟ"].forEach(((t,e)=>{const r=[];t.match(/../gu).forEach((t=>{const e=t.codePointAt(0),n=t.codePointAt(1);for(let t=e;t<=n;t++)r.push(String.fromCodePoint(t))}));const s=15-8*e;n[s]=r,r.forEach(((t,e)=>{o[t]=[s,e]}))}));r.encode=t=>{const e=t.length;let r="",o=0,s=0;for(let i=0;i<e;i++){const e=t[i];for(let t=7;t>=0;t--){o=(o<<1)+(e>>t&1),s++,15===s&&(r+=n[s][o],o=0,s=0)}}if(0!==s){for(;!(s in n);)o=1+(o<<1),s++;r+=n[s][o]}return r};r.decode=t=>{const e=t.length,r=new Uint8Array(Math.floor(15*e/8));let n=0,s=0,i=0;for(let c=0;c<e;c++){const a=t.charAt(c);if(!(a in o))throw new Error(`Unrecognised Base32768 character: ${a}`);const[l,u]=o[a];if(15!==l&&c!==e-1)throw new Error("Secondary character found before end of input at position "+String(c));for(let t=l-1;t>=0;t--){s=(s<<1)+(u>>t&1),i++,8===i&&(r[n]=s,n++,s=0,i=0)}}if(s!==(1<<i)-1)throw new Error("Padding mismatch");return new Uint8Array(r.buffer,0,n)}},{}],22:[function(t,e,r){e.exports={pad:function(t,e){var r=t;if("number"!=typeof e)e=16;else{if(e>255)throw new RangeError("pad(): PKCS#7 padding cannot be longer than 255 bytes");if(e<0)throw new RangeError("pad(): PKCS#7 padding size must be positive")}if("string"==typeof t){var n=e-t.length%e;isNaN(n)&&(n=0);for(var o=String.fromCharCode(n),s=0;s<n;s++)r+=o}else{if(!(t instanceof Uint8Array||t instanceof Uint8ClampedArray))throw new TypeError("pad(): data could not be padded");var i=t.byteLength;n=e-i%e,isNaN(n)&&(n=0);var c=i+n;for((r=new t.constructor(c)).set(t),s=i;s<c;s++)r[s]=n}return r},unpad:function(t){var e=t;if("string"==typeof t&&t.length>0){var r=t.charCodeAt(t.length-1);if(r>t.length)throw new Error("unpad(): cannot remove "+r+" bytes from a "+t.length+"-byte(s) string");for(var n=t.length-2,o=t.length-r;n>=o;n--)if(t.charCodeAt(n)!==r)throw new Error("unpad(): found a padding byte of "+t.charCodeAt(n)+" instead of "+r+" at position "+n);e=t.substring(0,o)}else if(t instanceof Uint8Array||t instanceof Uint8ClampedArray){var s=t.byteLength,i=s-(r=t[s-1]);if(i<0)throw new Error("unpad(): cannot remove "+r+" bytes from a "+s+"-byte(s) string");for(n=s-2;n>=i;n--)if(t[n]!==r)throw new Error("unpad(): found a padding byte of "+t[n]+" instead of "+r+" at position "+n);e=t.slice(0,i)}return e}}},{}],23:[function(t,e,r){"use strict";function n(t,e,r){var n;if(void 0===r&&(r={}),!e.codes){e.codes={};for(var o=0;o<e.chars.length;++o)e.codes[e.chars[o]]=o}if(!r.loose&&t.length*e.bits&7)throw new SyntaxError("Invalid padding");for(var s=t.length;"="===t[s-1];)if(--s,!(r.loose||(t.length-s)*e.bits&7))throw new SyntaxError("Invalid padding");for(var i=new(null!=(n=r.out)?n:Uint8Array)(s*e.bits/8|0),c=0,a=0,l=0,u=0;u<s;++u){var h=e.codes[t[u]];if(void 0===h)throw new SyntaxError("Invalid character "+t[u]);a=a<<e.bits|h,(c+=e.bits)>=8&&(c-=8,i[l++]=255&a>>c)}if(c>=e.bits||255&a<<8-c)throw new SyntaxError("Unexpected end of data");return i}function o(t,e,r){void 0===r&&(r={});for(var n=r.pad,o=void 0===n||n,s=(1<<e.bits)-1,i="",c=0,a=0,l=0;l<t.length;++l)for(a=a<<8|255&t[l],c+=8;c>e.bits;)c-=e.bits,i+=e.chars[s&a>>c];if(c&&(i+=e.chars[s&a<<e.bits-c]),o)for(;i.length*e.bits&7;)i+="=";return i}Object.defineProperty(r,"__esModule",{value:!0}),r.codec=r.base64url=r.base64=r.base32hex=r.base32=r.base16=void 0;var s={chars:"0123456789ABCDEF",bits:4},i={chars:"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",bits:5},c={chars:"0123456789ABCDEFGHIJKLMNOPQRSTUV",bits:5},a={chars:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",bits:6},l={chars:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",bits:6};r.base16={parse:function(t,e){return n(t.toUpperCase(),s,e)},stringify:function(t,e){return o(t,s,e)}},r.base32={parse:function(t,e){return void 0===e&&(e={}),n(e.loose?t.toUpperCase().replace(/0/g,"O").replace(/1/g,"L").replace(/8/g,"B"):t,i,e)},stringify:function(t,e){return o(t,i,e)}},r.base32hex={parse:function(t,e){return n(t,c,e)},stringify:function(t,e){return o(t,c,e)}},r.base64={parse:function(t,e){return n(t,a,e)},stringify:function(t,e){return o(t,a,e)}},r.base64url={parse:function(t,e){return n(t,l,e)},stringify:function(t,e){return o(t,l,e)}},r.codec={parse:n,stringify:o}},{}]},{},[1]);
 
+    // WebP Animation Duration Utility (pure JS RIFF parser - no WASM/external deps)
+    window.getWebPDuration = async function(url) {
+      try {
+        var response = await fetch(url);
+        var buffer = await response.arrayBuffer();
+        var view = new DataView(buffer);
+        if (buffer.byteLength < 12) return 0;
+        // Verify RIFF header + WEBP signature
+        if (view.getUint32(0) !== 0x52494646 || view.getUint32(8) !== 0x57454250) return 0;
+        var offset = 12;
+        var totalDuration = 0;
+        while (offset + 8 <= buffer.byteLength) {
+          var fourCC = String.fromCharCode(
+            view.getUint8(offset), view.getUint8(offset + 1),
+            view.getUint8(offset + 2), view.getUint8(offset + 3)
+          );
+          var chunkSize = view.getUint32(offset + 4, true);
+          if (fourCC === 'ANMF' && offset + 8 + 15 <= buffer.byteLength) {
+            // Duration is at bytes 12-14 of ANMF chunk data (uint24 LE, milliseconds)
+            var d = offset + 8;
+            totalDuration += view.getUint8(d + 12) | (view.getUint8(d + 13) << 8) | (view.getUint8(d + 14) << 16);
+          }
+          offset += 8 + chunkSize + (chunkSize & 1);
+        }
+        return totalDuration;
+      } catch(e) { return 0; }
+    };
+
+    // Unified animation duration detector (delegates to WebP or GIF parser)
+    window.getAnimationDuration = async function(url) {
+      if (/\.webp(\?|#|$)/i.test(url)) return window.getWebPDuration(url);
+      if (/\.gif(\?|#|$)/i.test(url)) return window.getGifDuration(url);
+      // For blob/opaque URLs, try WebP first (cheap header check), then GIF
+      var dur = await window.getWebPDuration(url);
+      if (dur > 0) return dur;
+      return window.getGifDuration(url);
+    };
+
     // GIF Duration Utility
     !function(t){var n={};function i(e){if(n[e])return n[e].exports;var r=n[e]={i:e,l:!1,exports:{}};return t[e].call(r.exports,r,r.exports,i),r.l=!0,r.exports}i.m=t,i.c=n,i.d=function(e,r,t){i.o(e,r)||Object.defineProperty(e,r,{enumerable:!0,get:t})},i.r=function(e){"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(e,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(e,"__esModule",{value:!0})},i.t=function(r,e){if(1&e&&(r=i(r)),8&e)return r;if(4&e&&"object"==typeof r&&r&&r.__esModule)return r;var t=Object.create(null);if(i.r(t),Object.defineProperty(t,"default",{enumerable:!0,value:r}),2&e&&"string"!=typeof r)for(var n in r)i.d(t,n,function(e){return r[e]}.bind(null,n));return t},i.n=function(e){var r=e&&e.__esModule?function(){return e.default}:function(){return e};return i.d(r,"a",r),r},i.o=function(e,r){return Object.prototype.hasOwnProperty.call(e,r)},i.p="",i(i.s=0)}([function(e,r,t){"use strict";t.r(r);var n=t(1);window.getGifDuration=async function(e){e=await(await fetch(e)).arrayBuffer(),e=Object(n.parseGIF)(e);return Object(n.decompressFrames)(e,!0).map(e=>e.delay).reduce((e,r)=>e+r,0)}},function(e,r,t){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.decompressFrames=r.decompressFrame=r.parseGIF=void 0;var n,i=(n=t(2))&&n.__esModule?n:{default:n},o=t(3),a=t(4),d=t(5),u=t(6);r.parseGIF=function(e){e=new Uint8Array(e);return(0,o.parse)((0,a.buildStream)(e),i.default)};function c(e,r,t){if(e.image){var n=e.image,i=n.descriptor.width*n.descriptor.height,i=(0,u.lzw)(n.data.minCodeSize,n.data.blocks,i);n.descriptor.lct.interlaced&&(i=(0,d.deinterlace)(i,n.descriptor.width));i={pixels:i,dims:{top:e.image.descriptor.top,left:e.image.descriptor.left,width:e.image.descriptor.width,height:e.image.descriptor.height}};return n.descriptor.lct&&n.descriptor.lct.exists?i.colorTable=n.lct:i.colorTable=r,e.gce&&(i.delay=10*(e.gce.delay||10),i.disposalType=e.gce.extras.disposal,e.gce.extras.transparentColorGiven&&(i.transparentIndex=e.gce.transparentColorIndex)),t&&(i.patch=function(e){for(var r=e.pixels.length,t=new Uint8ClampedArray(4*r),n=0;n<r;n++){var i=4*n,o=e.pixels[n],a=e.colorTable[o]||[0,0,0];t[i]=a[0],t[1+i]=a[1],t[2+i]=a[2],t[3+i]=o!==e.transparentIndex?255:0}return t}(i)),i}console.warn("gif frame does not have associated image.")}r.decompressFrame=c;r.decompressFrames=function(r,t){return r.frames.filter(function(e){return e.image}).map(function(e){return c(e,r.gct,t)})}},function(e,r,t){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.default=void 0;var n=t(3),c=t(4),i={blocks:function(e){for(var r=[],t=e.data.length,n=0,i=(0,c.readByte)()(e);0!==i&&i;i=(0,c.readByte)()(e)){if(e.pos+i>=t){var o=t-e.pos;r.push((0,c.readBytes)(o)(e)),n+=o;break}r.push((0,c.readBytes)(i)(e)),n+=i}for(var a=new Uint8Array(n),d=0,u=0;u<r.length;u++)a.set(r[u],d),d+=r[u].length;return a}},o=(0,n.conditional)({gce:[{codes:(0,c.readBytes)(2)},{byteSize:(0,c.readByte)()},{extras:(0,c.readBits)({future:{index:0,length:3},disposal:{index:3,length:3},userInput:{index:6},transparentColorGiven:{index:7}})},{delay:(0,c.readUnsigned)(!0)},{transparentColorIndex:(0,c.readByte)()},{terminator:(0,c.readByte)()}]},function(e){e=(0,c.peekBytes)(2)(e);return 33===e[0]&&249===e[1]}),a=(0,n.conditional)({image:[{code:(0,c.readByte)()},{descriptor:[{left:(0,c.readUnsigned)(!0)},{top:(0,c.readUnsigned)(!0)},{width:(0,c.readUnsigned)(!0)},{height:(0,c.readUnsigned)(!0)},{lct:(0,c.readBits)({exists:{index:0},interlaced:{index:1},sort:{index:2},future:{index:3,length:2},size:{index:5,length:3}})}]},(0,n.conditional)({lct:(0,c.readArray)(3,function(e,r,t){return Math.pow(2,t.descriptor.lct.size+1)})},function(e,r,t){return t.descriptor.lct.exists}),{data:[{minCodeSize:(0,c.readByte)()},i]}]},function(e){return 44===(0,c.peekByte)()(e)}),d=(0,n.conditional)({text:[{codes:(0,c.readBytes)(2)},{blockSize:(0,c.readByte)()},{preData:function(e,r,t){return(0,c.readBytes)(t.text.blockSize)(e)}},i]},function(e){e=(0,c.peekBytes)(2)(e);return 33===e[0]&&1===e[1]}),t=(0,n.conditional)({application:[{codes:(0,c.readBytes)(2)},{blockSize:(0,c.readByte)()},{id:function(e,r,t){return(0,c.readString)(t.blockSize)(e)}},i]},function(e){e=(0,c.peekBytes)(2)(e);return 33===e[0]&&255===e[1]}),i=(0,n.conditional)({comment:[{codes:(0,c.readBytes)(2)},i]},function(e){e=(0,c.peekBytes)(2)(e);return 33===e[0]&&254===e[1]}),d=[{header:[{signature:(0,c.readString)(3)},{version:(0,c.readString)(3)}]},{lsd:[{width:(0,c.readUnsigned)(!0)},{height:(0,c.readUnsigned)(!0)},{gct:(0,c.readBits)({exists:{index:0},resolution:{index:1,length:3},sort:{index:4},size:{index:5,length:3}})},{backgroundColorIndex:(0,c.readByte)()},{pixelAspectRatio:(0,c.readByte)()}]},(0,n.conditional)({gct:(0,c.readArray)(3,function(e,r){return Math.pow(2,r.lsd.gct.size+1)})},function(e,r){return r.lsd.gct.exists}),{frames:(0,n.loop)([o,t,i,a,d],function(e){e=(0,c.peekByte)()(e);return 33===e||44===e})}];r.default=d},function(e,r,t){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.loop=r.conditional=r.parse=void 0;function o(r,e){var t,n=2<arguments.length&&void 0!==arguments[2]?arguments[2]:{},i=3<arguments.length&&void 0!==arguments[3]?arguments[3]:n;return Array.isArray(e)?e.forEach(function(e){return o(r,e,n,i)}):"function"==typeof e?e(r,n,i,o):(t=Object.keys(e)[0],Array.isArray(e[t])?(i[t]={},o(r,e[t],n,i[t])):i[t]=e[t](r,n,i,o)),n}r.parse=o;r.conditional=function(i,o){return function(e,r,t,n){o(e,r,t)&&n(e,i,r,t)}};r.loop=function(d,u){return function(e,r,t,n){for(var i=[],o=e.pos;u(e,r,t);){var a={};if(n(e,d,r,a),e.pos===o)break;o=e.pos,i.push(a)}return i}}},function(e,r,t){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.readBits=r.readArray=r.readUnsigned=r.readString=r.peekBytes=r.readBytes=r.peekByte=r.readByte=r.buildStream=void 0;r.buildStream=function(e){return{data:e,pos:0}};function o(){return function(e){return e.data[e.pos++]}}r.readByte=o;r.peekByte=function(){var r=0<arguments.length&&void 0!==arguments[0]?arguments[0]:0;return function(e){return e.data[e.pos+r]}};function c(r){return function(e){return e.data.subarray(e.pos,e.pos+=r)}}r.readBytes=c;r.peekBytes=function(r){return function(e){return e.data.subarray(e.pos,e.pos+r)}};r.readString=function(r){return function(e){return Array.from(c(r)(e)).map(function(e){return String.fromCharCode(e)}).join("")}};r.readUnsigned=function(r){return function(e){e=c(2)(e);return r?(e[1]<<8)+e[0]:(e[0]<<8)+e[1]}};r.readArray=function(d,u){return function(e,r,t){for(var n="function"==typeof u?u(e,r,t):u,i=c(d),o=new Array(n),a=0;a<n;a++)o[a]=i(e);return o}};r.readBits=function(i){return function(e){for(var r=o()(e),n=new Array(8),t=0;t<8;t++)n[7-t]=!!(r&1<<t);return Object.keys(i).reduce(function(e,r){var t=i[r];return t.length?e[r]=function(e,r,t){for(var n=0,i=0;i<t;i++)n+=e[r+i]&&Math.pow(2,t-i-1);return n}(n,t.index,t.length):e[r]=n[t.index],e},{})}}},function(e,r,t){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.deinterlace=void 0;r.deinterlace=function(e,r){for(var t,n,i=new Array(e.length),o=e.length/r,a=[0,4,2,1],d=[8,8,4,2],u=0,c=0;c<4;c++)for(var s=a[c];s<o;s+=d[c])t=s,n=u,n=e.slice(n*r,(n+1)*r),i.splice.apply(i,[t*r,r].concat(n)),u++;return i}},function(e,r,t){"use strict";Object.defineProperty(r,"__esModule",{value:!0}),r.lzw=void 0;r.lzw=function(e,r,t){for(var n,i,o,a,d,u,c,s,f=4096,l=t,p=new Array(t),y=new Array(f),g=new Array(f),v=new Array(4097),h=e,m=1<<h,b=1+m,x=2+m,B=-1,w=h+1,k=(1<<w)-1,S=0;S<m;S++)y[S]=0,g[S]=S;for(i=o=a=d=u=c=s=0;i<l;){if(0===u){if(a<w){o+=r[s]<<a,a+=8,s++;continue}if(S=o&k,o>>=w,a-=w,x<S||S==b)break;if(S==m){k=(1<<(w=h+1))-1,x=2+m,B=-1;continue}if(-1==B){v[u++]=g[S],d=B=S;continue}for((n=S)==x&&(v[u++]=d,S=B);m<S;)v[u++]=g[S],S=y[S];d=255&g[S],v[u++]=d,x<f&&(y[x]=B,g[x]=d,0==(++x&k)&&x<f&&(w++,k+=x)),B=n}u--,p[c++]=v[u],i++}for(i=c;i<l;i++)p[i]=0;return p}}]);
 
@@ -1925,6 +1964,26 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           return /\.(mp4|webm|ogg|mov|gif)$/i.test(resource);
         },
 
+        // Check if this is an image that may have alternate format versions available
+        isWebPCandidate(resource) {
+          return /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(resource);
+        },
+
+        // Check if this is a GIF file
+        isGif(resource) {
+          return /\.gif$/i.test(resource);
+        },
+
+        // Convert image path to WebP equivalent
+        toWebPPath(path) {
+          return path.replace(/\.(jpg|jpeg|png|gif|bmp)$/i, '.webp');
+        },
+
+        // Convert image path to JPG equivalent (for thumbnails)
+        toJpgPath(path) {
+          return path.replace(/\.(gif|webp|png|bmp|jpeg)$/i, '.jpg');
+        },
+
         isMediaFile(resource) {
           return this.isImage(resource) || this.isVideo(resource);
         },
@@ -2111,7 +2170,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             this.activeConcurrentFetches++;
 
             try {
-              const url = await this.fetchResource(task.resource);
+              const url = await this.fetchResource(task.resource, task.priority);
               task.resolve(url);
             } catch (error) {
               task.reject(error);
@@ -2135,7 +2194,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
           this.processing = false;
         },
 
-        async fetchResource(resource) {
+        async fetchResource(resource, priority = "low") {
           // Safety check: return data URIs and blob URLs as-is
           if (resource.startsWith("data:") || resource.startsWith("blob:")) {
             return resource;
@@ -2162,6 +2221,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               baseResource.startsWith("flash/") ||
               baseResource.startsWith("vr/");
             const isMedia = this.isMediaFile(baseResource);
+            const isHighPriority = priority === "high" || priority === "vr-gallery";
 
             // Helper function to try a path with retries
             const tryPath = async (pathConfig) => {
@@ -2307,33 +2367,132 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             // Build non-encrypted paths first
             const unencryptedPaths = [];
 
+            // Check if this image could have alternate format versions available
+            const isWebPCandidate = this.isWebPCandidate(baseResource);
+            const isGifFile = this.isGif(baseResource);
+            const webpResource = isWebPCandidate ? this.toWebPPath(baseResource) : null;
+            const jpgResource = isWebPCandidate ? this.toJpgPath(baseResource) : null;
+
             if (isMedia && !isFlashOrVr) {
               // Regular media file path sequence
               if (!this.useCrypt) {
-                // Try unencrypted first
-                if (!this.skipPrFa) {
-                  unencryptedPaths.push({
-                    path: "pr/" + baseResource,
-                    encrypted: false,
-                  });
-                  unencryptedPaths.push({
-                    path: "un/" + baseResource,
-                    encrypted: false,
-                  });
-                  unencryptedPaths.push({
-                    path: "fa/" + baseResource,
-                    encrypted: false,
-                  });
-                }
-                if (!this.usesPrFa) {
-                  unencryptedPaths.push({
-                    path: baseResource,
-                    encrypted: false,
-                  });
+                // GIF handling depends on priority:
+                // - Thumbnails (low priority): Try JPG first (static thumbnail), then GIF
+                // - Fancybox (high priority): Try WebP first (animated), then GIF
+                if (isGifFile) {
+                  if (isHighPriority) {
+                    // Fancybox: Try WebP first for animated WebP support
+                    if (!this.skipPrFa) {
+                      unencryptedPaths.push({ path: "pr/" + webpResource, encrypted: false });
+                      unencryptedPaths.push({ path: "un/" + webpResource, encrypted: false });
+                      unencryptedPaths.push({ path: "fa/" + webpResource, encrypted: false });
+                    }
+                    if (!this.usesPrFa) {
+                      unencryptedPaths.push({ path: webpResource, encrypted: false });
+                    }
+                  } else {
+                    // Thumbnails: Try JPG first (static thumbnail for GIFs)
+                    if (!this.skipPrFa) {
+                      unencryptedPaths.push({ path: "pr/" + jpgResource, encrypted: false });
+                      unencryptedPaths.push({ path: "un/" + jpgResource, encrypted: false });
+                      unencryptedPaths.push({ path: "fa/" + jpgResource, encrypted: false });
+                    }
+                    if (!this.usesPrFa) {
+                      unencryptedPaths.push({ path: jpgResource, encrypted: false });
+                    }
+                    // Then try WebP as second fallback
+                    if (!this.skipPrFa) {
+                      unencryptedPaths.push({ path: "pr/" + webpResource, encrypted: false });
+                      unencryptedPaths.push({ path: "un/" + webpResource, encrypted: false });
+                      unencryptedPaths.push({ path: "fa/" + webpResource, encrypted: false });
+                    }
+                    if (!this.usesPrFa) {
+                      unencryptedPaths.push({ path: webpResource, encrypted: false });
+                    }
+                  }
+                  // Then try original GIF as final fallback
+                  if (!this.skipPrFa) {
+                    unencryptedPaths.push({ path: "pr/" + baseResource, encrypted: false });
+                    unencryptedPaths.push({ path: "un/" + baseResource, encrypted: false });
+                    unencryptedPaths.push({ path: "fa/" + baseResource, encrypted: false });
+                  }
+                  if (!this.usesPrFa) {
+                    unencryptedPaths.push({ path: baseResource, encrypted: false });
+                  }
+                } else if (isWebPCandidate) {
+                  if (isHighPriority) {
+                    // Fancybox: Try WebP first, then original format (skip JPG - that's only a thumbnail)
+                    if (!this.skipPrFa) {
+                      unencryptedPaths.push({ path: "pr/" + webpResource, encrypted: false });
+                      unencryptedPaths.push({ path: "un/" + webpResource, encrypted: false });
+                      unencryptedPaths.push({ path: "fa/" + webpResource, encrypted: false });
+                    }
+                    if (!this.usesPrFa) {
+                      unencryptedPaths.push({ path: webpResource, encrypted: false });
+                    }
+                    // Then try original format as fallback
+                    if (baseResource !== webpResource) {
+                      if (!this.skipPrFa) {
+                        unencryptedPaths.push({ path: "pr/" + baseResource, encrypted: false });
+                        unencryptedPaths.push({ path: "un/" + baseResource, encrypted: false });
+                        unencryptedPaths.push({ path: "fa/" + baseResource, encrypted: false });
+                      }
+                      if (!this.usesPrFa) {
+                        unencryptedPaths.push({ path: baseResource, encrypted: false });
+                      }
+                    }
+                  } else {
+                    // Thumbnails: Try JPG first, then WebP, then original format
+                    // Step 1: JPG (use jpgResource, or baseResource if it's already .jpg)
+                    const thumbJpg = jpgResource !== baseResource ? jpgResource : baseResource;
+                    if (!this.skipPrFa) {
+                      unencryptedPaths.push({ path: "pr/" + thumbJpg, encrypted: false });
+                      unencryptedPaths.push({ path: "un/" + thumbJpg, encrypted: false });
+                      unencryptedPaths.push({ path: "fa/" + thumbJpg, encrypted: false });
+                    }
+                    if (!this.usesPrFa) {
+                      unencryptedPaths.push({ path: thumbJpg, encrypted: false });
+                    }
+                    // Step 2: WebP (skip if same as what we already tried)
+                    if (webpResource !== thumbJpg) {
+                      if (!this.skipPrFa) {
+                        unencryptedPaths.push({ path: "pr/" + webpResource, encrypted: false });
+                        unencryptedPaths.push({ path: "un/" + webpResource, encrypted: false });
+                        unencryptedPaths.push({ path: "fa/" + webpResource, encrypted: false });
+                      }
+                      if (!this.usesPrFa) {
+                        unencryptedPaths.push({ path: webpResource, encrypted: false });
+                      }
+                    }
+                    // Step 3: Original format (skip if same as JPG or WebP)
+                    if (baseResource !== thumbJpg && baseResource !== webpResource) {
+                      if (!this.skipPrFa) {
+                        unencryptedPaths.push({ path: "pr/" + baseResource, encrypted: false });
+                        unencryptedPaths.push({ path: "un/" + baseResource, encrypted: false });
+                        unencryptedPaths.push({ path: "fa/" + baseResource, encrypted: false });
+                      }
+                      if (!this.usesPrFa) {
+                        unencryptedPaths.push({ path: baseResource, encrypted: false });
+                      }
+                    }
+                  }
+                } else {
+                  // Non-image media (videos, etc): Just try original paths
+                  if (!this.skipPrFa) {
+                    unencryptedPaths.push({ path: "pr/" + baseResource, encrypted: false });
+                    unencryptedPaths.push({ path: "un/" + baseResource, encrypted: false });
+                    unencryptedPaths.push({ path: "fa/" + baseResource, encrypted: false });
+                  }
+                  if (!this.usesPrFa) {
+                    unencryptedPaths.push({ path: baseResource, encrypted: false });
+                  }
                 }
               }
             } else if (isFlashOrVr) {
-              // Flash/VR specific
+              // Flash/VR specific — try WebP first, then original format as fallback
+              if (isWebPCandidate && webpResource && webpResource !== baseResource) {
+                unencryptedPaths.push({ path: webpResource, encrypted: false });
+              }
               unencryptedPaths.push({ path: baseResource, encrypted: false });
             } else {
               // Non-media files (JS, JSON, etc)
@@ -2367,20 +2526,75 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
             const encryptedPaths = [];
 
             if (isMedia && !isFlashOrVr) {
-              // Regular media file encrypted paths
-              encryptedPaths.push({
-                path: "pr/" + baseResource,
-                encrypted: true,
-              });
-              encryptedPaths.push({
-                path: "un/" + baseResource,
-                encrypted: true,
-              });
-              encryptedPaths.push({
-                path: "fa/" + baseResource,
-                encrypted: true,
-              });
-              encryptedPaths.push({ path: baseResource, encrypted: true });
+              // GIF handling depends on priority (same logic as unencrypted)
+              if (isGifFile) {
+                if (isHighPriority) {
+                  // Fancybox: Try WebP first for animated WebP support
+                  encryptedPaths.push({ path: "pr/" + webpResource, encrypted: true });
+                  encryptedPaths.push({ path: "un/" + webpResource, encrypted: true });
+                  encryptedPaths.push({ path: "fa/" + webpResource, encrypted: true });
+                  encryptedPaths.push({ path: webpResource, encrypted: true });
+                } else {
+                  // Thumbnails: Try JPG first (static thumbnail for GIFs)
+                  encryptedPaths.push({ path: "pr/" + jpgResource, encrypted: true });
+                  encryptedPaths.push({ path: "un/" + jpgResource, encrypted: true });
+                  encryptedPaths.push({ path: "fa/" + jpgResource, encrypted: true });
+                  encryptedPaths.push({ path: jpgResource, encrypted: true });
+                  // Then try WebP as second fallback
+                  encryptedPaths.push({ path: "pr/" + webpResource, encrypted: true });
+                  encryptedPaths.push({ path: "un/" + webpResource, encrypted: true });
+                  encryptedPaths.push({ path: "fa/" + webpResource, encrypted: true });
+                  encryptedPaths.push({ path: webpResource, encrypted: true });
+                }
+                // Then try original GIF as final fallback
+                encryptedPaths.push({ path: "pr/" + baseResource, encrypted: true });
+                encryptedPaths.push({ path: "un/" + baseResource, encrypted: true });
+                encryptedPaths.push({ path: "fa/" + baseResource, encrypted: true });
+                encryptedPaths.push({ path: baseResource, encrypted: true });
+              } else if (isWebPCandidate) {
+                if (isHighPriority) {
+                  // Fancybox: Try WebP first, then original format (skip JPG - that's only a thumbnail)
+                  encryptedPaths.push({ path: "pr/" + webpResource, encrypted: true });
+                  encryptedPaths.push({ path: "un/" + webpResource, encrypted: true });
+                  encryptedPaths.push({ path: "fa/" + webpResource, encrypted: true });
+                  encryptedPaths.push({ path: webpResource, encrypted: true });
+                  // Then try original format as fallback
+                  if (baseResource !== webpResource) {
+                    encryptedPaths.push({ path: "pr/" + baseResource, encrypted: true });
+                    encryptedPaths.push({ path: "un/" + baseResource, encrypted: true });
+                    encryptedPaths.push({ path: "fa/" + baseResource, encrypted: true });
+                    encryptedPaths.push({ path: baseResource, encrypted: true });
+                  }
+                } else {
+                  // Thumbnails: Try JPG first, then WebP, then original format
+                  // Step 1: JPG (use jpgResource, or baseResource if it's already .jpg)
+                  const thumbJpgEnc = jpgResource !== baseResource ? jpgResource : baseResource;
+                  encryptedPaths.push({ path: "pr/" + thumbJpgEnc, encrypted: true });
+                  encryptedPaths.push({ path: "un/" + thumbJpgEnc, encrypted: true });
+                  encryptedPaths.push({ path: "fa/" + thumbJpgEnc, encrypted: true });
+                  encryptedPaths.push({ path: thumbJpgEnc, encrypted: true });
+                  // Step 2: WebP (skip if same as what we already tried)
+                  if (webpResource !== thumbJpgEnc) {
+                    encryptedPaths.push({ path: "pr/" + webpResource, encrypted: true });
+                    encryptedPaths.push({ path: "un/" + webpResource, encrypted: true });
+                    encryptedPaths.push({ path: "fa/" + webpResource, encrypted: true });
+                    encryptedPaths.push({ path: webpResource, encrypted: true });
+                  }
+                  // Step 3: Original format (skip if same as JPG or WebP)
+                  if (baseResource !== thumbJpgEnc && baseResource !== webpResource) {
+                    encryptedPaths.push({ path: "pr/" + baseResource, encrypted: true });
+                    encryptedPaths.push({ path: "un/" + baseResource, encrypted: true });
+                    encryptedPaths.push({ path: "fa/" + baseResource, encrypted: true });
+                    encryptedPaths.push({ path: baseResource, encrypted: true });
+                  }
+                }
+              } else {
+                // Non-image media: Just try original paths
+                encryptedPaths.push({ path: "pr/" + baseResource, encrypted: true });
+                encryptedPaths.push({ path: "un/" + baseResource, encrypted: true });
+                encryptedPaths.push({ path: "fa/" + baseResource, encrypted: true });
+                encryptedPaths.push({ path: baseResource, encrypted: true });
+              }
             } else if (isFlashOrVr) {
               // Flash/VR encrypted
               encryptedPaths.push({ path: baseResource, encrypted: true });
@@ -2720,8 +2934,10 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
       function imgLoad(img) {
         jQuery(img).parent().show();
         var source = jQuery(img).attr("src");
-        window.getGifDuration(source).then((duration) => {
-          jQuery(`img[src="${source}"]`).attr("data-duration", duration);
+        window.getAnimationDuration(source).then((duration) => {
+          if (duration > 0) {
+            jQuery(`img[src="${source}"]`).attr("data-duration", duration);
+          }
         });
       }
 
@@ -5726,7 +5942,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                     ]);
                   }
                   if (("photo" == kind || "all" == kind) && !isVideo) {
-                    let photo = btoa(item.hash) + "." + extension;
+                    // Use JPG for thumbnails to avoid animated WebPs; getSrc fallback handles missing JPGs
+                    let photo = btoa(item.hash) + ".jpg";
                     let resource = `pr/${photo.substring(0, 2)}/${photo}`;
                     return Promise.resolve([
                       resource,
@@ -6318,8 +6535,8 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                   ".swf",
                 ].includes("." + extension.toLowerCase());
 
-                let image =
-                  btoa(coverHash) + "." + (isVideo ? "jpg" : extension);
+                // Always use JPG for album cover thumbnails to avoid animated WebPs
+                let image = btoa(coverHash) + ".jpg";
                 // Don't hardcode pr/ prefix - let getSrc determine if it's under pr/ or fa/
                 let resource = `${image.substring(0, 2)}/${image}`;
                 if (item.vr === 1) {
@@ -6898,7 +7115,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
               }
 
               window
-                .getGifDuration(slide.src)
+                .getAnimationDuration(slide.src)
                 .then((duration) => {
                   jQuery(`img[src="${slide.src}"]`).attr(
                     "data-duration",
@@ -7094,7 +7311,7 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
                 clearTimeout(window.slideshowTimer);
               }
               window
-                .getGifDuration(slide.src)
+                .getAnimationDuration(slide.src)
                 .then((duration) => {
                   jQuery(`img[src="${slide.src}"]`).attr(
                     "data-duration",
@@ -7624,6 +7841,11 @@ t.exports=function(){var t,e,i,n=function(t,e){if(!(t instanceof e))throw new Ty
         }
 
         function loadLazyImage(lazyImage, priority) {
+          // Lazy-loaded images are always grid thumbnails - cap at "medium" so
+          // fetchResource uses the thumbnail format cascade (JPG -> WebP -> original).
+          // "high" is reserved for fancybox full-size views which call getSrc directly.
+          if (priority === "high") priority = "medium";
+
           // Skip if permanently failed (404)
           if (medcrypt.failedResources.has(lazyImage.dataset.src)) {
             return;

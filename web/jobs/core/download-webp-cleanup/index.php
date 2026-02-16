@@ -47,6 +47,7 @@ $opsUnfiltered = new cloudFS($downloadLocation . 'un' . DIRECTORY_SEPARATOR, tru
  * - Only delete image files (jpg, jpeg, png, gif, bmp, heic, ico, tiff)
  * - Only delete when hash.webp exists for the same hash
  * - KEEP .jpg if the hash also has .gif or .png (static thumbnail for animated content)
+ * - KEEP .jpg if the hash also has .mp4 or .webm (video thumbnail)
  * - Videos (.mp4, .webm) are never touched
  */
 function findWebpDuplicates(cloudFS $ops, string $prefix, array $imageExts): array
@@ -91,6 +92,10 @@ function findWebpDuplicates(cloudFS $ops, string $prefix, array $imageExts): arr
         // whose .jpg thumbnail must be preserved
         $hasAnimatedSource = in_array('gif', $exts) || in_array('png', $exts);
 
+        // Check if this hash has video content (mp4 or webm)
+        // whose .jpg thumbnail must be preserved
+        $hasVideoSource = in_array('mp4', $exts) || in_array('webm', $exts);
+
         foreach ($exts as $ext) {
             if ($ext === 'webp') {
                 continue;
@@ -99,9 +104,9 @@ function findWebpDuplicates(cloudFS $ops, string $prefix, array $imageExts): arr
                 continue;
             }
 
-            // Keep .jpg if it's a static thumbnail for animated content (gif/animated png)
-            if ($ext === 'jpg' && $hasAnimatedSource) {
-                echo PHP_EOL . "  Keeping $prefix/$hash.jpg (animated content thumbnail)";
+            // Keep .jpg if it's a thumbnail for animated content (gif/animated png) or video
+            if ($ext === 'jpg' && ($hasAnimatedSource || $hasVideoSource)) {
+                echo PHP_EOL . "  Keeping $prefix/$hash.jpg (thumbnail for " . ($hasVideoSource ? 'video' : 'animated') . " content)";
                 continue;
             }
 
