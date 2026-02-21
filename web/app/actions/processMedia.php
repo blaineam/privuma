@@ -166,6 +166,26 @@ class processMedia
                                 $dlThumbPreservationPath,
                                 false
                             );
+                        } elseif (strtoupper($dlExt) === 'WEBP' && $this->isAnimatedWebP($mediaPath)) {
+                            echo PHP_EOL . 'generating static JPG thumbnail for animated WebP';
+                            $dlThumbDest =
+                                preg_replace('/\.webp$/i', '', $mediaPath) . '.jpg';
+                            $dlThumbPreservationPath =
+                                preg_replace('/\.webp$/i', '.jpg', $mediaPreservationPath);
+                            $cmediapath = escapeshellarg($mediaPath);
+                            exec(
+                                "nice magick {$cmediapath}[0] -sampling-factor 4:2:0 -strip -interlace JPEG -colorspace sRGB -resize 1000 -compress JPEG -quality 70 " . escapeshellarg($dlThumbDest)
+                            );
+                            if (is_file($dlThumbDest) && filesize($dlThumbDest) > 0) {
+                                echo PHP_EOL .
+                                    "Downloading animated WebP thumbnail to: $dlThumbPreservationPath";
+                                $downloadOps->rename(
+                                    $dlThumbDest,
+                                    $dlThumbPreservationPath,
+                                    false
+                                );
+                            }
+                            is_file($dlThumbDest) && unlink($dlThumbDest);
                         }
 
                         $isVideoMedia = in_array(strtoupper($dlExt), ['MP4', 'WEBM']);
@@ -180,8 +200,8 @@ class processMedia
                                 true,
                             )
                         ) {
-                            // For videos, extract a frame as WebP thumbnail before deleting the temp file
-                            if ($isVideoMedia && file_exists($mediaPath)) {
+                            // For videos, extract a frame as WebP thumbnail only if no thumbnail URL will be downloaded
+                            if ($isVideoMedia && !isset($data['thumbnail']) && file_exists($mediaPath)) {
                                 $webpThumbPath = preg_replace('/\.[^.]+$/', '.webp', $mediaPreservationPath);
                                 $framePath = $this->extractVideoFrame($mediaPath);
                                 if ($framePath) {
@@ -213,16 +233,19 @@ class processMedia
                                     $mediaPreservationPath
                                 )
                             );
+                            // Use webpOnly for video thumbnails - only store WebP, not JPG
                             if (
                                 (new preserveMedia([], $downloadOps))->compress(
                                     $thumbnailPath,
                                     $thumbnailPreservationPath,
+                                    true,
                                 )
                             ) {
                                 file_exists($thumbnailPath) &&
                                     unlink($thumbnailPath);
+                                $webpThumbnailPath = preg_replace('/\.[^.]+$/', '.webp', $thumbnailPreservationPath);
                                 echo PHP_EOL .
-                                    "Downloaded media to: $thumbnailPreservationPath";
+                                    "Downloaded video thumbnail to: $webpThumbnailPath";
                             } else {
                                 echo PHP_EOL . 'Thumbnail compression failed, cleaning up';
                                 file_exists($thumbnailPath) && unlink($thumbnailPath);
@@ -416,7 +439,7 @@ class processMedia
     {
         $frameTemp = tempnam(sys_get_temp_dir(), 'PVMA-FRAME-') . '.webp';
         $ffmpegPath = PHP_OS_FAMILY == 'Darwin' ? '/usr/local/bin/ffmpeg' : '/usr/bin/ffmpeg';
-        $cmd = "$ffmpegPath -hide_banner -loglevel error -y -i " . escapeshellarg($videoPath) . ' -vframes 1 -c:v libwebp -q:v 80 ' . escapeshellarg($frameTemp);
+        $cmd = "$ffmpegPath -hide_banner -loglevel error -y -i " . escapeshellarg($videoPath) . " -vframes 1 -c:v libwebp -q:v 80 -vf \"scale='min(1000,iw)':-1\" " . escapeshellarg($frameTemp);
         echo PHP_EOL . 'Extracting video frame: ' . $cmd;
         exec($cmd, $void, $response);
 
@@ -427,6 +450,22 @@ class processMedia
         echo PHP_EOL . 'Video frame extraction failed';
         is_file($frameTemp) && unlink($frameTemp);
         return null;
+    }
+
+    private function isAnimatedWebP(string $filePath): bool
+    {
+        if (!is_file($filePath)) {
+            return false;
+        }
+        $handle = fopen($filePath, 'rb');
+        if (!$handle) {
+            return false;
+        }
+        // Read enough of the RIFF header to check for ANMF chunks (animated frames)
+        $data = fread($handle, 4096);
+        fclose($handle);
+        // ANMF chunk indicates animation frames in WebP
+        return strpos($data, 'ANMF') !== false;
     }
 
     private function downloadUrl(string $url): ?string

@@ -36,6 +36,15 @@ if (file_exists($deletionQueuePath)) {
 
 $imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'heic', 'ico', 'tiff'];
 
+// Query DB for hashes that were originally GIFs or animated PNGs
+// Since webpOnly mode no longer stores .gif originals, we need the DB to identify
+// which .jpg files are static thumbnails for animated content
+$conn = $privuma->getPDO();
+$stmt = $conn->prepare("SELECT DISTINCT hash FROM media WHERE hash IS NOT NULL AND hash != '' AND LOWER(filename) REGEXP '\\.(gif|apng)$'");
+$stmt->execute();
+$animatedHashes = array_flip(array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'hash'));
+echo PHP_EOL . 'Found ' . count($animatedHashes) . ' animated image hashes in database';
+
 $ops = new cloudFS($downloadLocation . 'pr' . DIRECTORY_SEPARATOR, true, '/usr/bin/rclone', null, true);
 $opsFavorites = new cloudFS($downloadLocation . 'fa' . DIRECTORY_SEPARATOR, true, '/usr/bin/rclone', null, true);
 $opsUnfiltered = new cloudFS($downloadLocation . 'un' . DIRECTORY_SEPARATOR, true, '/usr/bin/rclone', null, true);
@@ -46,11 +55,11 @@ $opsUnfiltered = new cloudFS($downloadLocation . 'un' . DIRECTORY_SEPARATOR, tru
  * Rules:
  * - Only delete image files (jpg, jpeg, png, gif, bmp, heic, ico, tiff)
  * - Only delete when hash.webp exists for the same hash
- * - KEEP .jpg if the hash also has .gif or .png (static thumbnail for animated content)
+ * - KEEP .jpg if the hash has .gif/.png companion OR was originally a GIF/APNG in the DB
  * - KEEP .jpg if the hash also has .mp4 or .webm (video thumbnail)
  * - Videos (.mp4, .webm) are never touched
  */
-function findWebpDuplicates(cloudFS $ops, string $prefix, array $imageExts): array
+function findWebpDuplicates(cloudFS $ops, string $prefix, array $imageExts, array $animatedHashes): array
 {
     echo PHP_EOL . "Scanning $prefix/ for non-WebP images that have a WebP replacement";
 
@@ -61,7 +70,9 @@ function findWebpDuplicates(cloudFS $ops, string $prefix, array $imageExts): arr
     }
 
     $files = array_map(
-        fn ($item) => trim($item, "\/"),
+        function ($item) {
+            return trim($item, "\/");
+        },
         array_column($scan, 'Name')
     );
     unset($scan);
@@ -88,12 +99,13 @@ function findWebpDuplicates(cloudFS $ops, string $prefix, array $imageExts): arr
             continue;
         }
 
-        // Check if this hash has animated source content (gif or png)
-        // whose .jpg thumbnail must be preserved
-        $hasAnimatedSource = in_array('gif', $exts) || in_array('png', $exts);
+        // Check if this hash has animated source content (gif or png file on disk)
+        // OR was originally a GIF/APNG in the database (original may no longer be stored)
+        $hasAnimatedSource = in_array('gif', $exts) || in_array('png', $exts)
+            || array_key_exists($hash, $animatedHashes);
 
         // Check if this hash has video content (mp4 or webm)
-        // whose .jpg thumbnail must be preserved
+        // Videos use WebP-only thumbnails, so their JPGs can be cleaned up
         $hasVideoSource = in_array('mp4', $exts) || in_array('webm', $exts);
 
         foreach ($exts as $ext) {
@@ -104,9 +116,10 @@ function findWebpDuplicates(cloudFS $ops, string $prefix, array $imageExts): arr
                 continue;
             }
 
-            // Keep .jpg if it's a thumbnail for animated content (gif/animated png) or video
-            if ($ext === 'jpg' && ($hasAnimatedSource || $hasVideoSource)) {
-                echo PHP_EOL . "  Keeping $prefix/$hash.jpg (thumbnail for " . ($hasVideoSource ? 'video' : 'animated') . ' content)';
+            // Keep .jpg only if it's a thumbnail for animated image content (GIF/APNG)
+            // Video thumbnails are WebP-only, so video .jpg files can be deleted
+            if ($ext === 'jpg' && $hasAnimatedSource && !$hasVideoSource) {
+                echo PHP_EOL . "  Keeping $prefix/$hash.jpg (thumbnail for animated content)";
                 continue;
             }
 
@@ -120,9 +133,9 @@ function findWebpDuplicates(cloudFS $ops, string $prefix, array $imageExts): arr
 }
 
 $deletions = [];
-$deletions = array_merge($deletions, findWebpDuplicates($ops, 'pr', $imageExts));
-$deletions = array_merge($deletions, findWebpDuplicates($opsFavorites, 'fa', $imageExts));
-$deletions = array_merge($deletions, findWebpDuplicates($opsUnfiltered, 'un', $imageExts));
+$deletions = array_merge($deletions, findWebpDuplicates($ops, 'pr', $imageExts, $animatedHashes));
+$deletions = array_merge($deletions, findWebpDuplicates($opsFavorites, 'fa', $imageExts, $animatedHashes));
+$deletions = array_merge($deletions, findWebpDuplicates($opsUnfiltered, 'un', $imageExts, $animatedHashes));
 
 echo PHP_EOL . PHP_EOL . 'Total files to delete: ' . count($deletions);
 

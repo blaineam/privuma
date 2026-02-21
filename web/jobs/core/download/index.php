@@ -418,7 +418,8 @@ if (!file_exists(__DIR__ . '/restore_point.txt')) {
         echo PHP_EOL . 'Moving favorite: ' . $src . '  to: ' . $dst;
         $opsNoEncodeNoPrefix->rename($src, $dst, true);
 
-        if (in_array(strtolower($ext), ['webm', 'mp4', 'gif'])) {
+        if (in_array(strtolower($ext), ['gif'])) {
+            // GIFs use JPG static first-frame thumbnails
             $src = cloudFS::canonicalize($prefix . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.jpg', true));
             $dst = cloudFS::canonicalize('fa' . DIRECTORY_SEPARATOR . cloudFS::encode($favorite['hash'] . '.jpg', true));
             echo PHP_EOL . 'Moving favorite thumbnail: ' . $src . '  to: ' . $dst;
@@ -795,13 +796,17 @@ $dlData = array_filter($dlData, function ($item) use ($previouslyDownloadedMedia
     $preserve = $item['hash'] . '.' . strtolower(pathinfo($filename, PATHINFO_EXTENSION));
     $thumbnailPreserve = $item['hash'] . '.jpg';
     $isVideo = str_contains($preserve, '.webm') || str_contains($preserve, '.mp4');
+    $isGif = str_contains($preserve, '.gif');
+    $isAnimated = $isVideo || $isGif;
     $webpPreserve = $item['hash'] . '.webp';
     $fileExists = array_key_exists($preserve, $previouslyDownloadedMedia)
         || (!$isVideo && array_key_exists($webpPreserve, $previouslyDownloadedMedia));
+    // For videos, .webp is a static frame thumbnail so it counts.
+    // For GIFs, .webp is the animated version, so only .jpg counts as a thumbnail.
     $thumbnailExists = array_key_exists($thumbnailPreserve, $previouslyDownloadedMedia)
-        || array_key_exists($webpPreserve, $previouslyDownloadedMedia);
+        || ($isVideo && array_key_exists($webpPreserve, $previouslyDownloadedMedia));
     return !$fileExists
-        || ($isVideo && !$thumbnailExists);
+        || ($isAnimated && !$thumbnailExists);
 });
 
 $existingFavorites = array_flip(
@@ -827,13 +832,17 @@ $dlData = array_filter($dlData, function ($item) use ($existingFavorites) {
     $preserve = $item['hash'] . '.' . strtolower(pathinfo($filename, PATHINFO_EXTENSION));
     $thumbnailPreserve = $item['hash'] . '.jpg';
     $isVideo = str_contains($preserve, '.webm') || str_contains($preserve, '.mp4');
+    $isGif = str_contains($preserve, '.gif');
+    $isAnimated = $isVideo || $isGif;
     $webpPreserve = $item['hash'] . '.webp';
     $fileExists = array_key_exists($preserve, $existingFavorites)
         || (!$isVideo && array_key_exists($webpPreserve, $existingFavorites));
+    // For videos, .webp is a static frame thumbnail so it counts.
+    // For GIFs, .webp is the animated version, so only .jpg counts as a thumbnail.
     $thumbnailExists = array_key_exists($thumbnailPreserve, $existingFavorites)
-        || array_key_exists($webpPreserve, $existingFavorites);
+        || ($isVideo && array_key_exists($webpPreserve, $existingFavorites));
     return !$fileExists
-        || ($isVideo && !$thumbnailExists);
+        || ($isAnimated && !$thumbnailExists);
 });
 
 echo PHP_EOL . 'Found ' . count($dlData) . ' new media items to be downloaded';
@@ -871,6 +880,7 @@ foreach ($dlData as $item) {
     $thumbnailPath = dirname($path) . DIRECTORY_SEPARATOR . basename($path, '.' . $ext) . '.jpg';
 
     $isVideo = (strpos($filename, '.webm') !== false || strpos($filename, '.mp4') !== false);
+    $isGif = (strtolower(pathinfo($filename, PATHINFO_EXTENSION)) === 'gif');
     $webpPreserve = $item['hash'] . '.webp';
     if (!$ops->is_file($preserve) && ($isVideo || !$ops->is_file($webpPreserve))) {
         if (!isset($item['url'])) {
@@ -940,6 +950,29 @@ foreach ($dlData as $item) {
                 ],
             ])
         );
+    } elseif (
+        $isGif
+        && $ops->is_file($webpPreserve)
+        && !$ops->is_file($thumbnailPreserve)
+    ) {
+        // GIF WebP exists but static JPG thumbnail is missing - regenerate from WebP
+        echo PHP_EOL . 'Regenerating GIF thumbnail: ' . $thumbnailPreserve . ' from ' . $webpPreserve . ' in album: ' . $item['album'];
+        $webpLocalPath = $ops->pull($webpPreserve);
+        if ($webpLocalPath && is_file($webpLocalPath)) {
+            $jpgTemp = tempnam(sys_get_temp_dir(), 'PVMA-GIFTHUMB-') . '.jpg';
+            $cmd = "nice magick " . escapeshellarg($webpLocalPath) . "[0] -sampling-factor 4:2:0 -strip -interlace JPEG -colorspace sRGB -resize 1000 -compress JPEG -quality 70 " . escapeshellarg($jpgTemp);
+            exec($cmd, $void, $response);
+            if ($response === 0 && is_file($jpgTemp) && filesize($jpgTemp) > 0) {
+                $ops->rename($jpgTemp, $thumbnailPreserve, false);
+                echo PHP_EOL . 'Generated GIF thumbnail: ' . $thumbnailPreserve;
+            } else {
+                echo PHP_EOL . 'Failed to generate GIF thumbnail from WebP';
+            }
+            is_file($jpgTemp) && unlink($jpgTemp);
+            is_file($webpLocalPath) && unlink($webpLocalPath);
+        } else {
+            echo PHP_EOL . 'Failed to pull WebP for GIF thumbnail generation: ' . $webpPreserve;
+        }
     }
     file_put_contents(__DIR__ . '/restore_point.txt', $item['time']);
 }
