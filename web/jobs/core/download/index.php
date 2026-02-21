@@ -960,7 +960,7 @@ foreach ($dlData as $item) {
         $webpLocalPath = $ops->pull($webpPreserve);
         if ($webpLocalPath && is_file($webpLocalPath)) {
             $jpgTemp = tempnam(sys_get_temp_dir(), 'PVMA-GIFTHUMB-') . '.jpg';
-            $cmd = "nice magick " . escapeshellarg($webpLocalPath) . "[0] -sampling-factor 4:2:0 -strip -interlace JPEG -colorspace sRGB -resize 1000 -compress JPEG -quality 70 " . escapeshellarg($jpgTemp);
+            $cmd = 'nice magick ' . escapeshellarg($webpLocalPath) . '[0] -sampling-factor 4:2:0 -strip -interlace JPEG -colorspace sRGB -resize 1000 -compress JPEG -quality 70 ' . escapeshellarg($jpgTemp);
             exec($cmd, $void, $response);
             if ($response === 0 && is_file($jpgTemp) && filesize($jpgTemp) > 0) {
                 $ops->rename($jpgTemp, $thumbnailPreserve, false);

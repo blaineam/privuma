@@ -59,7 +59,7 @@ function convertThumbnailsToWebp(cloudFS $ops, string $directory, preserveMedia 
     }
     unset($scan);
 
-    echo PHP_EOL . "Found " . count($hashMap) . " unique file groups in $directory/";
+    echo PHP_EOL . 'Found ' . count($hashMap) . " unique file groups in $directory/";
 
     $thumbnailExts = ['jpg', 'jpeg', 'png'];
     $converted = 0;
