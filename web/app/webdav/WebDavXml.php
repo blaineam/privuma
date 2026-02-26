@@ -17,7 +17,7 @@ class WebDavXml
     public static function directoryResponse(string $href, string $name, ?int $mtime = null): string
     {
         $href = self::encodePath($href);
-        $xml  = '<D:response>' . "\n";
+        $xml = '<D:response>' . "\n";
         $xml .= '  <D:href>' . htmlspecialchars($href, ENT_XML1) . '</D:href>' . "\n";
         $xml .= '  <D:propstat>' . "\n";
         $xml .= '    <D:prop>' . "\n";
@@ -36,7 +36,7 @@ class WebDavXml
     public static function fileResponse(string $href, string $name, ?int $mtime, ?string $contentType, ?string $etag, ?int $size = null): string
     {
         $href = self::encodePath($href);
-        $xml  = '<D:response>' . "\n";
+        $xml = '<D:response>' . "\n";
         $xml .= '  <D:href>' . htmlspecialchars($href, ENT_XML1) . '</D:href>' . "\n";
         $xml .= '  <D:propstat>' . "\n";
         $xml .= '    <D:prop>' . "\n";
