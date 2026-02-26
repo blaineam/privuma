@@ -753,7 +753,7 @@ class WebDavServer
             $destPath = substr($destPath, strlen($this->basePath));
         }
         $destPath = '/' . trim($destPath, '/');
-        $destParts = array_values(array_filter(explode('/', $destPath), fn($p) => $p !== ''));
+        $destParts = array_values(array_filter(explode('/', $destPath), fn ($p) => $p !== ''));
         $destParts = array_map('urldecode', $destParts);
 
         if (empty($destParts) || $destParts[0] !== 'Favorites') {

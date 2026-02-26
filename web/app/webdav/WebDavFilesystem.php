@@ -168,7 +168,9 @@ class WebDavFilesystem
 
         $needSize = [];
         foreach ($items as $idx => &$item) {
-            if (empty($item['hash'])) continue;
+            if (empty($item['hash'])) {
+                continue;
+            }
             $cacheKey = 'flash_' . $item['hash'];
             if (isset($sizeCache[$cacheKey]) && $sizeCache[$cacheKey] > 0) {
                 $item['size'] = $sizeCache[$cacheKey];
@@ -214,7 +216,7 @@ class WebDavFilesystem
                 $ch = $h['ch'];
                 $info = $h['info'];
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $contentLength = (int)curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
+                $contentLength = (int) curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
 
                 if ($httpCode === 200 && $contentLength > 0) {
                     $items[$info['idx']]['size'] = $contentLength;
@@ -315,7 +317,7 @@ class WebDavFilesystem
                     'hash' => $vrHash,
                     'ext' => $ext,
                     'mtime' => $mtime,
-                    'size' => !empty($item['Size']) ? (int)$item['Size'] : null,
+                    'size' => !empty($item['Size']) ? (int) $item['Size'] : null,
                     'contentType' => $item['MimeType'] ?? self::getContentType($ext),
                     'vrPath' => $itemPath,
                 ];
@@ -327,7 +329,7 @@ class WebDavFilesystem
                     $sidecarData = [
                         'hash' => $vrHash,
                         'path' => $itemPath,
-                        'size' => !empty($item['Size']) ? (int)$item['Size'] : null,
+                        'size' => !empty($item['Size']) ? (int) $item['Size'] : null,
                         'mimeType' => $item['MimeType'] ?? null,
                     ];
                     // Duration and Sound are only present on video entries in deovr-fs.json
@@ -493,7 +495,7 @@ class WebDavFilesystem
                     'hash' => $vrHash,
                     'ext' => $ext,
                     'mtime' => $mtime,
-                    'size' => !empty($item['Size']) ? (int)$item['Size'] : null,
+                    'size' => !empty($item['Size']) ? (int) $item['Size'] : null,
                     'contentType' => $item['MimeType'] ?? self::getContentType($ext),
                     'vrPath' => $itemPath,
                     'isFavVr' => true,
@@ -503,8 +505,12 @@ class WebDavFilesystem
                 if (self::isEnvEnabled('WEBDAV_JSON_SIDECAR', true)) {
                     $vrBaseName = pathinfo($name, PATHINFO_FILENAME);
                     $sidecarData = ['hash' => $vrHash, 'path' => $itemPath, 'size' => $item['Size'] ?? null];
-                    if (isset($item['Duration'])) $sidecarData['duration'] = $item['Duration'];
-                    if (isset($item['Sound'])) $sidecarData['sound'] = $item['Sound'];
+                    if (isset($item['Duration'])) {
+                        $sidecarData['duration'] = $item['Duration'];
+                    }
+                    if (isset($item['Sound'])) {
+                        $sidecarData['sound'] = $item['Sound'];
+                    }
                     $sidecarJson = json_encode($sidecarData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
                     $files[] = [
                         'name' => $vrBaseName . '.json',
@@ -546,7 +552,7 @@ class WebDavFilesystem
         foreach ($subdirs as $name => $mtime) {
             $dirs[] = ['name' => $name, 'type' => 'dir', 'mtime' => $mtime];
         }
-        usort($dirs, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+        usort($dirs, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
 
         $result = ['dirs' => $dirs, 'files' => $files];
         $this->setCache($cacheKey, $result);
@@ -652,7 +658,7 @@ class WebDavFilesystem
         if ($hasSwf) {
             $dirs[] = ['name' => 'assets', 'type' => 'dir', 'mtime' => time(), 'flashAssetsDir' => true];
         }
-        usort($dirs, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+        usort($dirs, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
 
         $result = ['dirs' => $dirs, 'files' => $files];
         $this->setCache($cacheKey, $result);
@@ -955,11 +961,17 @@ HTML;
         $files = [];
         $allowed = ['js', 'wasm'];
         foreach (scandir($dir) as $entry) {
-            if ($entry === '.' || $entry === '..') continue;
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
             $path = $dir . $entry;
-            if (!is_file($path)) continue;
+            if (!is_file($path)) {
+                continue;
+            }
             $ext = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
-            if (!in_array($ext, $allowed)) continue;
+            if (!in_array($ext, $allowed)) {
+                continue;
+            }
             $contentType = $ext === 'wasm' ? 'application/wasm' : 'application/javascript';
             $files[] = [
                 'name' => $entry,
@@ -1060,8 +1072,8 @@ HTML;
                 $result[] = [
                     'rawName' => $rawName,
                     'segments' => $segments,
-                    'mtime' => (int)$row['mtime'],
-                    'count' => (int)$row['cnt'],
+                    'mtime' => (int) $row['mtime'],
+                    'count' => (int) $row['cnt'],
                 ];
             }
         } else {
@@ -1080,8 +1092,8 @@ HTML;
                 $result[] = [
                     'rawName' => $row['album'],
                     'segments' => $segments,
-                    'mtime' => (int)$row['mtime'],
-                    'count' => (int)$row['cnt'],
+                    'mtime' => (int) $row['mtime'],
+                    'count' => (int) $row['cnt'],
                 ];
             }
         }
@@ -1235,7 +1247,7 @@ HTML;
                             if (!isset($favHashSet[$row['hash']])) {
                                 // Non-favorited page — mark for multi-prefix probing
                                 $row['_comicsProbe'] = true;
-                                $row['_sourceSection'] = ((int)$row['blocked'] === 1) ? 'Unfiltered' : 'Albums';
+                                $row['_sourceSection'] = ((int) $row['blocked'] === 1) ? 'Unfiltered' : 'Albums';
                             }
                             // Favorited pages default to Favorites (fa/) prefix
                             $mergedRows[] = $row;
@@ -1296,7 +1308,7 @@ HTML;
                 'hash' => $row['hash'],
                 'ext' => $ext,
                 'isVideo' => $isVideo,
-                'mtime' => (int)$row['mtime'],
+                'mtime' => (int) $row['mtime'],
                 'contentType' => self::getContentType($serveExt),
             ];
             // Comics pages sourced from Albums/Unfiltered need different cloud URL prefix
@@ -1328,7 +1340,7 @@ HTML;
                     'type' => 'file',
                     'hash' => $row['hash'],
                     'ext' => 'json',
-                    'mtime' => (int)$row['mtime'],
+                    'mtime' => (int) $row['mtime'],
                     'contentType' => 'application/json',
                     'sidecar' => $sidecarData,
                     'size' => strlen($sidecarJson),
@@ -1497,7 +1509,7 @@ HTML;
                 $ch = $h['ch'];
                 $info = $h['info'];
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $contentLength = (int)curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
+                $contentLength = (int) curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
 
                 if ($httpCode === 200 && $contentLength > 0) {
                     $items[$info['idx']]['size'] = $contentLength;
@@ -1537,7 +1549,7 @@ HTML;
                         ]);
                         curl_exec($ch);
                         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                        $contentLength = (int)curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
+                        $contentLength = (int) curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
                         curl_close($ch);
 
                         if ($httpCode === 200 && $contentLength > 0) {
@@ -1652,9 +1664,15 @@ HTML;
     private function hasMissingSizes(array $items): bool
     {
         foreach ($items as $item) {
-            if (($item['type'] ?? '') !== 'file') continue;
-            if (isset($item['sidecar']) || !empty($item['vrJsonSidecar']) || !empty($item['vrSidecar']) || !empty($item['flashHtmlSidecar'])) continue;
-            if (empty($item['size'])) return true;
+            if (($item['type'] ?? '') !== 'file') {
+                continue;
+            }
+            if (isset($item['sidecar']) || !empty($item['vrJsonSidecar']) || !empty($item['vrSidecar']) || !empty($item['flashHtmlSidecar'])) {
+                continue;
+            }
+            if (empty($item['size'])) {
+                return true;
+            }
         }
         return false;
     }
